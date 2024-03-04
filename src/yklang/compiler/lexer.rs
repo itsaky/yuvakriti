@@ -19,7 +19,7 @@ use std::iter::Peekable;
 
 use crate::yklang::compiler::diagnostics::{Diagnostic, DiagnosticHandler, DiagnosticKind};
 use crate::yklang::compiler::location::{Position, Range};
-use crate::yklang::compiler::messages::CompilerMessages;
+
 use crate::yklang::compiler::tokens::{Token, TokenType};
 
 pub struct YKLexer<'a, R: Read> {
