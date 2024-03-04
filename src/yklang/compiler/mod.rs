@@ -1,5 +1,5 @@
-mod tokens;
-mod lexer;
-mod location;
-mod diagnostics;
-mod messages;
+pub mod tokens;
+pub mod lexer;
+pub mod location;
+pub mod diagnostics;
+pub mod messages;

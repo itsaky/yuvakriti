@@ -2,6 +2,12 @@ use std::process::ExitCode;
 
 mod yklang;
 
+#[cfg(test)]
+mod tests;
+
+#[cfg(doctest)]
+mod tests;
+
 fn main() -> ExitCode {
     // let path = Path::new("test.yk");
     // let path_display = path.display();

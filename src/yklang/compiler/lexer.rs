@@ -16,23 +16,23 @@
 use std::io;
 use std::io::{BufReader, Bytes, Read};
 use std::iter::Peekable;
+use std::sync::{Arc, Mutex};
 
 use crate::yklang::compiler::diagnostics::{Diagnostic, DiagnosticHandler, DiagnosticKind};
 use crate::yklang::compiler::location::{Position, Range};
-
 use crate::yklang::compiler::tokens::{Token, TokenType};
 
 pub struct YKLexer<'a, R: Read> {
-    diagnostics: &'a mut Box<dyn DiagnosticHandler>,
+    diagnostics: Arc<Mutex<dyn DiagnosticHandler + 'a>>,
     input: Peekable<Bytes<BufReader<R>>>,
     current: Option<char>,
     token_start: Position,
     position: Position
 }
 
-impl <'a, R: Read> YKLexer<'a, R> {
+impl <R: Read> YKLexer<'_, R> {
     fn report(&mut self, diagnostic_kind: DiagnosticKind, message: String) {
-        self.diagnostics.handle(self.create_diagnostic(diagnostic_kind, message));
+        self.diagnostics.lock().unwrap().handle(self.create_diagnostic(diagnostic_kind, message));
     }
 
     fn create_diagnostic(
@@ -53,10 +53,10 @@ impl <'a, R: Read> YKLexer<'a, R> {
     }
 }
 
-impl<'a, R: Read> YKLexer<'a, R> {
+impl<R: Read> YKLexer<'_, R> {
 
     /// Creates a [YKLexer] which tokenizes the given source.
-    pub fn new(source: R, diagnostics_handler: &mut Box<dyn DiagnosticHandler>) -> YKLexer<R> {
+    pub fn new<'a>(source: R, diagnostics_handler: Arc<Mutex<dyn DiagnosticHandler + 'a>>) -> YKLexer<'a, R> {
         let iterator = BufReader::new(source).bytes().peekable();
         let mut lexer = YKLexer {
             diagnostics: diagnostics_handler,
@@ -73,7 +73,7 @@ impl<'a, R: Read> YKLexer<'a, R> {
     }
 }
 
-impl <'a, R: Read> YKLexer<'a, R> {
+impl <R: Read> YKLexer<'_, R> {
 
     pub fn all(&mut self) -> Vec<Token> {
         let mut tokens: Vec<Token> = Vec::new();
@@ -213,47 +213,5 @@ fn u8_to_char(result: &io::Result<u8>) -> Option<char> {
     match result {
         Err(err) => panic!("Error while reading from source: {}", err),
         Ok(character) => Some(char::from(*character))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::io::Cursor;
-
-    use crate::yklang::compiler::diagnostics;
-    use crate::yklang::compiler::lexer::YKLexer;
-    use crate::yklang::compiler::tokens::TokenType;
-
-    #[test]
-    fn test() {
-        let diag_handler = Box::new(diagnostics::collecting_handler());
-
-        let mut lexer = YKLexer::new(
-            Cursor::new("()[]{},.+-;*"),
-            &diag_handler
-        );
-
-        let expected_tokens = vec![
-            TokenType::LParen,
-            TokenType::RParen,
-            TokenType::LBrack,
-            TokenType::RBrack,
-            TokenType::LBrace,
-            TokenType::RBrace,
-            TokenType::Comma,
-            TokenType::Dot,
-            TokenType::Plus,
-            TokenType::Minus,
-            TokenType::Semicolon,
-            TokenType::Asterisk,
-        ];
-
-        let tokens: Vec<TokenType> = lexer.all()
-            .into_iter()
-            .map(|token| token.token_type)
-            .collect();
-
-
-        assert_eq!(expected_tokens, tokens);
     }
 }
