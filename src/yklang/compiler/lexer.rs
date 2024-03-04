@@ -13,17 +13,18 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::cell::RefCell;
 use std::io;
 use std::io::{BufReader, Bytes, Read};
 use std::iter::Peekable;
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
 
 use crate::yklang::compiler::diagnostics::{Diagnostic, DiagnosticHandler, DiagnosticKind};
 use crate::yklang::compiler::location::{Position, Range};
 use crate::yklang::compiler::tokens::{Token, TokenType};
 
 pub struct YKLexer<'a, R: Read> {
-    diagnostics: Arc<Mutex<dyn DiagnosticHandler + 'a>>,
+    diagnostics: Rc<RefCell<dyn DiagnosticHandler + 'a>>,
     input: Peekable<Bytes<BufReader<R>>>,
     current: Option<char>,
     token_start: Position,
@@ -32,7 +33,7 @@ pub struct YKLexer<'a, R: Read> {
 
 impl <R: Read> YKLexer<'_, R> {
     fn report(&mut self, diagnostic_kind: DiagnosticKind, message: String) {
-        self.diagnostics.lock().unwrap().handle(self.create_diagnostic(diagnostic_kind, message));
+        self.diagnostics.borrow_mut().handle(self.create_diagnostic(diagnostic_kind, message));
     }
 
     fn create_diagnostic(
@@ -56,7 +57,7 @@ impl <R: Read> YKLexer<'_, R> {
 impl<R: Read> YKLexer<'_, R> {
 
     /// Creates a [YKLexer] which tokenizes the given source.
-    pub fn new<'a>(source: R, diagnostics_handler: Arc<Mutex<dyn DiagnosticHandler + 'a>>) -> YKLexer<'a, R> {
+    pub fn new<'a>(source: R, diagnostics_handler: Rc<RefCell<dyn DiagnosticHandler + 'a>>) -> YKLexer<'a, R> {
         let iterator = BufReader::new(source).bytes().peekable();
         let mut lexer = YKLexer {
             diagnostics: diagnostics_handler,
