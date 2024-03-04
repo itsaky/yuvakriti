@@ -52,3 +52,35 @@ fn test_simple_operator_lexing() {
 
     assert_eq!(expected_tokens, tokens);
 }
+
+#[test]
+fn test_whitespaces_in_input_must_be_ignored() {
+    let diag_handler = Arc::new(Mutex::new(diagnostics::collecting_handler()));
+    let mut lexer = YKLexer::new(
+        Cursor::new("( )[ ]{ }\t,\r.\n+-;*"),
+        diag_handler.clone()
+    );
+
+    let expected_tokens = vec![
+        TokenType::LParen,
+        TokenType::RParen,
+        TokenType::LBrack,
+        TokenType::RBrack,
+        TokenType::LBrace,
+        TokenType::RBrace,
+        TokenType::Comma,
+        TokenType::Dot,
+        TokenType::Plus,
+        TokenType::Minus,
+        TokenType::Semicolon,
+        TokenType::Asterisk,
+    ];
+
+    let tokens: Vec<TokenType> = lexer.all()
+        .into_iter()
+        .map(|token| token.token_type)
+        .collect();
+
+
+    assert_eq!(expected_tokens, tokens);
+}

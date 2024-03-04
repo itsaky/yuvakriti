@@ -77,10 +77,9 @@ impl <R: Read> YKLexer<'_, R> {
 
     pub fn all(&mut self) -> Vec<Token> {
         let mut tokens: Vec<Token> = Vec::new();
-        loop {
-            match self.next() {
-                Some(token) => tokens.push(token),
-                None => break
+        while !self.is_eof() {
+            if let Some(token) = self.next() {
+                tokens.push(token)
             }
         }
         return tokens
