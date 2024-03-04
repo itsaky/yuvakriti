@@ -13,16 +13,68 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::sync::OnceLock;
+
 use crate::yklang::compiler::location::Range;
 
 pub trait DiagnosticHandler {
-    fn handle(diagnostic: Diagnostic);
+
+    fn handle(&mut self, diagnostic: Diagnostic);
+}
+
+#[derive(Eq, PartialEq, Copy, Clone, Hash, Debug)]
+pub struct NoOpDiagnosticHandler {}
+
+impl NoOpDiagnosticHandler {
+    pub fn instance() -> &'static NoOpDiagnosticHandler {
+        static INSTANCE: OnceLock<NoOpDiagnosticHandler> = OnceLock::new();
+        return INSTANCE.get_or_init(|| NoOpDiagnosticHandler {})
+    }
+}
+
+impl DiagnosticHandler for NoOpDiagnosticHandler {
+    fn handle(&mut self, _diagnostic: Diagnostic) {}
+}
+
+pub fn no_op_handler() -> &'static NoOpDiagnosticHandler {
+    return NoOpDiagnosticHandler::instance();
+}
+
+
+pub struct CollectingDiagnosticHandler {
+    diagnostics: Vec<Diagnostic>
+}
+
+impl CollectingDiagnosticHandler {
+    pub fn new() -> CollectingDiagnosticHandler {
+        return CollectingDiagnosticHandler {
+            diagnostics: Vec::new()
+        }
+    }
+}
+
+impl DiagnosticHandler for CollectingDiagnosticHandler {
+    fn handle(&mut self, diagnostic: Diagnostic) {
+        self.diagnostics.push(diagnostic);
+    }
+}
+
+pub fn collecting_handler() -> CollectingDiagnosticHandler {
+    return CollectingDiagnosticHandler::new();
 }
 
 #[derive(Eq)]
 pub struct Diagnostic {
-    range: Range,
-    message: String,
+    pub range: Range,
+    pub message: String,
+    pub kind: DiagnosticKind
+}
+
+#[derive(Eq)]
+pub enum DiagnosticKind {
+    Error,
+    Warning,
+    Note
 }
 
 impl PartialEq<Self> for Diagnostic {
@@ -31,3 +83,10 @@ impl PartialEq<Self> for Diagnostic {
             && self.message == other.message
     }
 }
+
+impl PartialEq<Self> for DiagnosticKind {
+    fn eq(&self, other: &Self) -> bool {
+        return std::mem::discriminant(self) == std::mem::discriminant(other)
+    }
+}
+

@@ -17,23 +17,52 @@ use std::io;
 use std::io::{BufReader, Bytes, Read};
 use std::iter::Peekable;
 
+use crate::yklang::compiler::diagnostics::{Diagnostic, DiagnosticHandler, DiagnosticKind};
 use crate::yklang::compiler::location::{Position, Range};
+use crate::yklang::compiler::messages::CompilerMessages;
 use crate::yklang::compiler::tokens::{Token, TokenType};
 
-struct YKLexer<R: Read> {
-    reader: Peekable<Bytes<BufReader<R>>>,
+pub struct YKLexer<'a, R: Read> {
+    diagnostics: &'a mut Box<dyn DiagnosticHandler>,
+    input: Peekable<Bytes<BufReader<R>>>,
     current: Option<char>,
+    token_start: Position,
     position: Position
 }
 
-impl<R: Read> YKLexer<R> {
+impl <'a, R: Read> YKLexer<'a, R> {
+    fn report(&mut self, diagnostic_kind: DiagnosticKind, message: String) {
+        self.diagnostics.handle(self.create_diagnostic(diagnostic_kind, message));
+    }
+
+    fn create_diagnostic(
+        &self,
+        diagnostic_kind: DiagnosticKind,
+        message: String,
+    ) -> Diagnostic {
+        Diagnostic {
+            range: Range {
+                start: self.token_start,
+                end: self.position
+            },
+
+            message,
+
+            kind: diagnostic_kind
+        }
+    }
+}
+
+impl<'a, R: Read> YKLexer<'a, R> {
 
     /// Creates a [YKLexer] which tokenizes the given source.
-    pub fn new(source: R) -> YKLexer<R> {
+    pub fn new(source: R, diagnostics_handler: &mut Box<dyn DiagnosticHandler>) -> YKLexer<R> {
         let iterator = BufReader::new(source).bytes().peekable();
         let mut lexer = YKLexer {
-            reader: iterator,
+            diagnostics: diagnostics_handler,
+            input: iterator,
             current: None,
+            token_start: Position::NO_POS,
             position: Position::NO_POS,
         };
 
@@ -44,7 +73,7 @@ impl<R: Read> YKLexer<R> {
     }
 }
 
-impl <R: Read> YKLexer<R> {
+impl <'a, R: Read> YKLexer<'a, R> {
 
     pub fn all(&mut self) -> Vec<Token> {
         let mut tokens: Vec<Token> = Vec::new();
@@ -58,22 +87,22 @@ impl <R: Read> YKLexer<R> {
     }
 
     pub fn next(&mut self) -> Option<Token> {
-        let start = self.position.clone();
+        self.token_start = self.position.clone();
         let result = match self.advance() {
             None => None,
             Some(char) => match char {
-                '(' => Some(self.token(TokenType::LParen, start)),
-                ')' => Some(self.token(TokenType::RParen, start)),
-                '[' => Some(self.token(TokenType::LBrack, start)),
-                ']' => Some(self.token(TokenType::RBrack, start)),
-                '{' => Some(self.token(TokenType::LBrace, start)),
-                '}' => Some(self.token(TokenType::RBrace, start)),
-                ',' => Some(self.token(TokenType::Comma, start)),
-                '.' => Some(self.token(TokenType::Dot, start)),
-                '+' => Some(self.token(TokenType::Plus, start)),
-                '-' => Some(self.token(TokenType::Minus, start)),
-                ';' => Some(self.token(TokenType::Semicolon, start)),
-                '*' => Some(self.token(TokenType::Asterisk, start)),
+                '(' => Some(self.token(TokenType::LParen)),
+                ')' => Some(self.token(TokenType::RParen)),
+                '[' => Some(self.token(TokenType::LBrack)),
+                ']' => Some(self.token(TokenType::RBrack)),
+                '{' => Some(self.token(TokenType::LBrace)),
+                '}' => Some(self.token(TokenType::RBrace)),
+                ',' => Some(self.token(TokenType::Comma)),
+                '.' => Some(self.token(TokenType::Dot)),
+                '+' => Some(self.token(TokenType::Plus)),
+                '-' => Some(self.token(TokenType::Minus)),
+                ';' => Some(self.token(TokenType::Semicolon)),
+                '*' => Some(self.token(TokenType::Asterisk)),
 
                 _ => {
                     if self.is_whitespace(char) {
@@ -81,7 +110,8 @@ impl <R: Read> YKLexer<R> {
                         return None
                     }
 
-                    todo!("Handle unknown tokens")
+                    self.report(DiagnosticKind::Error, String::from("Unknown token"));
+                    return None
                 }
             }
         };
@@ -91,7 +121,7 @@ impl <R: Read> YKLexer<R> {
 
     /// Returns the character at the current lexer position and advances to the next character
     fn advance(&mut self) -> Option<char> {
-        let next_char = self.reader.next();
+        let next_char = self.input.next();
         let result = self.current;
 
         self.current = match next_char {
@@ -125,7 +155,7 @@ impl <R: Read> YKLexer<R> {
 
     /// Single-character lookahead
     fn peek_next(&mut self) -> Option<char> {
-        let result = self.reader.peek();
+        let result = self.input.peek();
         match result {
             None => None,
             Some(result) => u8_to_char(result)
@@ -143,24 +173,22 @@ impl <R: Read> YKLexer<R> {
 
     fn token(
         &self,
-        token_type: TokenType,
-        token_start: Position
+        token_type: TokenType
     ) -> Token {
-        return self.text_token(token_type, None, token_start)
+        return self.text_token(token_type, None)
     }
 
     /// Create a token
     fn text_token(
         &self,
         token_type: TokenType,
-        content: Option<String>,
-        token_start: Position
+        content: Option<String>
     ) -> Token {
         return Token {
             token_type,
             content,
             range: Range {
-                start: token_start,
+                start: self.token_start,
                 end: self.position.clone()
             }
         };
@@ -192,12 +220,18 @@ fn u8_to_char(result: &io::Result<u8>) -> Option<char> {
 mod tests {
     use std::io::Cursor;
 
+    use crate::yklang::compiler::diagnostics;
     use crate::yklang::compiler::lexer::YKLexer;
     use crate::yklang::compiler::tokens::TokenType;
 
     #[test]
     fn test() {
-        let mut lexer = YKLexer::new(Cursor::new("()[]{},.+-;*"));
+        let diag_handler = Box::new(diagnostics::collecting_handler());
+
+        let mut lexer = YKLexer::new(
+            Cursor::new("()[]{},.+-;*"),
+            &diag_handler
+        );
 
         let expected_tokens = vec![
             TokenType::LParen,

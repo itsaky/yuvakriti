@@ -15,8 +15,8 @@
 
 #[derive(Eq, Clone, Copy, Debug)]
 pub struct Range {
-    pub(crate) start: Position,
-    pub(crate) end: Position
+    pub start: Position,
+    pub end: Position
 }
 
 impl Range {
