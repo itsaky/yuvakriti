@@ -13,7 +13,7 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#[derive(Eq, Clone, Copy)]
+#[derive(Eq, Clone, Copy, Debug)]
 pub struct Range {
     pub(crate) start: Position,
     pub(crate) end: Position
@@ -33,7 +33,7 @@ impl PartialEq<Self> for Range {
     }
 }
 
-#[derive(Eq, Clone, Copy)]
+#[derive(Eq, Clone, Copy, Debug)]
 pub struct Position {
     pub line: i32,
     pub column: i32,

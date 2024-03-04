@@ -15,7 +15,7 @@
 
 use crate::yklang::compiler::location::Range;
 
-#[derive(Eq)]
+#[derive(Eq, Debug)]
 pub struct Token {
 
     /// See [TokenType] for a list of valid tokens.
@@ -41,7 +41,7 @@ impl PartialEq<Self> for Token {
 
 
 /// Token types for YKLang
-#[derive(Eq)]
+#[derive(Eq, Debug)]
 pub enum TokenType {
 
     LParen,         // (

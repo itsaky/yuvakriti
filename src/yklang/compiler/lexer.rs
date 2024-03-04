@@ -13,7 +13,6 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::fs::File;
 use std::io;
 use std::io::{BufReader, Bytes, Read};
 use std::iter::Peekable;
@@ -21,28 +20,31 @@ use std::iter::Peekable;
 use crate::yklang::compiler::location::{Position, Range};
 use crate::yklang::compiler::tokens::{Token, TokenType};
 
-struct YKLexer {
-    reader: Peekable<Bytes<BufReader<File>>>,
+struct YKLexer<R: Read> {
+    reader: Peekable<Bytes<BufReader<R>>>,
     current: Option<char>,
     position: Position
 }
 
-impl YKLexer {
+impl<R: Read> YKLexer<R> {
 
-    /// Creates a [YKLexer] which tokens the given file's contents.
-    pub fn from_file(file: File) -> YKLexer {
-        let iterator = BufReader::new(file).bytes().peekable();
+    /// Creates a [YKLexer] which tokenizes the given source.
+    pub fn new(source: R) -> YKLexer<R> {
+        let iterator = BufReader::new(source).bytes().peekable();
         let mut lexer = YKLexer {
             reader: iterator,
             current: None,
-            position: Position::NO_POS
+            position: Position::NO_POS,
         };
 
         // advance to the first character in the input source
         lexer.advance();
 
-        return lexer;
+        lexer
     }
+}
+
+impl <R: Read> YKLexer<R> {
 
     pub fn all(&mut self) -> Vec<Token> {
         let mut tokens: Vec<Token> = Vec::new();
@@ -110,7 +112,7 @@ impl YKLexer {
             self.position.index += 1;
 
             if result.unwrap_or('\0') == '\n' {
-                // in case we just encountered a line feed
+                // in case we encountered a line feed
                 // increment the line number and set column to 0 (start of line)
                 // index is unchanged, obviously
                 self.position.line += 1;
@@ -164,7 +166,7 @@ impl YKLexer {
         };
     }
 
-    /// Returns whether the current character represents and end-of-file (EOF)
+    /// Returns whether the current character represents an end-of-file (EOF)
     fn is_eof(&self) -> bool {
         return self.current.unwrap_or('\0') == '\0'
     }
@@ -183,5 +185,41 @@ fn u8_to_char(result: &io::Result<u8>) -> Option<char> {
     match result {
         Err(err) => panic!("Error while reading from source: {}", err),
         Ok(character) => Some(char::from(*character))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::Cursor;
+
+    use crate::yklang::compiler::lexer::YKLexer;
+    use crate::yklang::compiler::tokens::TokenType;
+
+    #[test]
+    fn test() {
+        let mut lexer = YKLexer::new(Cursor::new("()[]{},.+-;*"));
+
+        let expected_tokens = vec![
+            TokenType::LParen,
+            TokenType::RParen,
+            TokenType::LBrack,
+            TokenType::RBrack,
+            TokenType::LBrace,
+            TokenType::RBrace,
+            TokenType::Comma,
+            TokenType::Dot,
+            TokenType::Plus,
+            TokenType::Minus,
+            TokenType::Semicolon,
+            TokenType::Asterisk,
+        ];
+
+        let tokens: Vec<TokenType> = lexer.all()
+            .into_iter()
+            .map(|token| token.token_type)
+            .collect();
+
+
+        assert_eq!(expected_tokens, tokens);
     }
 }
