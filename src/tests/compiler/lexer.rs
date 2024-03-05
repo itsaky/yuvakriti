@@ -258,3 +258,86 @@ fn test_mixed_identifier_and_keyword_lexing() {
         TokenType::Identifier,
     ]);
 }
+
+#[test]
+fn test_numbers_in_identifiers() {
+    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut lexer = YKLexer::new(
+        Cursor::new("and123"),
+        diag_handler.clone()
+    );
+
+    check_token_types(&mut lexer, &vec![
+        TokenType::Identifier
+    ]);
+}
+
+#[test]
+fn test_identifiers_starting_with_number() {
+    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut lexer = YKLexer::new(
+        Cursor::new("123and"),
+        diag_handler.clone()
+    );
+
+    check_token_types(&mut lexer, &vec![
+        TokenType::Number,
+        TokenType::And,
+    ]);
+}
+
+#[test]
+fn test_underscores_in_identifiers() {
+    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut lexer = YKLexer::new(
+        Cursor::new("and_ a_nd _and"),
+        diag_handler.clone()
+    );
+
+    check_token_types(&mut lexer, &vec![
+        TokenType::Identifier,
+        TokenType::Identifier,
+        TokenType::Identifier,
+    ]);
+}
+
+#[test]
+fn test_integer_number() {
+    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut lexer = YKLexer::new(
+        Cursor::new("123"),
+        diag_handler.clone()
+    );
+
+    check_token_types(&mut lexer, &vec![
+        TokenType::Number,
+    ]);
+}
+
+#[test]
+fn test_decimal_number() {
+    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut lexer = YKLexer::new(
+        Cursor::new("123.123"),
+        diag_handler.clone()
+    );
+
+    check_token_types(&mut lexer, &vec![
+        TokenType::Number,
+    ]);
+}
+
+#[test]
+fn test_invalid_number() {
+    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut lexer = YKLexer::new(
+        Cursor::new("123.123.123"),
+        diag_handler.clone()
+    );
+
+    check_token_types(&mut lexer, &vec![
+        TokenType::Number,
+        TokenType::Dot,
+        TokenType::Number,
+    ]);
+}

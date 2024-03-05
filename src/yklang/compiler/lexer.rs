@@ -26,6 +26,8 @@ use crate::yklang::compiler::location::{Position, Range};
 use crate::yklang::compiler::messages;
 use crate::yklang::compiler::tokens::{Token, TokenType};
 
+const NULL_CHAR: char = '\0';
+
 pub struct YKLexer<'a, R: Read> {
     diagnostics: Rc<RefCell<dyn DiagnosticHandler + 'a>>,
     input: Peekable<Bytes<BufReader<R>>>,
@@ -93,7 +95,7 @@ impl <R: Read> YKLexer<'_, R> {
     /// Tokenizes the input source and returns all the recognized tokens.
     pub fn all(&mut self) -> Vec<Token> {
         let mut tokens: Vec<Token> = Vec::new();
-        while !self.is_eof() {
+        while !self.is_at_eof() {
             if let Some(token) = self.next() {
 
                 if self.ignore_comments
@@ -123,11 +125,11 @@ impl <R: Read> YKLexer<'_, R> {
             None => None,
             Some(char) => {
 
-                if self.is_identifier_start(char) {
+                if is_identifier_start(char) {
                     return self.identifier();
                 }
 
-                if self.is_digit(char) {
+                if is_digit(char) {
                     return self.number();
                 }
 
@@ -170,7 +172,7 @@ impl <R: Read> YKLexer<'_, R> {
                             // comments start with a '//' token and span the entire line
                             // we seek to the end of line and return a comment token
                             if next == '/' {
-                                while self.peek().unwrap_or('\0') != '\n' && !self.is_eof() {
+                                while self.peek().unwrap_or(NULL_CHAR) != '\n' && !self.is_at_eof() {
                                     // we ignore comments
                                     self.advance();
 
@@ -204,7 +206,7 @@ impl <R: Read> YKLexer<'_, R> {
 
     /// Scans an identifier
     fn identifier(&mut self) -> Option<Token> {
-        while self.is_identifier_part(self.peek().unwrap_or('\0')) && !self.is_eof() {
+        while is_identifier_part(self.peek().unwrap_or(NULL_CHAR)) && !self.is_at_eof() {
             self.advance();
         }
 
@@ -270,8 +272,32 @@ impl <R: Read> YKLexer<'_, R> {
         return Some(result_type)
     }
 
-    fn number(&mut self) -> Option<Token>  {
-        None
+    fn number(&mut self) -> Option<Token> {
+
+        // TODO: Add support for '_' in numbers
+        //  For example, 10000 could be written as 10_000
+        //  Constrains are simple :
+        //  - Number cannot start or end with '_'
+        //  - Number after decimal cannot start or end with '_'
+        //  - There cannot be consecutive '_'
+
+        // consume all digits
+        while is_digit(self.peek().unwrap_or(NULL_CHAR)) {
+            self.advance();
+        }
+
+        // check if the number is followed by a decimal point and more numbers
+        if self.peek().unwrap_or(NULL_CHAR) == '.'
+            && is_digit(self.peek_next().unwrap_or(NULL_CHAR)) {
+
+            // consume the decimal point and the following numbers
+            self.advance();
+            while is_digit(self.peek().unwrap_or(NULL_CHAR)) {
+                self.advance();
+            }
+        }
+
+        Some(self.token(TokenType::Number))
     }
 
     /// Returns the character at the current lexer position and advances to the next character
@@ -285,7 +311,7 @@ impl <R: Read> YKLexer<'_, R> {
         };
 
         if let Some(char) = result {
-            if self.is_identifier_part(char) {
+            if is_identifier_part(char) {
                 self.current_word.push(char);
             }
         }
@@ -302,7 +328,7 @@ impl <R: Read> YKLexer<'_, R> {
             self.position.column += 1;
             self.position.index += 1;
 
-            if result.unwrap_or('\0') == '\n' {
+            if result.unwrap_or(NULL_CHAR) == '\n' {
                 // in case we encountered a line feed
                 // increment the line number and set column to 0 (start of line)
                 // index is unchanged, obviously
@@ -336,8 +362,8 @@ impl <R: Read> YKLexer<'_, R> {
     /// Skips through the input source until a non-whitespace character or EOF is encountered.
     fn skip_whitespaces(&mut self) {
         loop {
-            let char = self.peek().unwrap_or('\0');
-            if char == '\0' || !self.is_whitespace(char) || self.is_eof() {
+            let char = self.peek().unwrap_or(NULL_CHAR);
+            if char == NULL_CHAR || !is_whitespace(char) || self.is_at_eof() {
                 return;
             }
 
@@ -347,11 +373,11 @@ impl <R: Read> YKLexer<'_, R> {
 
     /// Returns `true` if the current character is the expected character, `false` otherwise.
     fn cmatch(&mut self, expected: char) -> bool {
-        if self.is_eof() {
+        if self.is_at_eof() {
             return false;
         }
 
-        if self.peek().unwrap_or('\0') != expected {
+        if self.peek().unwrap_or(NULL_CHAR) != expected {
             return false;
         }
 
@@ -384,41 +410,9 @@ impl <R: Read> YKLexer<'_, R> {
         };
     }
 
-
-    /// Checks whether the given character represents a valid start character of an identifier
-    fn is_identifier_start(&self, char: char) -> bool {
-        return self.is_alpha(char);
-    }
-
-    /// Checks whether the given character is a valid identifier 'part'. The 'part' of an
-    /// identifier is everything after the first character in the identifier.
-    fn is_identifier_part(&self, char: char) -> bool {
-        return self.is_alpha(char) || self.is_digit(char);
-    }
-
-    /// Checks whether the given character is a valid alphabet in YuvaKriti lang
-    fn is_alpha(&self, char: char) -> bool {
-        return (char >= 'a' && char <= 'z') ||
-            (char >= 'A' && char <= 'Z') ||
-            char == '_';
-    }
-
-    /// Checks whether the given character is a valid digit in YuvaKriti lang
-    fn is_digit(&self, char: char) -> bool {
-        return char >= '0' && char <= '9';
-    }
-
-    /// Returns whether the given character is a whitespace
-    fn is_whitespace(&self, c: char) -> bool {
-        return c == ' '
-        || c == '\t'
-        || c == '\r'
-        || c == '\n'
-    }
-
     /// Returns whether the current character represents an end-of-file (EOF)
-    fn is_eof(&self) -> bool {
-        return self.peek().unwrap_or('\0') == '\0'
+    fn is_at_eof(&self) -> bool {
+        return self.peek().unwrap_or(NULL_CHAR) == NULL_CHAR
     }
 }
 
@@ -431,4 +425,35 @@ fn u8_to_char(result: &io::Result<u8>) -> Option<char> {
         },
         Ok(character) => Some(char::from(*character))
     }
+}
+
+/// Checks whether the given character represents a valid start character of an identifier
+fn is_identifier_start(char: char) -> bool {
+    return is_alpha(char);
+}
+
+/// Checks whether the given character is a valid identifier 'part'. The 'part' of an
+/// identifier is everything after the first character in the identifier.
+fn is_identifier_part(char: char) -> bool {
+    return is_alpha(char) || is_digit(char);
+}
+
+/// Checks whether the given character is a valid alphabet in YuvaKriti lang
+fn is_alpha(char: char) -> bool {
+    return (char >= 'a' && char <= 'z') ||
+        (char >= 'A' && char <= 'Z') ||
+        char == '_';
+}
+
+/// Checks whether the given character is a valid digit in YuvaKriti lang
+fn is_digit(char: char) -> bool {
+    return char >= '0' && char <= '9';
+}
+
+/// Returns whether the given character is a whitespace
+fn is_whitespace(c: char) -> bool {
+    return c == ' '
+        || c == '\t'
+        || c == '\r'
+        || c == '\n'
 }
