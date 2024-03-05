@@ -13,9 +13,10 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::cell::RefCell;
 use std::fmt::Pointer;
 use std::io::Cursor;
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
 
 use crate::yklang::compiler::diagnostics;
 use crate::yklang::compiler::lexer::YKLexer;
@@ -23,7 +24,7 @@ use crate::yklang::compiler::tokens::TokenType;
 
 #[test]
 fn test_simple_operator_lexing() {
-    let diag_handler = Arc::new(Mutex::new(diagnostics::collecting_handler()));
+    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
     let mut lexer = YKLexer::new(
         Cursor::new("()[]{},.+-;*"),
         diag_handler.clone()
@@ -55,7 +56,7 @@ fn test_simple_operator_lexing() {
 
 #[test]
 fn test_whitespaces_in_input_must_be_ignored() {
-    let diag_handler = Arc::new(Mutex::new(diagnostics::collecting_handler()));
+    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
     let mut lexer = YKLexer::new(
         Cursor::new("( )[ ]{ }\t,\r.\n+-;*"),
         diag_handler.clone()
@@ -83,4 +84,45 @@ fn test_whitespaces_in_input_must_be_ignored() {
 
 
     assert_eq!(expected_tokens, tokens);
+}
+
+#[test]
+fn test_lexer_reports_unrecognized_tokens() {
+    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut lexer = YKLexer::new(
+        Cursor::new("( )[ ]{ }\t,\r.\n�+-;*"),
+        diag_handler.clone()
+    );
+
+    let expected_tokens = vec![
+        TokenType::LParen,
+        TokenType::RParen,
+        TokenType::LBrack,
+        TokenType::RBrack,
+        TokenType::LBrace,
+        TokenType::RBrace,
+        TokenType::Comma,
+        TokenType::Dot,
+        TokenType::Plus,
+        TokenType::Minus,
+        TokenType::Semicolon,
+        TokenType::Asterisk,
+    ];
+
+    let tokens: Vec<TokenType> = lexer.all()
+        .into_iter()
+        .map(|token| token.token_type)
+        .collect();
+
+    assert_eq!(expected_tokens, tokens);
+
+    let messages: Vec<String> = diag_handler
+        .borrow()
+        .diagnostics
+        .iter()
+        .map(|diag| diag.message.clone())
+        .collect();
+
+    // should contain 3 unknown tokens (of 3 bytes) because of the unicode characters
+    assert_eq!(messages, vec!["Unknown token", "Unknown token", "Unknown token"])
 }
