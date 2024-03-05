@@ -13,8 +13,4 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub struct CompilerMessages {}
-
-impl CompilerMessages {
-    pub const LEX_UNKNOWN_TOKEN: String = String::from("Unknown token");
-}
+pub(crate) const LEX_UNKNOWN_TOKEN: &str = "Unknown token";
