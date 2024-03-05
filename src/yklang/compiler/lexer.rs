@@ -18,6 +18,7 @@ use std::io;
 use std::io::{BufReader, Bytes, Read};
 use std::iter::Peekable;
 use std::rc::Rc;
+
 use log::error;
 
 use crate::yklang::compiler::diagnostics::{Diagnostic, DiagnosticHandler, DiagnosticKind};
@@ -29,7 +30,8 @@ pub struct YKLexer<'a, R: Read> {
     input: Peekable<Bytes<BufReader<R>>>,
     current: Option<char>,
     token_start: Position,
-    position: Position
+    position: Position,
+    pub ignore_comments: bool
 }
 
 impl <R: Read> YKLexer<'_, R> {
@@ -58,7 +60,10 @@ impl <R: Read> YKLexer<'_, R> {
 impl<R: Read> YKLexer<'_, R> {
 
     /// Creates a [YKLexer] which tokenizes the given source.
-    pub fn new<'a>(source: R, diagnostics_handler: Rc<RefCell<dyn DiagnosticHandler + 'a>>) -> YKLexer<'a, R> {
+    pub fn new<'a>(
+        source: R,
+        diagnostics_handler: Rc<RefCell<dyn DiagnosticHandler + 'a>>,
+    ) -> YKLexer<'a, R> {
         let iterator = BufReader::new(source).bytes().peekable();
         let mut lexer = YKLexer {
             diagnostics: diagnostics_handler,
@@ -66,6 +71,7 @@ impl<R: Read> YKLexer<'_, R> {
             current: None,
             token_start: Position::NO_POS,
             position: Position::NO_POS,
+            ignore_comments: true,
         };
 
         // advance to the first character in the input source
@@ -81,6 +87,13 @@ impl <R: Read> YKLexer<'_, R> {
         let mut tokens: Vec<Token> = Vec::new();
         while !self.is_eof() {
             if let Some(token) = self.next() {
+
+                if self.ignore_comments
+                    && token.token_type == TokenType::Comment {
+                    // ignore comments
+                    continue
+                }
+
                 tokens.push(token)
             }
         }
@@ -91,7 +104,7 @@ impl <R: Read> YKLexer<'_, R> {
         self.token_start = self.position.clone();
         let result = match self.advance() {
             None => None,
-            Some(char) => match char {
+            Some(next) => match next {
                 '(' => Some(self.token(TokenType::LParen)),
                 ')' => Some(self.token(TokenType::RParen)),
                 '[' => Some(self.token(TokenType::LBrack)),
@@ -105,8 +118,43 @@ impl <R: Read> YKLexer<'_, R> {
                 ';' => Some(self.token(TokenType::Semicolon)),
                 '*' => Some(self.token(TokenType::Asterisk)),
 
+                '!' => match self.cmatch('=') {
+                    true => Some(self.token(TokenType::BangEq)),
+                    false => Some(self.token(TokenType::Bang))
+                },
+
+                '=' => match self.cmatch('=') {
+                    true => Some(self.token(TokenType::EqEq)),
+                    false => Some(self.token(TokenType::Eq))
+                },
+
+                '>' => match self.cmatch('=') {
+                    true => Some(self.token(TokenType::GtEq)),
+                    false => Some(self.token(TokenType::Gt))
+                },
+
+                '<' => match self.cmatch('=') {
+                    true => Some(self.token(TokenType::LtEq)),
+                    false => Some(self.token(TokenType::Lt))
+                },
+
+                '/' => {
+                    if let Some(next) = self.peek() {
+                        if next == '/' {
+                            while self.peek().unwrap_or('\0') != '\n' && !self.is_eof() {
+                                // we ignore comments
+                                self.advance();
+                            }
+
+                            return Some(self.token(TokenType::Comment))
+                        }
+                    }
+
+                    return Some(self.token(TokenType::Slash));
+                }
+
                 _ => {
-                    if self.is_whitespace(char) {
+                    if self.is_whitespace(next) {
                         // ignore whitespaces
                         return None
                     }
@@ -123,7 +171,7 @@ impl <R: Read> YKLexer<'_, R> {
     /// Returns the character at the current lexer position and advances to the next character
     fn advance(&mut self) -> Option<char> {
         let next_char = self.input.next();
-        let result = self.current;
+        let result = self.peek();
 
         self.current = match next_char {
             None => None,
@@ -154,6 +202,10 @@ impl <R: Read> YKLexer<'_, R> {
         return result;
     }
 
+    fn peek(&self) -> Option<char> {
+        return self.current;
+    }
+
     /// Single-character lookahead
     fn peek_next(&mut self) -> Option<char> {
         let result = self.input.peek();
@@ -163,15 +215,22 @@ impl <R: Read> YKLexer<'_, R> {
         }
     }
 
-    /// Checks if the current character is the expected value. Returns `true` if it is.
-    fn cmatch(&self, expected: char) -> bool {
+    /// Returns `true` if the current character is the expected character, `false` otherwise.
+    fn cmatch(&mut self, expected: char) -> bool {
         if self.is_eof() {
             return false;
         }
 
-        return self.current.unwrap_or('\0') == expected;
+        if self.peek().unwrap_or('\0') != expected {
+            return false;
+        }
+
+        self.advance();
+
+        return true;
     }
 
+    /// Create a token without text
     fn token(
         &self,
         token_type: TokenType
@@ -179,7 +238,7 @@ impl <R: Read> YKLexer<'_, R> {
         return self.text_token(token_type, None)
     }
 
-    /// Create a token
+    /// Create a token with the given token text (content)
     fn text_token(
         &self,
         token_type: TokenType,
@@ -197,7 +256,7 @@ impl <R: Read> YKLexer<'_, R> {
 
     /// Returns whether the current character represents an end-of-file (EOF)
     fn is_eof(&self) -> bool {
-        return self.current.unwrap_or('\0') == '\0'
+        return self.peek().unwrap_or('\0') == '\0'
     }
 
     /// Returns whether the given character is a whitespace

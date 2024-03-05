@@ -26,7 +26,7 @@ use crate::yklang::compiler::tokens::TokenType;
 fn test_simple_operator_lexing() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
     let mut lexer = YKLexer::new(
-        Cursor::new("()[]{},.+-;*"),
+        Cursor::new("()[]{},.+-;*!<>="),
         diag_handler.clone()
     );
 
@@ -43,6 +43,46 @@ fn test_simple_operator_lexing() {
         TokenType::Minus,
         TokenType::Semicolon,
         TokenType::Asterisk,
+        TokenType::Bang,
+        TokenType::Lt,
+        TokenType::Gt,
+        TokenType::Eq,
+    ];
+
+    let tokens: Vec<TokenType> = lexer.all()
+        .into_iter()
+        .map(|token| token.token_type)
+        .collect();
+
+
+    assert_eq!(expected_tokens, tokens);
+}
+
+#[test]
+fn test_multiline_operator_lexing() {
+    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut lexer = YKLexer::new(
+        Cursor::new("()\n[]\n{}\n,\n.\n+\n-\n;\n*\n!\n<\n>\n=\n"),
+        diag_handler.clone()
+    );
+
+    let expected_tokens = vec![
+        TokenType::LParen,
+        TokenType::RParen,
+        TokenType::LBrack,
+        TokenType::RBrack,
+        TokenType::LBrace,
+        TokenType::RBrace,
+        TokenType::Comma,
+        TokenType::Dot,
+        TokenType::Plus,
+        TokenType::Minus,
+        TokenType::Semicolon,
+        TokenType::Asterisk,
+        TokenType::Bang,
+        TokenType::Lt,
+        TokenType::Gt,
+        TokenType::Eq,
     ];
 
     let tokens: Vec<TokenType> = lexer.all()
@@ -75,6 +115,78 @@ fn test_whitespaces_in_input_must_be_ignored() {
         TokenType::Minus,
         TokenType::Semicolon,
         TokenType::Asterisk,
+    ];
+
+    let tokens: Vec<TokenType> = lexer.all()
+        .into_iter()
+        .map(|token| token.token_type)
+        .collect();
+
+
+    assert_eq!(expected_tokens, tokens);
+}
+
+#[test]
+fn test_multi_character_operator_lexing() {
+    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut lexer = YKLexer::new(
+        Cursor::new("!===<=>="),
+        diag_handler.clone()
+    );
+
+    let expected_tokens = vec![
+        TokenType::BangEq,
+        TokenType::EqEq,
+        TokenType::LtEq,
+        TokenType::GtEq,
+    ];
+
+    let tokens: Vec<TokenType> = lexer.all()
+        .into_iter()
+        .map(|token| token.token_type)
+        .collect();
+
+
+    assert_eq!(expected_tokens, tokens);
+}
+
+#[test]
+fn test_comments_are_ignored_by_default() {
+    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut lexer = YKLexer::new(
+        Cursor::new("!=\n// something not equal to \n=="),
+        diag_handler.clone()
+    );
+
+    let expected_tokens = vec![
+        TokenType::BangEq,
+        TokenType::EqEq,
+    ];
+
+    let tokens: Vec<TokenType> = lexer.all()
+        .into_iter()
+        .map(|token| token.token_type)
+        .collect();
+
+
+    assert_eq!(expected_tokens, tokens);
+}
+
+#[test]
+fn test_comments_are_tokenized_if_enabled() {
+    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut lexer = YKLexer::new(
+        Cursor::new("!=\n// something not equal to \n=="),
+        diag_handler.clone()
+    );
+
+    // enable comment tokenization
+    lexer.ignore_comments = false;
+
+    let expected_tokens = vec![
+        TokenType::BangEq,
+        TokenType::Comment,
+        TokenType::EqEq,
     ];
 
     let tokens: Vec<TokenType> = lexer.all()

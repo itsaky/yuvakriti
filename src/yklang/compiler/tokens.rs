@@ -85,6 +85,8 @@ pub enum TokenType {
 
     True,           // true
     False,          // false
+
+    Comment,        // Anything after a '//'
 }
 
 impl PartialEq<Self> for TokenType {
