@@ -43,7 +43,7 @@ pub fn no_op_handler() -> &'static NoOpDiagnosticHandler {
 
 #[derive(Debug)]
 pub struct CollectingDiagnosticHandler {
-    diagnostics: Vec<Diagnostic>
+    pub diagnostics: Vec<Diagnostic>
 }
 
 impl CollectingDiagnosticHandler {
@@ -64,14 +64,14 @@ pub fn collecting_handler() -> CollectingDiagnosticHandler {
     return CollectingDiagnosticHandler::new();
 }
 
-#[derive(Eq, Debug)]
+#[derive(Eq, Debug, Clone)]
 pub struct Diagnostic {
     pub range: Range,
     pub message: String,
     pub kind: DiagnosticKind
 }
 
-#[derive(Eq, Debug)]
+#[derive(Eq, Debug, Clone)]
 pub enum DiagnosticKind {
     Error,
     Warning,

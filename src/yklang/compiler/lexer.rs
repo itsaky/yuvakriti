@@ -18,6 +18,7 @@ use std::io;
 use std::io::{BufReader, Bytes, Read};
 use std::iter::Peekable;
 use std::rc::Rc;
+use log::error;
 
 use crate::yklang::compiler::diagnostics::{Diagnostic, DiagnosticHandler, DiagnosticKind};
 use crate::yklang::compiler::location::{Position, Range};
@@ -211,7 +212,10 @@ impl <R: Read> YKLexer<'_, R> {
 /// Converts the result from the read operation to a character
 fn u8_to_char(result: &io::Result<u8>) -> Option<char> {
     match result {
-        Err(err) => panic!("Error while reading from source: {}", err),
+        Err(err) => {
+            error!("Failed to convert u8 to char: {:?}", err);
+            None
+        },
         Ok(character) => Some(char::from(*character))
     }
 }
