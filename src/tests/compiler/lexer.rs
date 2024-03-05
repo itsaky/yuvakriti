@@ -20,6 +20,7 @@ use std::rc::Rc;
 
 use crate::yklang::compiler::diagnostics;
 use crate::yklang::compiler::lexer::YKLexer;
+use crate::yklang::compiler::messages::CompilerMessages;
 use crate::yklang::compiler::tokens::TokenType;
 
 #[test]
@@ -236,5 +237,9 @@ fn test_lexer_reports_unrecognized_tokens() {
         .collect();
 
     // should contain 3 unknown tokens (of 3 bytes) because of the unicode characters
-    assert_eq!(messages, vec!["Unknown token", "Unknown token", "Unknown token"])
+    assert_eq!(messages, vec![
+        CompilerMessages::LEX_UNKNOWN_TOKEN,
+        CompilerMessages::LEX_UNKNOWN_TOKEN,
+        CompilerMessages::LEX_UNKNOWN_TOKEN
+    ])
 }

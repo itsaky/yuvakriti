@@ -23,6 +23,7 @@ use log::error;
 
 use crate::yklang::compiler::diagnostics::{Diagnostic, DiagnosticHandler, DiagnosticKind};
 use crate::yklang::compiler::location::{Position, Range};
+use crate::yklang::compiler::messages::CompilerMessages;
 use crate::yklang::compiler::tokens::{Token, TokenType};
 
 pub struct YKLexer<'a, R: Read> {
@@ -140,6 +141,9 @@ impl <R: Read> YKLexer<'_, R> {
 
                 '/' => {
                     if let Some(next) = self.peek() {
+
+                        // comments start with a '//' token and span the entire line
+                        // we seek to the end of line and finally return a comment token
                         if next == '/' {
                             while self.peek().unwrap_or('\0') != '\n' && !self.is_eof() {
                                 // we ignore comments
@@ -159,7 +163,7 @@ impl <R: Read> YKLexer<'_, R> {
                         return None
                     }
 
-                    self.report(DiagnosticKind::Error, String::from("Unknown token"));
+                    self.report(DiagnosticKind::Error, CompilerMessages::LEX_UNKNOWN_TOKEN);
                     return None
                 }
             }
