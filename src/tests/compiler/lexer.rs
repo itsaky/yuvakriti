@@ -14,7 +14,6 @@
  */
 
 use std::cell::RefCell;
-use std::fmt::Pointer;
 use std::io::{Cursor, Read};
 use std::rc::Rc;
 
@@ -230,7 +229,7 @@ fn test_simple_identifier_lexing() {
 fn test_simple_keyword_lexing() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
     let mut lexer = YKLexer::new(
-        Cursor::new("and or if else while nil return true fun for false"),
+        Cursor::new("and or if else while nil return true fun for false var"),
         diag_handler.clone()
     );
 
@@ -246,6 +245,7 @@ fn test_simple_keyword_lexing() {
         TokenType::Fun,
         TokenType::For,
         TokenType::False,
+        TokenType::Var,
     ]);
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());

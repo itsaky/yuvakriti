@@ -77,7 +77,8 @@ pub enum TokenType {
     For,            // for
     While,          // while
     Nil,            // nil
-    Return,         // Return
+    Return,         // return
+    Var,         // var
 
     Identifier,
     String,

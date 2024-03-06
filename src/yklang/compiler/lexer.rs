@@ -228,6 +228,7 @@ impl <R: Read> YKLexer<'_, R> {
                 'n' => self.match_word_rest(1, "il", TokenType::Nil),
                 'r' => self.match_word_rest(1, "eturn", TokenType::Return),
                 't' => self.match_word_rest(1, "rue", TokenType::True),
+                'v' => self.match_word_rest(1, "ar", TokenType::Var),
                 'f' => {
                     match self.current_word.get(1) {
                         None => None,
@@ -340,7 +341,7 @@ impl <R: Read> YKLexer<'_, R> {
     /// Scans the input source from the current position of the lexer and checks if a valid
     /// escape sequence is recognized. If no valid escape sequence is recognized, reports the
     /// appropriate error to the diagnostics handler and returns an [Err].
-    fn expect_esc_seq(&mut self) -> Result<(), Err(())> {
+    fn expect_esc_seq(&mut self) -> Result<(), ()> {
         let mut char = self.advance().unwrap_or(NULL_CHAR);
 
         if self.is_at_eof() || char == NULL_CHAR || char != '\\' {
