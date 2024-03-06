@@ -47,7 +47,7 @@ fn check_diagnostic_messages(diag_handler: &CollectingDiagnosticHandler, expecte
 fn test_simple_operator_lexing() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
     let mut lexer = YKLexer::new(
-        Cursor::new("()[]{},.+-;*!<> ="),
+        Cursor::new("()[]{},.+-:;*!<> ="),
         diag_handler.clone()
     );
 
@@ -62,6 +62,7 @@ fn test_simple_operator_lexing() {
         TokenType::Dot,
         TokenType::Plus,
         TokenType::Minus,
+        TokenType::Colon,
         TokenType::Semicolon,
         TokenType::Asterisk,
         TokenType::Bang,

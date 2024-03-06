@@ -144,6 +144,7 @@ impl <R: Read> YKLexer<'_, R> {
                     '.' => Some(self.token(TokenType::Dot)),
                     '+' => Some(self.token(TokenType::Plus)),
                     '-' => Some(self.token(TokenType::Minus)),
+                    ':' => Some(self.token(TokenType::Colon)),
                     ';' => Some(self.token(TokenType::Semicolon)),
                     '*' => Some(self.token(TokenType::Asterisk)),
 
