@@ -275,6 +275,7 @@ impl <R: Read> YKLexer<'_, R> {
         return Some(result_type)
     }
 
+    /// Scans a number literal in the input source
     fn number(&mut self) -> Option<Token> {
 
         // TODO: Add support for '_' in numbers
@@ -303,6 +304,7 @@ impl <R: Read> YKLexer<'_, R> {
         Some(self.token(TokenType::Number))
     }
 
+    /// Scans a string literal in the input source
     fn string(&mut self) -> Option<Token> {
         loop {
             let mut peek = self.peek().unwrap_or(NULL_CHAR);
@@ -319,9 +321,9 @@ impl <R: Read> YKLexer<'_, R> {
                 },
                 '\\' => {
 
-                    // this consumes the whole escape sequence
+                    // this consumes the whole escape sequence,
                     // so we need to continue the loop, instead of calling advance() below
-                    self.expect_esc_seq();
+                    let _ = self.expect_esc_seq();
                     continue
                 },
                 _ => {}
@@ -335,12 +337,15 @@ impl <R: Read> YKLexer<'_, R> {
         return Some(self.token(TokenType::String));
     }
 
-    fn expect_esc_seq(&mut self) {
+    /// Scans the input source from the current position of the lexer and checks if a valid
+    /// escape sequence is recognized. If no valid escape sequence is recognized, reports the
+    /// appropriate error to the diagnostics handler and returns an [Err].
+    fn expect_esc_seq(&mut self) -> Result<(), Err(())> {
         let mut char = self.advance().unwrap_or(NULL_CHAR);
 
         if self.is_at_eof() || char == NULL_CHAR || char != '\\' {
             self.report(DiagnosticKind::Error, messages::LEX_STRING_EXPECTED_ESC_SEQ);
-            return;
+            return Err(());
         }
 
         char = self.advance().unwrap_or(NULL_CHAR);
@@ -354,15 +359,17 @@ impl <R: Read> YKLexer<'_, R> {
                 for _ in 0..4 {
                     if !is_hex_digit(self.advance().unwrap_or(NULL_CHAR)) {
                         self.report(DiagnosticKind::Error, messages::LEX_STRING_ILLEGAL_UNICODE_ESC);
-                        return;
+                        return Err(());
                     }
                 }
             }
             _ => {
                 self.report(DiagnosticKind::Error, messages::LEX_STRING_UNRECOGNIZED_ESC_SEQ);
-                return;
+                return Err(());
             }
         }
+
+        Ok(())
     }
 
     /// Returns the character at the current lexer position and advances to the next character
@@ -405,6 +412,7 @@ impl <R: Read> YKLexer<'_, R> {
         return result;
     }
 
+    /// Peeks at the next character
     fn peek(&self) -> Option<char> {
         return self.current_char;
     }
