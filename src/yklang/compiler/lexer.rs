@@ -147,6 +147,8 @@ impl <R: Read> YKLexer<'_, R> {
                     ';' => Some(self.token(TokenType::Semicolon)),
                     '*' => Some(self.token(TokenType::Asterisk)),
 
+                    '"' => self.string(),
+
                     '!' => match self.cmatch('=') {
                         true => Some(self.token(TokenType::BangEq)),
                         false => Some(self.token(TokenType::Bang))
@@ -180,7 +182,8 @@ impl <R: Read> YKLexer<'_, R> {
                                     //  characters in a comment. This may help save some memory
                                     //  if the comment is longer than WORD_VECTOR_INITIAL_CAPACITY
                                     //
-                                    //  Currently, we use the following condition to decide
+                                    //  Currently, we discard words in a comment if the lexer
+                                    //  is configured to ignore comments
                                     if self.ignore_comments {
                                        self.reset_word();
                                     }
@@ -298,6 +301,68 @@ impl <R: Read> YKLexer<'_, R> {
         }
 
         Some(self.token(TokenType::Number))
+    }
+
+    fn string(&mut self) -> Option<Token> {
+        loop {
+            let mut peek = self.peek().unwrap_or(NULL_CHAR);
+            if self.is_at_eof() || peek == NULL_CHAR {
+                self.report(DiagnosticKind::Error, messages::LEX_UNEXPECTED_EOF);
+                return None
+            }
+
+            match peek {
+                '"' => break, // reached end of string
+                '\n' => {
+                    self.report(DiagnosticKind::Error, messages::LEX_STRING_MULTILINE_ERROR);
+                    return None
+                },
+                '\\' => {
+
+                    // this consumes the whole escape sequence
+                    // so we need to continue the loop, instead of calling advance() below
+                    self.expect_esc_seq();
+                    continue
+                },
+                _ => {}
+            }
+
+            self.advance();
+        }
+
+        self.advance();
+
+        return Some(self.token(TokenType::String));
+    }
+
+    fn expect_esc_seq(&mut self) {
+        let mut char = self.advance().unwrap_or(NULL_CHAR);
+
+        if self.is_at_eof() || char == NULL_CHAR || char != '\\' {
+            self.report(DiagnosticKind::Error, messages::LEX_STRING_EXPECTED_ESC_SEQ);
+            return;
+        }
+
+        char = self.advance().unwrap_or(NULL_CHAR);
+        match char {
+            'b' | 's'  | 't' | 'n' | 'f' | 'r' |
+            '"' | '\\' | '\'' => {}
+            'u' => {
+                // a unicode escape
+                // we have consumer '\u'
+                // check for the remaining 4 unicode HEX characters
+                for _ in 0..4 {
+                    if !is_hex_digit(self.advance().unwrap_or(NULL_CHAR)) {
+                        self.report(DiagnosticKind::Error, messages::LEX_STRING_ILLEGAL_UNICODE_ESC);
+                        return;
+                    }
+                }
+            }
+            _ => {
+                self.report(DiagnosticKind::Error, messages::LEX_STRING_UNRECOGNIZED_ESC_SEQ);
+                return;
+            }
+        }
     }
 
     /// Returns the character at the current lexer position and advances to the next character
@@ -448,6 +513,13 @@ fn is_alpha(char: char) -> bool {
 /// Checks whether the given character is a valid digit in YuvaKriti lang
 fn is_digit(char: char) -> bool {
     return char >= '0' && char <= '9';
+}
+
+/// Checks whether the given character is a valid hex digit
+fn is_hex_digit(char: char) -> bool {
+    return is_digit(char) ||
+        (char >= 'a' && char <= 'f') ||
+        (char >= 'A' && char <= 'F');
 }
 
 /// Returns whether the given character is a whitespace

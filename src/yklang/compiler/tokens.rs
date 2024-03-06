@@ -27,7 +27,7 @@ pub struct Token {
     pub content: Option<String>,
 
     /// The range of the token
-    /// The end position of token is exclusive
+    /// The column and index in end position of token is exclusive
     pub range: Range
 }
 

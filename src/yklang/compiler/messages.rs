@@ -13,4 +13,9 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub(crate) const LEX_UNKNOWN_TOKEN: &str = "Unknown token";
+pub(crate) const LEX_UNKNOWN_TOKEN: &str = "unknown token";
+pub(crate) const LEX_UNEXPECTED_EOF: &str = "unexpected EOF";
+pub(crate) const LEX_STRING_MULTILINE_ERROR: &str = "multiline strings are not supported";
+pub(crate) const LEX_STRING_EXPECTED_ESC_SEQ: &str = "expected an escape sequence";
+pub(crate) const LEX_STRING_UNRECOGNIZED_ESC_SEQ: &str = "unrecognized escape sequence";
+pub(crate) const LEX_STRING_ILLEGAL_UNICODE_ESC: &str = "illegal unicode escape";
