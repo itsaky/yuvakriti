@@ -14,3 +14,4 @@
  */
 
 mod lexer;
+mod parser;

@@ -16,25 +16,23 @@
 use crate::yklang::compiler::location::Range;
 
 #[derive(Eq, Debug)]
-pub struct Token {
+pub(crate) struct Token {
 
     /// See [TokenType] for a list of valid tokens.
-    pub token_type: TokenType,
+    pub(crate) token_type: TokenType,
 
     /// The substring from the source code represented by this token
-    /// This is [None] for most cases except for Identifier, String, Number and other similar
-    /// token types.
-    pub content: Option<String>,
+    pub(crate) text: String,
 
     /// The range of the token
     /// The column and index in end position of token is exclusive
-    pub range: Range
+    pub(crate) range: Range
 }
 
 impl PartialEq<Self> for Token {
     fn eq(&self, other: &Self) -> bool {
         return self.token_type == other.token_type
-            && self.content == other.content
+            && self.text == other.text
             && self.range == other.range
     }
 }
@@ -42,7 +40,7 @@ impl PartialEq<Self> for Token {
 
 /// Token types for YKLang
 #[derive(Eq, Debug)]
-pub enum TokenType {
+pub(crate) enum TokenType {
 
     LParen,         // (
     RParen,         // )
@@ -79,7 +77,10 @@ pub enum TokenType {
     While,          // while
     Nil,            // nil
     Return,         // return
-    Var,         // var
+    Var,            // var
+    Super,          // super
+    This,           // this
+    Print,           // print
 
     Identifier,
     String,

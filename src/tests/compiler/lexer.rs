@@ -230,7 +230,7 @@ fn test_simple_identifier_lexing() {
 fn test_simple_keyword_lexing() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
     let mut lexer = YKLexer::new(
-        Cursor::new("and or if else while nil return true fun for false var"),
+        Cursor::new("and or if else while nil return true fun for false var this super print"),
         diag_handler.clone()
     );
 
@@ -247,6 +247,9 @@ fn test_simple_keyword_lexing() {
         TokenType::For,
         TokenType::False,
         TokenType::Var,
+        TokenType::This,
+        TokenType::Super,
+        TokenType::Print,
     ]);
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());

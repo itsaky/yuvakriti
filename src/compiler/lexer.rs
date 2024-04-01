@@ -2,7 +2,7 @@
  * Copyright (c) 2024 The YuvaKriti Lang Authors.
  *
  * This program is free software: you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
+ *  terms of the GNU General public License as published by the Free Software
  *  Foundation, version 3.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY
@@ -28,14 +28,14 @@ use crate::yklang::compiler::tokens::{Token, TokenType};
 
 const NULL_CHAR: char = '\0';
 
-pub struct YKLexer<'a, R: Read> {
+pub(crate) struct YKLexer<'a, R: Read> {
     diagnostics: Rc<RefCell<dyn DiagnosticHandler + 'a>>,
     input: Peekable<Bytes<BufReader<R>>>,
     current_char: Option<char>,
-    current_word: Vec<char>,
+    token_text: Vec<char>,
     token_start: Position,
     position: Position,
-    pub ignore_comments: bool
+    pub(crate) ignore_comments: bool
 }
 
 impl <R: Read> YKLexer<'_, R> {
@@ -65,10 +65,10 @@ impl<R: Read> YKLexer<'_, R> {
 
     /// Initial capacity of the vector in the lexer which is used to store the
     /// characters of the current word
-    const WORD_VECTOR_INITIAL_CAPACITY: usize = 64;
+    const VECTOR_TKN_TXT_INITIAL_CAPACITY: usize = 64;
 
     /// Creates a [YKLexer] which tokenizes the given source.
-    pub fn new<'a>(
+    pub(crate) fn new<'a>(
         source: R,
         diagnostics_handler: Rc<RefCell<dyn DiagnosticHandler + 'a>>,
     ) -> YKLexer<'a, R> {
@@ -77,7 +77,7 @@ impl<R: Read> YKLexer<'_, R> {
             diagnostics: diagnostics_handler,
             input: iterator,
             current_char: None,
-            current_word: Vec::with_capacity(Self::WORD_VECTOR_INITIAL_CAPACITY),
+            token_text: Vec::with_capacity(Self::VECTOR_TKN_TXT_INITIAL_CAPACITY),
             token_start: Position::NO_POS,
             position: Position::NO_POS,
             ignore_comments: true,
@@ -93,7 +93,7 @@ impl<R: Read> YKLexer<'_, R> {
 impl <R: Read> YKLexer<'_, R> {
 
     /// Tokenizes the input source and returns all the recognized tokens.
-    pub fn all(&mut self) -> Vec<Token> {
+    pub(crate) fn all(&mut self) -> Vec<Token> {
         let mut tokens: Vec<Token> = Vec::new();
         while !self.is_at_eof() {
             if let Some(token) = self.next() {
@@ -112,7 +112,7 @@ impl <R: Read> YKLexer<'_, R> {
 
     /// Advance to the next token in the input source. This returns [Some] if a valid token
     /// is recognized, otherwise return [None].
-    pub fn next(&mut self) -> Option<Token> {
+    pub(crate) fn next(&mut self) -> Option<Token> {
 
         // Skip all whitespaces
         self.skip_whitespaces();
@@ -178,16 +178,6 @@ impl <R: Read> YKLexer<'_, R> {
                                 while self.peek().unwrap_or(NULL_CHAR) != '\n' && !self.is_at_eof() {
                                     // we ignore comments
                                     self.advance();
-
-                                    // TODO : Decide if the word vector should discard all the
-                                    //  characters in a comment. This may help save some memory
-                                    //  if the comment is longer than WORD_VECTOR_INITIAL_CAPACITY
-                                    //
-                                    //  Currently, we discard words in a comment if the lexer
-                                    //  is configured to ignore comments
-                                    if self.ignore_comments {
-                                       self.reset_word();
-                                    }
                                 }
 
                                 return Some(self.token(TokenType::Comment))
@@ -219,28 +209,35 @@ impl <R: Read> YKLexer<'_, R> {
 
     /// Returns the type of identifier at the current lexer position
     fn identifier_type(&self) -> TokenType {
-        let match_result = match self.current_word.get(0) {
+        let match_result = match self.token_text.get(0) {
             Some(c1) => match c1 {
                 'a' => self.match_word_rest(1, "nd", TokenType::And),
-                'o' => self.match_word_rest(1, "r", TokenType::Or),
-                'i' => self.match_word_rest(1, "f", TokenType::If),
                 'e' => self.match_word_rest(1, "lse", TokenType::Else),
-                'w' => self.match_word_rest(1, "hile", TokenType::While),
-                'n' => self.match_word_rest(1, "il", TokenType::Nil),
-                'r' => self.match_word_rest(1, "eturn", TokenType::Return),
-                't' => self.match_word_rest(1, "rue", TokenType::True),
-                'v' => self.match_word_rest(1, "ar", TokenType::Var),
-                'f' => {
-                    match self.current_word.get(1) {
-                        None => None,
-                        Some(c2) => match c2 {
-                            'u' => self.match_word_rest(2, "n", TokenType::Fun),
-                            'o' => self.match_word_rest(2, "r", TokenType::For),
-                            'a' => self.match_word_rest(2, "lse", TokenType::False),
-                            _ => None
-                        }
+                'f' => match self.token_text.get(1) {
+                    None => None,
+                    Some(c2) => match c2 {
+                        'u' => self.match_word_rest(2, "n", TokenType::Fun),
+                        'o' => self.match_word_rest(2, "r", TokenType::For),
+                        'a' => self.match_word_rest(2, "lse", TokenType::False),
+                        _ => None
                     }
-                }
+                },
+                'i' => self.match_word_rest(1, "f", TokenType::If),
+                'n' => self.match_word_rest(1, "il", TokenType::Nil),
+                'o' => self.match_word_rest(1, "r", TokenType::Or),
+                'p' => self.match_word_rest(1, "rint", TokenType::Print),
+                'r' => self.match_word_rest(1, "eturn", TokenType::Return),
+                's' => self.match_word_rest(1, "uper", TokenType::Super),
+                't' => match self.token_text.get(1) {
+                    None => None,
+                    Some(c2) => match c2 {
+                        'r' => self.match_word_rest(2, "ue", TokenType::True),
+                        'h' => self.match_word_rest(2, "is", TokenType::This),
+                        _ => None
+                    }
+                },
+                'v' => self.match_word_rest(1, "ar", TokenType::Var),
+                'w' => self.match_word_rest(1, "hile", TokenType::While),
                 _ => None,
             }
             None => None
@@ -257,17 +254,17 @@ impl <R: Read> YKLexer<'_, R> {
     ///
     /// The behavior is similar to how a 'trie' works.
     fn match_word_rest(&self, start: usize, rest: &str, result_type: TokenType) -> Option<TokenType> {
-        if start < 0 || start >= self.current_word.len() {
+        if start < 0 || start >= self.token_text.len() {
             return None
         }
 
-        if self.current_word.len() > rest.len() + start {
+        if self.token_text.len() > rest.len() + start {
             return None
         }
 
         let bytes = rest.as_bytes();
-        for i in start..self.current_word.len() {
-            if let Some(char) = self.current_word.get(i) {
+        for i in start..self.token_text.len() {
+            if let Some(char) = self.token_text.get(i) {
                 if char != &char::from(bytes[i - start]) {
                     return None
                 }
@@ -385,9 +382,7 @@ impl <R: Read> YKLexer<'_, R> {
         };
 
         if let Some(char) = result {
-            if is_identifier_part(char) {
-                self.current_word.push(char);
-            }
+            self.token_text.push(char);
         }
 
         if self.position == Position::NO_POS {
@@ -430,7 +425,7 @@ impl <R: Read> YKLexer<'_, R> {
 
     /// Resets the current word vector.
     fn reset_word(&mut self) {
-        self.current_word.clear();
+        self.token_text.clear();
     }
 
 
@@ -461,23 +456,14 @@ impl <R: Read> YKLexer<'_, R> {
         return true;
     }
 
-    /// Create a token without text
+    /// Create a token
     fn token(
         &self,
-        token_type: TokenType
-    ) -> Token {
-        return self.text_token(token_type, None)
-    }
-
-    /// Create a token with the given token text (content)
-    fn text_token(
-        &self,
         token_type: TokenType,
-        content: Option<String>
     ) -> Token {
         return Token {
             token_type,
-            content,
+            text: self.token_text.iter().collect(),
             range: Range {
                 start: self.token_start,
                 end: self.position.clone()

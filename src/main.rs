@@ -1,7 +1,5 @@
 use std::process::ExitCode;
 
-mod yklang;
-
 #[cfg(test)]
 mod tests;
 

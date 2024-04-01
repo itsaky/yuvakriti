@@ -13,9 +13,7 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::fmt::Debug;
 use colored::{ColoredString, Colorize};
-
 use log::{Level, LevelFilter, Log, Metadata, Record, SetLoggerError};
 
 pub const LOG_LEVEL: Level = Level::Debug;
@@ -37,8 +35,8 @@ impl Log for YKLogger {
 
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
-            let mut message = format_log_record(record);
-            let mut colored: ColoredString;
+            let message = format_log_record(record);
+            let colored: ColoredString;
             match record.level() {
                 Level::Error => colored = message.truecolor(244, 67, 54),
                 Level::Warn => colored = message.truecolor(255, 171, 0),

@@ -17,16 +17,16 @@ use std::sync::OnceLock;
 
 use crate::yklang::compiler::location::Range;
 
-pub trait DiagnosticHandler {
+pub(crate) trait DiagnosticHandler {
 
     fn handle(&mut self, diagnostic: Diagnostic);
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Hash, Debug)]
-pub struct NoOpDiagnosticHandler {}
+pub(crate) struct NoOpDiagnosticHandler {}
 
 impl NoOpDiagnosticHandler {
-    pub fn instance() -> &'static NoOpDiagnosticHandler {
+    pub(crate) fn instance() -> &'static NoOpDiagnosticHandler {
         static INSTANCE: OnceLock<NoOpDiagnosticHandler> = OnceLock::new();
         return INSTANCE.get_or_init(|| NoOpDiagnosticHandler {})
     }
@@ -36,18 +36,18 @@ impl DiagnosticHandler for NoOpDiagnosticHandler {
     fn handle(&mut self, _diagnostic: Diagnostic) {}
 }
 
-pub fn no_op_handler() -> &'static NoOpDiagnosticHandler {
+pub(crate) fn no_op_handler() -> &'static NoOpDiagnosticHandler {
     return NoOpDiagnosticHandler::instance();
 }
 
 
 #[derive(Debug)]
-pub struct CollectingDiagnosticHandler {
-    pub diagnostics: Vec<Diagnostic>
+pub(crate) struct CollectingDiagnosticHandler {
+    pub(crate) diagnostics: Vec<Diagnostic>
 }
 
 impl CollectingDiagnosticHandler {
-    pub fn new() -> CollectingDiagnosticHandler {
+    pub(crate) fn new() -> CollectingDiagnosticHandler {
         return CollectingDiagnosticHandler {
             diagnostics: Vec::new()
         }
@@ -60,19 +60,19 @@ impl DiagnosticHandler for CollectingDiagnosticHandler {
     }
 }
 
-pub fn collecting_handler() -> CollectingDiagnosticHandler {
+pub(crate) fn collecting_handler() -> CollectingDiagnosticHandler {
     return CollectingDiagnosticHandler::new();
 }
 
 #[derive(Eq, Debug, Clone)]
-pub struct Diagnostic {
-    pub range: Range,
-    pub message: String,
-    pub kind: DiagnosticKind
+pub(crate) struct Diagnostic {
+    pub(crate) range: Range,
+    pub(crate) message: String,
+    pub(crate) kind: DiagnosticKind
 }
 
 #[derive(Eq, Debug, Clone)]
-pub enum DiagnosticKind {
+pub(crate) enum DiagnosticKind {
     Error,
     Warning,
     Note

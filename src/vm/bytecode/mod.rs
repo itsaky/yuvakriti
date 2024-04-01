@@ -2,7 +2,7 @@
  * Copyright (c) 2024 The YuvaKriti Lang Authors.
  *
  * This program is free software: you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software
+ *  terms of the GNU General Public License as published by the Free Software 
  *  Foundation, version 3.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY
@@ -13,9 +13,18 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub(crate) const LEX_UNKNOWN_TOKEN: &str = "unknown token";
-pub(crate) const LEX_UNEXPECTED_EOF: &str = "unexpected EOF";
-pub(crate) const LEX_STRING_MULTILINE_ERROR: &str = "multiline strings are not supported";
-pub(crate) const LEX_STRING_EXPECTED_ESC_SEQ: &str = "expected an escape sequence";
-pub(crate) const LEX_STRING_UNRECOGNIZED_ESC_SEQ: &str = "unrecognized escape sequence";
-pub(crate) const LEX_STRING_ILLEGAL_UNICODE_ESC: &str = "illegal unicode escape";
+mod chunk;
+
+/// Magic number for the YuvaKriti Binary file format (`.ykb`).
+/// The first 4 bytes of all YKB files have this value to help recognize
+/// the file format.
+pub(crate) const MAGIC_NUMBER: u32 = 0x59564B52; // ASCII codes for 'YVKR'x
+
+
+/// The opcodes in YKB files.
+pub(crate) struct OpCode;
+impl OpCode {
+
+    /// Opcode for a return statement.
+    pub(crate) const OP_RETURN: u8 = 0x01;
+}
