@@ -99,7 +99,8 @@ fn test_simple_var_decl() {
 fn test_simple_ast_printer() {
     let out = parse_to_string("for (var i = 0; i < 10; i = i + 1) {\n    print i;\n}", true);
 
-    assert_eq!("(program
+    assert_eq!(
+"(program
   (decl (stmt for ((stmt var i = (primary Number(0.0))); Lt (primary Identifier(\"i\"))(primary Number(10.0)); Eq (primary Identifier(\"i\"))(binary Plus (primary Identifier(\"i\"))(primary Number(1.0)))) {
       (stmt print  (primary Identifier(\"i\")))}))
   )", out);
@@ -220,6 +221,14 @@ fn test_arith_assoc() {
         ("2 * 3 / 4;", "((2 * 3) / 4)"),
         ("2 / 3 * 4;", "((2 / 3) * 4)"),
         ("2 / 3 / 4;", "((2 / 3) / 4)"),
+        ("2 + 3 * 4;", "(2 + (3 * 4))"),
+        ("2 * 3 + 4;", "((2 * 3) + 4)"),
+        ("2 + 3 / 4;", "(2 + (3 / 4))"),
+        ("2 / 3 + 4;", "((2 / 3) + 4)"),
+        ("2 - 3 * 4;", "(2 - (3 * 4))"),
+        ("2 * 3 - 4;", "((2 * 3) - 4)"),
+        ("2 - 3 / 4;", "(2 - (3 / 4))"),
+        ("2 / 3 - 4;", "((2 / 3) - 4)"),
     ];
 
     let mut ok = true;
