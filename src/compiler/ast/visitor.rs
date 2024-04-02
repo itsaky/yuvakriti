@@ -13,27 +13,27 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::yklang::compiler::ast::AssignExpr;
-use crate::yklang::compiler::ast::AstNode;
-use crate::yklang::compiler::ast::BinaryExpr;
-use crate::yklang::compiler::ast::BlockStmt;
-use crate::yklang::compiler::ast::ClassDecl;
-use crate::yklang::compiler::ast::Decl;
-use crate::yklang::compiler::ast::Expr;
-use crate::yklang::compiler::ast::ExprStmt;
-use crate::yklang::compiler::ast::ForStmt;
-use crate::yklang::compiler::ast::FuncCallExpr;
-use crate::yklang::compiler::ast::FuncDecl;
-use crate::yklang::compiler::ast::IfStmt;
-use crate::yklang::compiler::ast::MemberAccessExpr;
-use crate::yklang::compiler::ast::PrimaryExpr;
-use crate::yklang::compiler::ast::PrintStmt;
-use crate::yklang::compiler::ast::Program;
-use crate::yklang::compiler::ast::ReturnStmt;
-use crate::yklang::compiler::ast::Stmt;
-use crate::yklang::compiler::ast::UnaryExpr;
-use crate::yklang::compiler::ast::VarDecl;
-use crate::yklang::compiler::ast::WhileStmt;
+use crate::compiler::ast::AssignExpr;
+use crate::compiler::ast::AstNode;
+use crate::compiler::ast::BinaryExpr;
+use crate::compiler::ast::BlockStmt;
+use crate::compiler::ast::ClassDecl;
+use crate::compiler::ast::Decl;
+use crate::compiler::ast::Expr;
+use crate::compiler::ast::ExprStmt;
+use crate::compiler::ast::ForStmt;
+use crate::compiler::ast::FuncCallExpr;
+use crate::compiler::ast::FuncDecl;
+use crate::compiler::ast::IfStmt;
+use crate::compiler::ast::MemberAccessExpr;
+use crate::compiler::ast::PrimaryExpr;
+use crate::compiler::ast::PrintStmt;
+use crate::compiler::ast::Program;
+use crate::compiler::ast::ReturnStmt;
+use crate::compiler::ast::Stmt;
+use crate::compiler::ast::UnaryExpr;
+use crate::compiler::ast::VarStmt;
+use crate::compiler::ast::WhileStmt;
 
 /// ASTVisitor for visiting AST nodes. Methods in the visitor result an [Option<R>]. If the result
 /// is [Some], then the child nodes of the AST node will not be visited.
@@ -41,7 +41,7 @@ pub trait ASTVisitor<P, R> {
     fn visit_program(&mut self, program: &Program, p: &P) -> Option<R> {
         let mut r: Option<R> = None;
         for decl in &program.decls {
-            r = self.visit_decl(decl, p);
+            r = self.visit_decl(&decl.0, p);
 
             if r.is_some() {
                 break
@@ -68,7 +68,7 @@ pub trait ASTVisitor<P, R> {
         self.visit_block_stmt(&func_decl.body.0, p)
     }
 
-    fn visit_var_decl(&mut self, var_decl: &VarDecl, p: &P) -> Option<R> {
+    fn visit_var_decl(&mut self, var_decl: &VarStmt, p: &P) -> Option<R> {
         if let Some((initializer, _)) = &var_decl.initializer {
             return self.visit_expr(initializer, p)
         }
@@ -79,7 +79,7 @@ pub trait ASTVisitor<P, R> {
     fn visit_block_stmt(&mut self, block_stmt: &BlockStmt, p: &P) -> Option<R> {
         let mut r: Option<R> = None;
         for decl in &block_stmt.decls {
-            r = self.visit_decl(decl, p);
+            r = self.visit_decl(&decl.0, p);
 
             if r.is_some() {
                 break
@@ -96,7 +96,7 @@ pub trait ASTVisitor<P, R> {
     fn visit_for_stmt(&mut self, for_stmt: &ForStmt, p: &P) -> Option<R> {
         let mut r: Option<R> = None;
         if let Some((init, _)) = &for_stmt.init {
-            r = self.visit_expr(&init, p);
+            r = self.visit_stmt(&init, p);
         }
 
         if r.is_some() {
@@ -199,8 +199,7 @@ pub trait ASTVisitor<P, R> {
         match decl {
             Decl::Class(class_decl) => self.visit_class_decl(&class_decl, p),
             Decl::Func(func_decl) => self.visit_func_decl(&func_decl, p),
-            Decl::Var(var_decl) => self.visit_var_decl(&var_decl, p),
-            Decl::Stmt ((stmt, _)) => self.visit_stmt(stmt, p),
+            Decl::Stmt (stmt) => self.visit_stmt(stmt, p),
         }
     }
 
@@ -212,13 +211,13 @@ pub trait ASTVisitor<P, R> {
             Stmt::Print(print_stmt) => self.visit_print_stmt(&print_stmt, p),
             Stmt::Return(return_stmt) => self.visit_return_stmt(&return_stmt, p),
             Stmt::While(while_stmt) => self.visit_while_stmt(&while_stmt, p),
+            Stmt::Var(var_decl) => self.visit_var_decl(&var_decl, p),
             Stmt::Block(block_stmt) => self.visit_block_stmt(&block_stmt.0, p),
         }
     }
 
     fn visit_expr(&mut self, expr: &Expr, p: &P) -> Option<R> {
         match expr {
-            Expr::Assign(assign_expr) => self.visit_assign_expr(&assign_expr, p),
             Expr::Binary(binary_expr) => self.visit_binary_expr(&binary_expr, p),
             Expr::Unary(unary_expr) => self.visit_unary_expr(&unary_expr, p),
             Expr::FuncCall(func_call_expr) => self.visit_func_call_expr(&func_call_expr, p),
@@ -246,7 +245,7 @@ impl AstNode for FuncDecl {
     }
 }
 
-impl AstNode for VarDecl {
+impl AstNode for VarStmt {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_var_decl(self, p)
     }

@@ -21,10 +21,10 @@ use std::rc::Rc;
 
 use log::error;
 
-use crate::yklang::compiler::diagnostics::{Diagnostic, DiagnosticHandler, DiagnosticKind};
-use crate::yklang::compiler::location::{Position, Range};
-use crate::yklang::compiler::messages;
-use crate::yklang::compiler::tokens::{Token, TokenType};
+use crate::compiler::diagnostics::{Diagnostic, DiagnosticHandler, DiagnosticKind};
+use crate::compiler::location::{Position, Range};
+use crate::compiler::messages;
+use crate::compiler::tokens::{Token, TokenType};
 
 const NULL_CHAR: char = '\0';
 
@@ -306,7 +306,7 @@ impl <R: Read> YKLexer<'_, R> {
     /// Scans a string literal in the input source
     fn string(&mut self) -> Option<Token> {
         loop {
-            let mut peek = self.peek().unwrap_or(NULL_CHAR);
+            let peek = self.peek().unwrap_or(NULL_CHAR);
             if self.is_at_eof() || peek == NULL_CHAR {
                 self.report(DiagnosticKind::Error, messages::LEX_UNEXPECTED_EOF);
                 return None

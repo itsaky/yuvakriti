@@ -1,5 +1,8 @@
 use std::process::ExitCode;
 
+mod compiler;
+mod vm;
+
 #[cfg(test)]
 mod tests;
 

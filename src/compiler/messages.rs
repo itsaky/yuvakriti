@@ -29,8 +29,9 @@ pub(crate) const PARS_EXPECTED_UNARY_OP: &str = "expected a unary operator";
 pub(crate) const PARS_EXPECTED_EXPR: &str = "expected an expression";
 pub(crate) const PARS_EXPECTED_FUN_NAME: &str = "expected a function name";
 pub(crate) const PARS_EXPECTED_PARAM_NAME: &str = "expected a parameter name";
-pub(crate) const PARS_EXPECTED_IF_COND: &str = "expected an expression";
+pub(crate) const PARS_EXPECTED_STMT: &str = "expected a statement";
 pub(crate) const PARS_EXPECTED_BODY: &str = "expected body";
+pub(crate) const PARS_INVALID_ASSIGN_TARGET: &str = "invalid assignment target";
 
 pub(crate) fn err_exp_kywrd(keyword: &str) -> String {
     return format!("expected '{}' keyword", keyword)

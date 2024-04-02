@@ -13,18 +13,10 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-mod chunk;
-
-/// Magic number for the YuvaKriti Binary file format (`.ykb`).
-/// The first 4 bytes of all YKB files have this value to help recognize
-/// the file format.
-pub(crate) const MAGIC_NUMBER: u32 = 0x59564B52; // ASCII codes for 'YVKR'x
-
-
-/// The opcodes in YKB files.
-pub(crate) struct OpCode;
-impl OpCode {
-
-    /// Opcode for a return statement.
-    pub(crate) const OP_RETURN: u8 = 0x01;
-}
+pub(crate) mod ast;
+pub(crate) mod diagnostics;
+pub(crate) mod lexer;
+pub(crate) mod location;
+pub(crate) mod messages;
+pub(crate) mod parser;
+pub(crate) mod tokens;

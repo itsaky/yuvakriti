@@ -15,7 +15,7 @@
 
 use std::sync::OnceLock;
 
-use crate::yklang::compiler::location::Range;
+use crate::compiler::location::Range;
 
 pub(crate) trait DiagnosticHandler {
 

@@ -17,11 +17,11 @@ use std::cell::RefCell;
 use std::io::{Cursor, Read};
 use std::rc::Rc;
 
-use crate::yklang::compiler::diagnostics;
-use crate::yklang::compiler::diagnostics::{CollectingDiagnosticHandler, DiagnosticHandler};
-use crate::yklang::compiler::lexer::YKLexer;
-use crate::yklang::compiler::messages;
-use crate::yklang::compiler::tokens::{Token, TokenType};
+use crate::compiler::diagnostics;
+use crate::compiler::diagnostics::{CollectingDiagnosticHandler, DiagnosticHandler};
+use crate::compiler::lexer::YKLexer;
+use crate::compiler::messages;
+use crate::compiler::tokens::{Token, TokenType};
 
 fn check_token_types<R: Read>(lexer: &mut YKLexer<R>, expected_tokens: &Vec<TokenType>) {
     let tokens: Vec<TokenType> = lexer.all()

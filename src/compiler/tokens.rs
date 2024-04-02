@@ -13,7 +13,8 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::yklang::compiler::location::Range;
+use std::fmt::{Display, Formatter};
+use crate::compiler::location::Range;
 
 #[derive(Eq, Debug)]
 pub(crate) struct Token {
@@ -95,5 +96,11 @@ pub(crate) enum TokenType {
 impl PartialEq<Self> for TokenType {
     fn eq(&self, other: &Self) -> bool {
         return std::mem::discriminant(self) == std::mem::discriminant(other)
+    }
+}
+
+impl Display for TokenType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
     }
 }

@@ -13,16 +13,21 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::yklang::compiler::ast::visitor::ASTVisitor;
-use crate::yklang::compiler::location::Range;
-use crate::yklang::compiler::tokens::{Token, TokenType};
+use std::fmt::{Display, Formatter};
+
+use crate::compiler::ast::visitor::ASTVisitor;
+use crate::compiler::location::Range;
+use crate::compiler::tokens::{Token, TokenType};
 
 pub(crate) mod visitor;
 pub(crate) mod pretty;
+pub(crate) mod macros;
 
 pub(crate) type Spanned<T> = (T, Range);
 pub(crate) type StmtS = Spanned<Stmt>;
 pub(crate) type ExprS = Spanned<Expr>;
+pub(crate) type DeclS = Spanned<Decl>;
+pub(crate) type Identifier = Spanned<String>;
 
 pub(crate) trait AstNode {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R>;
@@ -31,7 +36,7 @@ pub(crate) trait AstNode {
 /// Program : (Declaration)*
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Program {
-    pub(crate) decls: Vec<Decl>
+    pub(crate) decls: Vec<DeclS>
 }
 
 /// Decl : ClassDecl
@@ -42,37 +47,36 @@ pub(crate) struct Program {
 pub(crate) enum Decl {
     Class(ClassDecl),
     Func(FuncDecl),
-    Var(VarDecl),
-    Stmt(StmtS)
+    Stmt(Stmt)
 }
 
 /// ClassDecl : "class" IDENTIFIER ( ":" IDENTIFIER )? "{" ( FuncDecl )* "}"
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct ClassDecl {
-    pub(crate) name: String,
-    pub(crate) supercls: Option<String>,
+    pub(crate) name: Identifier,
+    pub(crate) supercls: Option<Identifier>,
     pub(crate) methods: Vec<Spanned<FuncDecl>>,
 }
 
 /// FuncDecl : "fun" IDENTIFIER "(" ( IDENTIFIER )? ")" BlockStmt
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct FuncDecl {
-    pub(crate) name: String,
-    pub(crate) params: Vec<String>,
+    pub(crate) name: Identifier,
+    pub(crate) params: Vec<Identifier>,
     pub(crate) body: Spanned<BlockStmt>,
 }
 
 /// VarDecl : "var" IDENTIFIER ("=" Expr)?
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct VarDecl {
-    pub(crate) name: String,
+pub(crate) struct VarStmt {
+    pub(crate) name: Identifier,
     pub(crate) initializer: Option<ExprS>,
 }
 
 /// BlockStmt : "{" ( Decl )* "}"
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct BlockStmt {
-    pub(crate) decls: Vec<Decl>,
+    pub(crate) decls: Vec<DeclS>,
 }
 
 /// Stmt : ExprStmt
@@ -85,11 +89,12 @@ pub(crate) struct BlockStmt {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Stmt {
     Expr(ExprStmt),
-    For(ForStmt),
+    For(Box<ForStmt>),
     If(IfStmt),
     Print(PrintStmt),
     Return(ReturnStmt),
     While(WhileStmt),
+    Var(VarStmt),
     Block(Spanned<BlockStmt>),
 }
 
@@ -102,7 +107,7 @@ pub(crate) struct ExprStmt {
 /// ForStmt : "for" "(" ( Expr | VarDecl )? ";" ( Expr )? ";" ( Expr )? ")" Stmt
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct ForStmt {
-    pub(crate) init: Option<ExprS>,
+    pub(crate) init: Option<StmtS>,
     pub(crate) condition: Option<ExprS>,
     pub(crate) step: Option<ExprS>,
     pub(crate) body: Spanned<BlockStmt>
@@ -137,7 +142,6 @@ pub(crate) struct WhileStmt {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Expr {
-    Assign(Box<AssignExpr>),
     Binary(Box<BinaryExpr>),
     Unary(Box<UnaryExpr>),
     FuncCall(Box<FuncCallExpr>),
@@ -148,7 +152,7 @@ pub(crate) enum Expr {
 /// AssignExpr : IDENTIFIER "=" Expr
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct AssignExpr {
-    pub(crate) name: String,
+    pub(crate) target: ExprS,
     pub(crate) value: ExprS,
 }
 
@@ -178,7 +182,7 @@ pub(crate) struct FuncCallExpr {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct MemberAccessExpr {
     pub(crate) receiver: ExprS,
-    pub(crate) member: String
+    pub(crate) member: Identifier
 }
 
 /// PrimaryExpr : "true"
@@ -215,6 +219,7 @@ pub(crate) enum UnaryOp {
 pub(crate) enum BinaryOp {
     Or,
     And,
+    Eq,
     EqEq,
     NotEq,
     Gt,
@@ -256,3 +261,16 @@ impl BinaryOp {
         }
     }
 }
+
+impl Display for BinaryOp {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl Display for UnaryOp {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
