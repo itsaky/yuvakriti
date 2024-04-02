@@ -42,7 +42,7 @@ use crate::compiler::ast::UnaryOp;
 use crate::compiler::ast::VarStmt;
 use crate::compiler::diagnostics::{Diagnostic, DiagnosticHandler, DiagnosticKind};
 use crate::compiler::lexer::YKLexer;
-use crate::compiler::location::Range;
+use crate::compiler::location::{Position, Range};
 use crate::compiler::messages;
 use crate::compiler::messages::{err_exp_kywrd, err_exp_sym};
 use crate::compiler::tokens::{Token, TokenType};
@@ -52,6 +52,7 @@ pub(crate) struct YKParser<'a, R: Read> {
     diagnostics: Rc<RefCell<dyn DiagnosticHandler + 'a>>,
 
     // parser state
+    position: Position,
     current: Option<Token>,
     next: Option<Token>,
     
@@ -68,6 +69,7 @@ impl <R: Read> YKParser<'_, R> {
         let mut parser = YKParser {
             lexer,
             diagnostics: diagnostics_handler,
+            position: Position::NO_POS,
             current: None,
             next: None,
             has_error: false,
@@ -94,8 +96,13 @@ impl <R: Read> YKParser<'_, R> {
         diagnostic_kind: DiagnosticKind,
         message: &str,
     ) -> Diagnostic {
+        let range = self.peek()
+            .map(|tkn| tkn.range)
+            .or_else(|| Some(Range::new().set_start_pos(&self.position).set_end_pos(&self.position)))
+            .expect("Expected token");
+        
         Diagnostic {
-            range: self.peek().unwrap().range.clone(),
+            range: range.clone(),
             message: String::from(message),
             kind: diagnostic_kind
         }
@@ -110,7 +117,6 @@ impl <R: Read> YKParser<'_, R> {
         return Program {
             decls: declarations
         };
-        
     }
 
     fn decls(&mut self) -> Vec<DeclS> {
@@ -573,9 +579,11 @@ impl <R: Read> YKParser<'_, R> {
     
     /// Consumes and returns the next token in the input source if it matches the given token type.
     /// Reports an error with the given error message otherwise.
-    fn accept(&mut self, token: TokenType, err_msg: &str) -> Option<Token> {
-        if self.peek()?.token_type == token {
-            return self.advance();
+    fn accept(&mut self, expected: TokenType, err_msg: &str) -> Option<Token> {
+        if let Some(token) = self.peek() {
+            if token.token_type == expected {
+                return self.advance();
+            }
         }
         
         self.report(DiagnosticKind::Error, err_msg);
@@ -615,6 +623,7 @@ impl <R: Read> YKParser<'_, R> {
     /// Returns the next token in the input source.
     fn advance(&mut self) -> Option<Token> {
         let result = self.current.take();
+        self.position = result.as_ref().map(|token| token.range.end).unwrap_or(self.position);
         self.current = self.next.take();
         self.next = self.lexer.next();
         return result;

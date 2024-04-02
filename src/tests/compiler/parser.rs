@@ -17,10 +17,10 @@ use std::cell::RefCell;
 use std::io::Cursor;
 use std::rc::Rc;
 
+use crate::compiler::{diagnostics, messages};
 use crate::compiler::ast::{AstNode, Decl, Expr, PrimaryExpr, Program, Stmt, UnaryOp};
 use crate::compiler::ast::arithemetic::ArithmeticASTPrinter;
 use crate::compiler::ast::pretty::ASTPrinter;
-use crate::compiler::diagnostics;
 use crate::compiler::lexer::YKLexer;
 use crate::compiler::parser::YKParser;
 
@@ -112,7 +112,7 @@ fn test_simple_unary_negation_expr() {
         Cursor::new("  !true  ;"),
         diag_handler.clone()
     );
-    
+
     let mut parser = YKParser::new(lexer, diag_handler.clone());
     let program = parser.parse();
     let decls = program.decls;
@@ -221,7 +221,7 @@ fn test_arith_assoc() {
         ("2 / 3 * 4;", "((2 / 3) * 4)"),
         ("2 / 3 / 4;", "((2 / 3) / 4)"),
     ];
-    
+
     let mut ok = true;
     for (source, expected) in cases {
         print!("Checking:: source: {}, expected: {}", source, expected);
@@ -236,8 +236,35 @@ fn test_arith_assoc() {
             println!("    ...FAIL")
         }
     }
-    
+
     assert!(ok)
+}
+
+#[test]
+fn test_parser_diagnostic_at_end() {
+    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let lexer = YKLexer::new(
+        Cursor::new("2 + 3"), // missing semicolon
+        diag_handler.clone()
+    );
+
+    let mut parser = YKParser::new(lexer, diag_handler.clone());
+    let mut program = parser.parse();
+    let mut out = String::new();
+    let mut printer = ArithmeticASTPrinter::new(&mut out);
+    program.accept(&mut printer, &());
+    
+    assert!(program.decls.is_empty());
+    
+    let diags = &diag_handler.borrow().diagnostics;
+    assert!(!diags.is_empty());
+    assert_eq!(2, diags.len());
+
+    let semi_exp = diags.get(0).expect("Diagnostic expected");
+    let stmt_exp = diags.get(1).expect("Diagnostic expected");
+    
+    assert_eq!(messages::err_exp_sym(";"), semi_exp.message);
+    assert_eq!(messages::PARS_DECL_OR_STMT_EXPECTED, stmt_exp.message);
 }
 
 #[test]
