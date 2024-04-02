@@ -18,6 +18,7 @@ use std::io::Cursor;
 use std::rc::Rc;
 
 use crate::compiler::ast::{AstNode, Decl, Expr, PrimaryExpr, Program, Stmt, UnaryOp};
+use crate::compiler::ast::arithemetic::ArithmeticASTPrinter;
 use crate::compiler::ast::pretty::ASTPrinter;
 use crate::compiler::diagnostics;
 use crate::compiler::lexer::YKLexer;
@@ -197,6 +198,46 @@ fn test_factors_assoc() {
   (decl (stmt expr (binary Div (binary Mult (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0)))))
   (decl (stmt expr (binary Div (binary Div (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0)))))
   )", out);
+}
+
+#[test]
+fn test_arith_prec() {
+    let mut program = parse("4 * 5 - (2 + 3) / 6 + 7;");
+    let mut out = String::new();
+    let mut printer = ArithmeticASTPrinter::new(&mut out);
+    program.accept(&mut printer, &());
+    assert_eq!("(((4 * 5) - ((2 + 3) / 6)) + 7)", out);
+}
+
+#[test]
+fn test_arith_assoc() {
+    let cases = [
+        ("2 - 3 - 4;", "((2 - 3) - 4)"),
+        ("2 - 3 + 4;", "((2 - 3) + 4)"),
+        ("2 + 3 - 4;", "((2 + 3) - 4)"),
+        ("2 + 3 + 4;", "((2 + 3) + 4)"),
+        ("2 * 3 * 4;", "((2 * 3) * 4)"),
+        ("2 * 3 / 4;", "((2 * 3) / 4)"),
+        ("2 / 3 * 4;", "((2 / 3) * 4)"),
+        ("2 / 3 / 4;", "((2 / 3) / 4)"),
+    ];
+    
+    let mut ok = true;
+    for (source, expected) in cases {
+        print!("Checking:: source: {}, expected: {}", source, expected);
+        let mut program = parse(source);
+        let mut out = String::new();
+        let mut printer = ArithmeticASTPrinter::new(&mut out);
+        program.accept(&mut printer, &());
+        ok = ok && out == expected;
+        if ok {
+            println!("    ...OK")
+        } else {
+            println!("    ...FAIL")
+        }
+    }
+    
+    assert!(ok)
 }
 
 #[test]

@@ -22,6 +22,7 @@ use crate::compiler::tokens::{Token, TokenType};
 pub(crate) mod visitor;
 pub(crate) mod pretty;
 pub(crate) mod macros;
+pub(crate) mod arithemetic;
 
 pub(crate) type Spanned<T> = (T, Range);
 pub(crate) type StmtS = Spanned<Stmt>;
@@ -233,6 +234,14 @@ pub(crate) enum BinaryOp {
 }
 
 impl UnaryOp {
+    
+    pub(crate) fn sym(&self) -> &'static str {
+        match self {
+            UnaryOp::Negate => "-",
+            UnaryOp::Not => "!"
+        }
+    }
+    
     pub(crate) fn from_token(token: &Token) -> Option<UnaryOp> {
         match token.token_type {
             TokenType::Bang => Some(UnaryOp::Not),
@@ -243,6 +252,46 @@ impl UnaryOp {
 }
 
 impl BinaryOp {
+    
+    pub(crate) fn sym(&self) -> &'static str {
+        match self {
+            BinaryOp::Or => "or",
+            BinaryOp::And => "and",
+            BinaryOp::Eq => "==",
+            BinaryOp::EqEq => "===",
+            BinaryOp::NotEq => "!=",
+            BinaryOp::Gt => ">",
+            BinaryOp::GtEq => ">=",
+            BinaryOp::Lt => "<",
+            BinaryOp::LtEq => "<=",
+            BinaryOp::Plus => "+",
+            BinaryOp::Minus => "-",
+            BinaryOp::Mult => "*",
+            BinaryOp::Div => "/",
+        }
+    }
+
+    pub(crate) fn precedence(&self) -> i32 {
+        match self {
+            BinaryOp::Or |
+            BinaryOp::And => 6,
+            
+            BinaryOp::Eq |
+            BinaryOp::EqEq |
+            BinaryOp::NotEq |
+            BinaryOp::Gt |
+            BinaryOp::GtEq |
+            BinaryOp::Lt |
+            BinaryOp::LtEq => 5,
+            
+            BinaryOp::Plus |
+            BinaryOp::Minus => 4,
+            
+            BinaryOp::Mult |
+            BinaryOp::Div => 3,
+        }
+    }
+    
     pub(crate) fn from_token(token: &Token) -> Option<BinaryOp> {
         match token.token_type {
             TokenType::Plus => Some(BinaryOp::Plus),

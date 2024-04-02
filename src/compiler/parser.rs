@@ -59,8 +59,6 @@ pub(crate) struct YKParser<'a, R: Read> {
 }
 
 impl <R: Read> YKParser<'_, R> {
-    
-    const LOOKAHEAD_SIZE: usize = 5;
 
     /// Create a new [YKParser] instance using the given [YKLexer].
     pub(crate) fn new(
@@ -565,7 +563,7 @@ impl <R: Read> YKParser<'_, R> {
                 return Some(expr);
             }
 
-            self.report(DiagnosticKind::Error, &err_exp_sym("}"));
+            self.report(DiagnosticKind::Error, &err_exp_sym(")"));
             return None
         }
 
