@@ -15,14 +15,17 @@
 
 use std::fmt::{Display, Formatter};
 
-use crate::compiler::ast::visitor::ASTVisitor;
+pub(crate) use arithemetic::ArithmeticASTPrinter;
+pub(crate) use pretty::ASTPrinter;
+pub(crate) use visitor::ASTVisitor;
+
 use crate::compiler::location::Range;
 use crate::compiler::tokens::{Token, TokenType};
 
-pub(crate) mod visitor;
-pub(crate) mod pretty;
-pub(crate) mod macros;
-pub(crate) mod arithemetic;
+mod arithemetic;
+mod macros;
+mod pretty;
+mod visitor;
 
 pub(crate) type Spanned<T> = (T, Range);
 pub(crate) type StmtS = Spanned<Stmt>;
@@ -37,7 +40,7 @@ pub(crate) trait AstNode {
 /// Program : (Declaration)*
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Program {
-    pub(crate) decls: Vec<DeclS>
+    pub(crate) decls: Vec<DeclS>,
 }
 
 /// Decl : ClassDecl
@@ -48,7 +51,7 @@ pub(crate) struct Program {
 pub(crate) enum Decl {
     Class(ClassDecl),
     Func(FuncDecl),
-    Stmt(Stmt)
+    Stmt(Stmt),
 }
 
 /// ClassDecl : "class" IDENTIFIER ( ":" IDENTIFIER )? "{" ( FuncDecl )* "}"
@@ -102,7 +105,7 @@ pub(crate) enum Stmt {
 /// ExprStmt : Expr
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct ExprStmt {
-    pub(crate) expr: ExprS
+    pub(crate) expr: ExprS,
 }
 
 /// ForStmt : "for" "(" ( Expr | VarDecl )? ";" ( Expr )? ";" ( Expr )? ")" Stmt
@@ -111,7 +114,7 @@ pub(crate) struct ForStmt {
     pub(crate) init: Option<StmtS>,
     pub(crate) condition: Option<ExprS>,
     pub(crate) step: Option<ExprS>,
-    pub(crate) body: Spanned<BlockStmt>
+    pub(crate) body: Spanned<BlockStmt>,
 }
 
 /// IfStmt : "if" Expr Stmt ( "else" Stmt )?
@@ -119,26 +122,26 @@ pub(crate) struct ForStmt {
 pub(crate) struct IfStmt {
     pub(crate) condition: ExprS,
     pub(crate) then_branch: Spanned<BlockStmt>,
-    pub(crate) else_branch: Option<Spanned<BlockStmt>>
+    pub(crate) else_branch: Option<Spanned<BlockStmt>>,
 }
 
 /// PrintStmt : "print" Expr
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct PrintStmt {
-    pub(crate) expr: ExprS
+    pub(crate) expr: ExprS,
 }
 
 /// ReturnStmt : "return" Expr
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct ReturnStmt {
-    pub(crate) expr: ExprS
+    pub(crate) expr: ExprS,
 }
 
 /// WhileStmt : "while" Expr BlockStmt
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct WhileStmt {
     pub(crate) condition: ExprS,
-    pub(crate) body: Spanned<BlockStmt>
+    pub(crate) body: Spanned<BlockStmt>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -169,21 +172,21 @@ pub(crate) struct BinaryExpr {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct UnaryExpr {
     pub(crate) op: UnaryOp,
-    pub(crate) expr: ExprS
+    pub(crate) expr: ExprS,
 }
 
 /// FuncCallExpr : IDENTIFIER ( "(" Expr? ")" )*
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct FuncCallExpr {
     pub(crate) callee: ExprS,
-    pub(crate) args: Vec<ExprS>
+    pub(crate) args: Vec<ExprS>,
 }
 
 /// MemberAccessExpr : Expr "." IDENTIFIER
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct MemberAccessExpr {
     pub(crate) receiver: ExprS,
-    pub(crate) member: Identifier
+    pub(crate) member: Identifier,
 }
 
 /// PrimaryExpr : "true"
@@ -210,7 +213,7 @@ pub(crate) enum PrimaryExpr {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum UnaryOp {
     Negate,
-    Not
+    Not,
 }
 
 /// BinaryOp : "+" | "-" | "*" | "/"
@@ -230,29 +233,27 @@ pub(crate) enum BinaryOp {
     Plus,
     Minus,
     Mult,
-    Div
+    Div,
 }
 
 impl UnaryOp {
-    
     pub(crate) fn sym(&self) -> &'static str {
         match self {
             UnaryOp::Negate => "-",
-            UnaryOp::Not => "!"
+            UnaryOp::Not => "!",
         }
     }
-    
+
     pub(crate) fn from_token(token: &Token) -> Option<UnaryOp> {
         match token.token_type {
             TokenType::Bang => Some(UnaryOp::Not),
             TokenType::Minus => Some(UnaryOp::Negate),
-            _ => None
+            _ => None,
         }
     }
 }
 
 impl BinaryOp {
-    
     pub(crate) fn sym(&self) -> &'static str {
         match self {
             BinaryOp::Or => "or",
@@ -273,25 +274,22 @@ impl BinaryOp {
 
     pub(crate) fn precedence(&self) -> i32 {
         match self {
-            BinaryOp::Or |
-            BinaryOp::And => 6,
-            
-            BinaryOp::Eq |
-            BinaryOp::EqEq |
-            BinaryOp::NotEq |
-            BinaryOp::Gt |
-            BinaryOp::GtEq |
-            BinaryOp::Lt |
-            BinaryOp::LtEq => 5,
-            
-            BinaryOp::Plus |
-            BinaryOp::Minus => 4,
-            
-            BinaryOp::Mult |
-            BinaryOp::Div => 3,
+            BinaryOp::Or | BinaryOp::And => 6,
+
+            BinaryOp::Eq
+            | BinaryOp::EqEq
+            | BinaryOp::NotEq
+            | BinaryOp::Gt
+            | BinaryOp::GtEq
+            | BinaryOp::Lt
+            | BinaryOp::LtEq => 5,
+
+            BinaryOp::Plus | BinaryOp::Minus => 4,
+
+            BinaryOp::Mult | BinaryOp::Div => 3,
         }
     }
-    
+
     pub(crate) fn from_token(token: &Token) -> Option<BinaryOp> {
         match token.token_type {
             TokenType::Plus => Some(BinaryOp::Plus),
@@ -306,7 +304,7 @@ impl BinaryOp {
             TokenType::LtEq => Some(BinaryOp::LtEq),
             TokenType::And => Some(BinaryOp::And),
             TokenType::Or => Some(BinaryOp::Or),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -322,4 +320,3 @@ impl Display for UnaryOp {
         write!(f, "{:?}", self)
     }
 }
-

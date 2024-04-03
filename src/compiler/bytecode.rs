@@ -13,8 +13,16 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+pub(crate) use cp::ConstantEntry;
+pub(crate) use cp::ConstantPool;
+pub(crate) use cp_info::CpInfo;
+pub(crate) use ykbfile::YKBFile;
+pub(crate) use ykbversion::YKBVersion;
+pub(crate) use ykbwriter::YKBFileWriter;
+
 mod cp;
-mod cp_info;
-mod lexer;
-mod parser;
-mod util;
+pub(crate) mod cp_info;
+mod ykbfile;
+mod ykbversion;
+mod ykbwriter;
+

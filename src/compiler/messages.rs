@@ -34,9 +34,9 @@ pub(crate) const PARS_EXPECTED_BODY: &str = "expected body";
 pub(crate) const PARS_INVALID_ASSIGN_TARGET: &str = "invalid assignment target";
 
 pub(crate) fn err_exp_kywrd(keyword: &str) -> String {
-    return format!("expected '{}' keyword", keyword)
+    return format!("expected '{}' keyword", keyword);
 }
 
 pub(crate) fn err_exp_sym(sym: &str) -> String {
-    return format!("expected a '{}'", sym)
+    return format!("expected a '{}'", sym);
 }

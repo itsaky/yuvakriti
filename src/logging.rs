@@ -21,14 +21,12 @@ const LOG_LEVEL_FILTER: LevelFilter = LevelFilter::Debug;
 static LOGGER: YKLogger = YKLogger;
 
 pub fn init_logger() -> Result<(), SetLoggerError> {
-    log::set_logger(&LOGGER)
-        .map(|()| log::set_max_level(LOG_LEVEL_FILTER))
+    log::set_logger(&LOGGER).map(|()| log::set_max_level(LOG_LEVEL_FILTER))
 }
 
 pub struct YKLogger;
 
 impl Log for YKLogger {
-
     fn enabled(&self, metadata: &Metadata) -> bool {
         return metadata.level() < LOG_LEVEL;
     }
@@ -55,5 +53,5 @@ impl Log for YKLogger {
 }
 
 fn format_log_record(record: &Record) -> String {
-    return format!("{} - {}", record.level(), record.args())
+    return format!("{} - {}", record.level(), record.args());
 }

@@ -16,5 +16,4 @@
 /// A chunk of instruction.
 struct Chunk {
     opcode: u8,
-
 }

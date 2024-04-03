@@ -16,20 +16,20 @@
 #[derive(Eq, Clone, Copy, Debug)]
 pub(crate) struct Range {
     pub(crate) start: Position,
-    pub(crate) end: Position
+    pub(crate) end: Position,
 }
 
 impl Range {
     pub(crate) const NO_RANGE: Range = Range {
         start: Position::NO_POS,
-        end: Position::NO_POS
+        end: Position::NO_POS,
     };
-    
+
     /// Create a new range.
     pub(crate) fn new() -> Range {
         return Self::NO_RANGE.clone();
     }
-    
+
     /// Set the end of this range to the end of the given range.
     pub(crate) fn set_end(&mut self, end: &Range) -> Self {
         self.end = end.end.clone();
@@ -57,8 +57,7 @@ impl Range {
 
 impl PartialEq<Self> for Range {
     fn eq(&self, other: &Self) -> bool {
-        return self.start == other.start
-            && self.end == other.end
+        return self.start == other.start && self.end == other.end;
     }
 }
 
@@ -66,21 +65,19 @@ impl PartialEq<Self> for Range {
 pub(crate) struct Position {
     pub(crate) line: i32,
     pub(crate) column: i32,
-    pub(crate) index: i64
+    pub(crate) index: i64,
 }
 
 impl Position {
     pub(crate) const NO_POS: Position = Position {
         line: -1,
         column: -1,
-        index: -1
+        index: -1,
     };
 }
 
 impl PartialEq<Self> for Position {
     fn eq(&self, other: &Self) -> bool {
-        return self.line == other.line
-            && self.column == other.column
-            && self.index == other.index
+        return self.line == other.line && self.column == other.column && self.index == other.index;
     }
 }

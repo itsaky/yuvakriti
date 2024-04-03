@@ -2,7 +2,7 @@
  * Copyright (c) 2024 The YuvaKriti Lang Authors.
  *
  * This program is free software: you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software 
+ *  terms of the GNU General Public License as published by the Free Software
  *  Foundation, version 3.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY
@@ -37,7 +37,7 @@ use crate::compiler::ast::WhileStmt;
 
 /// ASTVisitor for visiting AST nodes. Methods in the visitor result an [Option<R>]. If the result
 /// is [Some], then the child nodes of the AST node will not be visited.
-pub trait ASTVisitor<P, R> {
+pub(crate) trait ASTVisitor<P, R> {
     fn visit_program(&mut self, program: &Program, p: &P) -> Option<R> {
         self.default_visit_program(program, p)
     }
@@ -47,7 +47,7 @@ pub trait ASTVisitor<P, R> {
             r = self.visit_decl(&decl.0, p);
 
             if r.is_some() {
-                break
+                break;
             }
         }
 
@@ -57,14 +57,14 @@ pub trait ASTVisitor<P, R> {
     fn visit_class_decl(&mut self, class_decl: &ClassDecl, p: &P) -> Option<R> {
         self.default_visit_class_decl(class_decl, p)
     }
-    
+
     fn default_visit_class_decl(&mut self, class_decl: &ClassDecl, p: &P) -> Option<R> {
         let mut r: Option<R> = None;
         for (method, _) in &class_decl.methods {
             r = self.visit_func_decl(method, p);
 
             if r.is_some() {
-                break
+                break;
             }
         }
 
@@ -83,7 +83,7 @@ pub trait ASTVisitor<P, R> {
     }
     fn default_visit_var_decl(&mut self, var_decl: &VarStmt, p: &P) -> Option<R> {
         if let Some((initializer, _)) = &var_decl.initializer {
-            return self.visit_expr(initializer, p)
+            return self.visit_expr(initializer, p);
         }
 
         None
@@ -98,7 +98,7 @@ pub trait ASTVisitor<P, R> {
             r = self.visit_decl(&decl.0, p);
 
             if r.is_some() {
-                break
+                break;
             }
         }
 
@@ -122,7 +122,7 @@ pub trait ASTVisitor<P, R> {
         }
 
         if r.is_some() {
-            return r
+            return r;
         }
 
         if let Some((cond, _)) = &for_stmt.condition {
@@ -130,7 +130,7 @@ pub trait ASTVisitor<P, R> {
         }
 
         if r.is_some() {
-            return r
+            return r;
         }
 
         if let Some((step, _)) = &for_stmt.step {
@@ -138,7 +138,7 @@ pub trait ASTVisitor<P, R> {
         }
 
         if r.is_some() {
-            return r
+            return r;
         }
 
         self.visit_block_stmt(&for_stmt.body.0, p)
@@ -150,12 +150,12 @@ pub trait ASTVisitor<P, R> {
     fn default_visit_if_stmt(&mut self, if_stmt: &IfStmt, p: &P) -> Option<R> {
         let mut r = self.visit_expr(&if_stmt.condition.0, p);
         if r.is_some() {
-            return r
+            return r;
         }
 
         r = self.visit_block_stmt(&if_stmt.then_branch.0, p);
         if r.is_some() {
-            return r
+            return r;
         }
 
         if let Some(block) = &if_stmt.else_branch {
@@ -232,10 +232,18 @@ pub trait ASTVisitor<P, R> {
         None
     }
 
-    fn visit_member_access_expr(&mut self, member_access_expr: &MemberAccessExpr, p: &P) -> Option<R> {
+    fn visit_member_access_expr(
+        &mut self,
+        member_access_expr: &MemberAccessExpr,
+        p: &P,
+    ) -> Option<R> {
         self.default_visit_member_access_expr(member_access_expr, p)
     }
-    fn default_visit_member_access_expr(&mut self, member_access_expr: &MemberAccessExpr, p: &P) -> Option<R> {
+    fn default_visit_member_access_expr(
+        &mut self,
+        member_access_expr: &MemberAccessExpr,
+        p: &P,
+    ) -> Option<R> {
         self.visit_expr(&member_access_expr.receiver.0, p)
     }
 
@@ -254,7 +262,7 @@ pub trait ASTVisitor<P, R> {
         match decl {
             Decl::Class(class_decl) => self.visit_class_decl(&class_decl, p),
             Decl::Func(func_decl) => self.visit_func_decl(&func_decl, p),
-            Decl::Stmt (stmt) => self.visit_stmt(stmt, p),
+            Decl::Stmt(stmt) => self.visit_stmt(stmt, p),
         }
     }
 
@@ -282,7 +290,9 @@ pub trait ASTVisitor<P, R> {
             Expr::Binary(binary_expr) => self.visit_binary_expr(&binary_expr, p),
             Expr::Unary(unary_expr) => self.visit_unary_expr(&unary_expr, p),
             Expr::FuncCall(func_call_expr) => self.visit_func_call_expr(&func_call_expr, p),
-            Expr::MemberAccess(member_access_expr) => self.visit_member_access_expr(&member_access_expr, p),
+            Expr::MemberAccess(member_access_expr) => {
+                self.visit_member_access_expr(&member_access_expr, p)
+            }
             Expr::Primary(primary_expr) => self.visit_primary_expr(&primary_expr.0, p),
         }
     }

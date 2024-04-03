@@ -24,7 +24,8 @@ use crate::compiler::messages;
 use crate::compiler::tokens::{Token, TokenType};
 
 fn check_token_types<R: Read>(lexer: &mut YKLexer<R>, expected_tokens: &Vec<TokenType>) {
-    let tokens: Vec<TokenType> = lexer.all()
+    let tokens: Vec<TokenType> = lexer
+        .all()
         .into_iter()
         .map(|token| token.token_type)
         .collect();
@@ -32,7 +33,10 @@ fn check_token_types<R: Read>(lexer: &mut YKLexer<R>, expected_tokens: &Vec<Toke
     assert_eq!(expected_tokens, &tokens);
 }
 
-fn check_diagnostic_messages(diag_handler: &CollectingDiagnosticHandler, expected_messages: &Vec<&str>) {
+fn check_diagnostic_messages(
+    diag_handler: &CollectingDiagnosticHandler,
+    expected_messages: &Vec<&str>,
+) {
     let messages: Vec<String> = diag_handler
         .diagnostics
         .iter()
@@ -46,30 +50,30 @@ fn check_diagnostic_messages(diag_handler: &CollectingDiagnosticHandler, expecte
 #[test]
 fn test_simple_operator_lexing() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("()[]{},.+-:;*!<> ="),
-        diag_handler.clone()
-    );
+    let mut lexer = YKLexer::new(Cursor::new("()[]{},.+-:;*!<> ="), diag_handler.clone());
 
-    check_token_types(&mut lexer, &vec![
-        TokenType::LParen,
-        TokenType::RParen,
-        TokenType::LBrack,
-        TokenType::RBrack,
-        TokenType::LBrace,
-        TokenType::RBrace,
-        TokenType::Comma,
-        TokenType::Dot,
-        TokenType::Plus,
-        TokenType::Minus,
-        TokenType::Colon,
-        TokenType::Semicolon,
-        TokenType::Asterisk,
-        TokenType::Bang,
-        TokenType::Lt,
-        TokenType::Gt,
-        TokenType::Eq,
-    ]);
+    check_token_types(
+        &mut lexer,
+        &vec![
+            TokenType::LParen,
+            TokenType::RParen,
+            TokenType::LBrack,
+            TokenType::RBrack,
+            TokenType::LBrace,
+            TokenType::RBrace,
+            TokenType::Comma,
+            TokenType::Dot,
+            TokenType::Plus,
+            TokenType::Minus,
+            TokenType::Colon,
+            TokenType::Semicolon,
+            TokenType::Asterisk,
+            TokenType::Bang,
+            TokenType::Lt,
+            TokenType::Gt,
+            TokenType::Eq,
+        ],
+    );
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
@@ -79,27 +83,30 @@ fn test_multiline_operator_lexing() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
     let mut lexer = YKLexer::new(
         Cursor::new("()\n[]\n{}\n,\n.\n+\n-\n;\n*\n!\n<\n>\n=\n"),
-        diag_handler.clone()
+        diag_handler.clone(),
     );
 
-    check_token_types(&mut lexer, &vec![
-        TokenType::LParen,
-        TokenType::RParen,
-        TokenType::LBrack,
-        TokenType::RBrack,
-        TokenType::LBrace,
-        TokenType::RBrace,
-        TokenType::Comma,
-        TokenType::Dot,
-        TokenType::Plus,
-        TokenType::Minus,
-        TokenType::Semicolon,
-        TokenType::Asterisk,
-        TokenType::Bang,
-        TokenType::Lt,
-        TokenType::Gt,
-        TokenType::Eq,
-    ]);
+    check_token_types(
+        &mut lexer,
+        &vec![
+            TokenType::LParen,
+            TokenType::RParen,
+            TokenType::LBrack,
+            TokenType::RBrack,
+            TokenType::LBrace,
+            TokenType::RBrace,
+            TokenType::Comma,
+            TokenType::Dot,
+            TokenType::Plus,
+            TokenType::Minus,
+            TokenType::Semicolon,
+            TokenType::Asterisk,
+            TokenType::Bang,
+            TokenType::Lt,
+            TokenType::Gt,
+            TokenType::Eq,
+        ],
+    );
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
@@ -107,25 +114,25 @@ fn test_multiline_operator_lexing() {
 #[test]
 fn test_whitespaces_in_input_must_be_ignored() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("( )[ ]{ }\t,\r.\n+-;*"),
-        diag_handler.clone()
-    );
+    let mut lexer = YKLexer::new(Cursor::new("( )[ ]{ }\t,\r.\n+-;*"), diag_handler.clone());
 
-    check_token_types(&mut lexer, &vec![
-        TokenType::LParen,
-        TokenType::RParen,
-        TokenType::LBrack,
-        TokenType::RBrack,
-        TokenType::LBrace,
-        TokenType::RBrace,
-        TokenType::Comma,
-        TokenType::Dot,
-        TokenType::Plus,
-        TokenType::Minus,
-        TokenType::Semicolon,
-        TokenType::Asterisk,
-    ]);
+    check_token_types(
+        &mut lexer,
+        &vec![
+            TokenType::LParen,
+            TokenType::RParen,
+            TokenType::LBrack,
+            TokenType::RBrack,
+            TokenType::LBrace,
+            TokenType::RBrace,
+            TokenType::Comma,
+            TokenType::Dot,
+            TokenType::Plus,
+            TokenType::Minus,
+            TokenType::Semicolon,
+            TokenType::Asterisk,
+        ],
+    );
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
@@ -133,17 +140,17 @@ fn test_whitespaces_in_input_must_be_ignored() {
 #[test]
 fn test_multi_character_operator_lexing() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("!===<=>="),
-        diag_handler.clone()
-    );
+    let mut lexer = YKLexer::new(Cursor::new("!===<=>="), diag_handler.clone());
 
-    check_token_types(&mut lexer, &vec![
-        TokenType::BangEq,
-        TokenType::EqEq,
-        TokenType::LtEq,
-        TokenType::GtEq,
-    ]);
+    check_token_types(
+        &mut lexer,
+        &vec![
+            TokenType::BangEq,
+            TokenType::EqEq,
+            TokenType::LtEq,
+            TokenType::GtEq,
+        ],
+    );
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
@@ -153,13 +160,10 @@ fn test_comments_are_ignored_by_default() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
     let mut lexer = YKLexer::new(
         Cursor::new("!=\n// something not equal to \n=="),
-        diag_handler.clone()
+        diag_handler.clone(),
     );
 
-    check_token_types(&mut lexer, &vec![
-        TokenType::BangEq,
-        TokenType::EqEq,
-    ]);
+    check_token_types(&mut lexer, &vec![TokenType::BangEq, TokenType::EqEq]);
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
@@ -169,17 +173,16 @@ fn test_comments_are_tokenized_if_enabled() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
     let mut lexer = YKLexer::new(
         Cursor::new("!=\n// something not equal to \n=="),
-        diag_handler.clone()
+        diag_handler.clone(),
     );
 
     // enable comment tokenization
     lexer.ignore_comments = false;
 
-    check_token_types(&mut lexer, &vec![
-        TokenType::BangEq,
-        TokenType::Comment,
-        TokenType::EqEq,
-    ]);
+    check_token_types(
+        &mut lexer,
+        &vec![TokenType::BangEq, TokenType::Comment, TokenType::EqEq],
+    );
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
@@ -187,40 +190,40 @@ fn test_comments_are_tokenized_if_enabled() {
 #[test]
 fn test_lexer_reports_unrecognized_tokens() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("( )[ ]{ }\t,\r.\n�+-;*"),
-        diag_handler.clone()
+    let mut lexer = YKLexer::new(Cursor::new("( )[ ]{ }\t,\r.\n�+-;*"), diag_handler.clone());
+
+    check_token_types(
+        &mut lexer,
+        &vec![
+            TokenType::LParen,
+            TokenType::RParen,
+            TokenType::LBrack,
+            TokenType::RBrack,
+            TokenType::LBrace,
+            TokenType::RBrace,
+            TokenType::Comma,
+            TokenType::Dot,
+            TokenType::Plus,
+            TokenType::Minus,
+            TokenType::Semicolon,
+            TokenType::Asterisk,
+        ],
     );
 
-    check_token_types(&mut lexer, &vec![
-        TokenType::LParen,
-        TokenType::RParen,
-        TokenType::LBrack,
-        TokenType::RBrack,
-        TokenType::LBrace,
-        TokenType::RBrace,
-        TokenType::Comma,
-        TokenType::Dot,
-        TokenType::Plus,
-        TokenType::Minus,
-        TokenType::Semicolon,
-        TokenType::Asterisk,
-    ]);
-
-    check_diagnostic_messages(&diag_handler.borrow(), &vec![
-        messages::LEX_UNKNOWN_TOKEN,
-        messages::LEX_UNKNOWN_TOKEN,
-        messages::LEX_UNKNOWN_TOKEN
-    ]);
+    check_diagnostic_messages(
+        &diag_handler.borrow(),
+        &vec![
+            messages::LEX_UNKNOWN_TOKEN,
+            messages::LEX_UNKNOWN_TOKEN,
+            messages::LEX_UNKNOWN_TOKEN,
+        ],
+    );
 }
 
 #[test]
 fn test_simple_identifier_lexing() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("identifier"),
-        diag_handler.clone()
-    );
+    let mut lexer = YKLexer::new(Cursor::new("identifier"), diag_handler.clone());
 
     check_token_types(&mut lexer, &vec![TokenType::Identifier]);
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
@@ -231,26 +234,29 @@ fn test_simple_keyword_lexing() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
     let mut lexer = YKLexer::new(
         Cursor::new("and or if else while nil return true fun for false var this super print"),
-        diag_handler.clone()
+        diag_handler.clone(),
     );
 
-    check_token_types(&mut lexer, &vec![
-        TokenType::And,
-        TokenType::Or,
-        TokenType::If,
-        TokenType::Else,
-        TokenType::While,
-        TokenType::Nil,
-        TokenType::Return,
-        TokenType::True,
-        TokenType::Fun,
-        TokenType::For,
-        TokenType::False,
-        TokenType::Var,
-        TokenType::This,
-        TokenType::Super,
-        TokenType::Print,
-    ]);
+    check_token_types(
+        &mut lexer,
+        &vec![
+            TokenType::And,
+            TokenType::Or,
+            TokenType::If,
+            TokenType::Else,
+            TokenType::While,
+            TokenType::Nil,
+            TokenType::Return,
+            TokenType::True,
+            TokenType::Fun,
+            TokenType::For,
+            TokenType::False,
+            TokenType::Var,
+            TokenType::This,
+            TokenType::Super,
+            TokenType::Print,
+        ],
+    );
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
@@ -259,27 +265,32 @@ fn test_simple_keyword_lexing() {
 fn test_mixed_identifier_and_keyword_lexing() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
     let mut lexer = YKLexer::new(
-        Cursor::new("and or andor if else ifelse while nil return true fun identifier for false falseee"),
-        diag_handler.clone()
+        Cursor::new(
+            "and or andor if else ifelse while nil return true fun identifier for false falseee",
+        ),
+        diag_handler.clone(),
     );
 
-    check_token_types(&mut lexer, &vec![
-        TokenType::And,
-        TokenType::Or,
-        TokenType::Identifier,
-        TokenType::If,
-        TokenType::Else,
-        TokenType::Identifier,
-        TokenType::While,
-        TokenType::Nil,
-        TokenType::Return,
-        TokenType::True,
-        TokenType::Fun,
-        TokenType::Identifier,
-        TokenType::For,
-        TokenType::False,
-        TokenType::Identifier,
-    ]);
+    check_token_types(
+        &mut lexer,
+        &vec![
+            TokenType::And,
+            TokenType::Or,
+            TokenType::Identifier,
+            TokenType::If,
+            TokenType::Else,
+            TokenType::Identifier,
+            TokenType::While,
+            TokenType::Nil,
+            TokenType::Return,
+            TokenType::True,
+            TokenType::Fun,
+            TokenType::Identifier,
+            TokenType::For,
+            TokenType::False,
+            TokenType::Identifier,
+        ],
+    );
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
@@ -287,14 +298,9 @@ fn test_mixed_identifier_and_keyword_lexing() {
 #[test]
 fn test_numbers_in_identifiers() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("and123"),
-        diag_handler.clone()
-    );
+    let mut lexer = YKLexer::new(Cursor::new("and123"), diag_handler.clone());
 
-    check_token_types(&mut lexer, &vec![
-        TokenType::Identifier
-    ]);
+    check_token_types(&mut lexer, &vec![TokenType::Identifier]);
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
@@ -302,15 +308,9 @@ fn test_numbers_in_identifiers() {
 #[test]
 fn test_identifiers_starting_with_number() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("123and"),
-        diag_handler.clone()
-    );
+    let mut lexer = YKLexer::new(Cursor::new("123and"), diag_handler.clone());
 
-    check_token_types(&mut lexer, &vec![
-        TokenType::Number,
-        TokenType::And,
-    ]);
+    check_token_types(&mut lexer, &vec![TokenType::Number, TokenType::And]);
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
@@ -318,16 +318,16 @@ fn test_identifiers_starting_with_number() {
 #[test]
 fn test_underscores_in_identifiers() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("and_ a_nd _and"),
-        diag_handler.clone()
-    );
+    let mut lexer = YKLexer::new(Cursor::new("and_ a_nd _and"), diag_handler.clone());
 
-    check_token_types(&mut lexer, &vec![
-        TokenType::Identifier,
-        TokenType::Identifier,
-        TokenType::Identifier,
-    ]);
+    check_token_types(
+        &mut lexer,
+        &vec![
+            TokenType::Identifier,
+            TokenType::Identifier,
+            TokenType::Identifier,
+        ],
+    );
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
@@ -335,14 +335,9 @@ fn test_underscores_in_identifiers() {
 #[test]
 fn test_integer_number() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("123"),
-        diag_handler.clone()
-    );
+    let mut lexer = YKLexer::new(Cursor::new("123"), diag_handler.clone());
 
-    check_token_types(&mut lexer, &vec![
-        TokenType::Number,
-    ]);
+    check_token_types(&mut lexer, &vec![TokenType::Number]);
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
@@ -350,14 +345,9 @@ fn test_integer_number() {
 #[test]
 fn test_decimal_number() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("123.123"),
-        diag_handler.clone()
-    );
+    let mut lexer = YKLexer::new(Cursor::new("123.123"), diag_handler.clone());
 
-    check_token_types(&mut lexer, &vec![
-        TokenType::Number,
-    ]);
+    check_token_types(&mut lexer, &vec![TokenType::Number]);
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
@@ -365,16 +355,12 @@ fn test_decimal_number() {
 #[test]
 fn test_invalid_number() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("123.123.123"),
-        diag_handler.clone()
-    );
+    let mut lexer = YKLexer::new(Cursor::new("123.123.123"), diag_handler.clone());
 
-    check_token_types(&mut lexer, &vec![
-        TokenType::Number,
-        TokenType::Dot,
-        TokenType::Number,
-    ]);
+    check_token_types(
+        &mut lexer,
+        &vec![TokenType::Number, TokenType::Dot, TokenType::Number],
+    );
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
@@ -382,10 +368,7 @@ fn test_invalid_number() {
 #[test]
 fn test_simple_string_literal() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("\"something\""),
-        diag_handler.clone()
-    );
+    let mut lexer = YKLexer::new(Cursor::new("\"something\""), diag_handler.clone());
 
     let tokens = lexer.all();
 
@@ -408,7 +391,7 @@ fn test_simple_consecutive_string_literals() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
     let mut lexer = YKLexer::new(
         Cursor::new("\"something\" \"something else\""),
-        diag_handler.clone()
+        diag_handler.clone(),
     );
 
     let tokens = lexer.all();
@@ -441,10 +424,7 @@ fn test_simple_consecutive_string_literals() {
 #[test]
 fn test_multiline_string_literals_should_fail() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("\"some\nthing\""),
-        diag_handler.clone()
-    );
+    let mut lexer = YKLexer::new(Cursor::new("\"some\nthing\""), diag_handler.clone());
 
     let tokens = lexer.all();
 
@@ -458,10 +438,13 @@ fn test_multiline_string_literals_should_fail() {
     assert_eq!(false, tokens.is_empty());
     assert_eq!(TokenType::Identifier, tokens.get(0).unwrap().token_type);
 
-    check_diagnostic_messages(&diag_handler.borrow(), &vec![
-        messages::LEX_STRING_MULTILINE_ERROR,
-        messages::LEX_UNEXPECTED_EOF
-    ]);
+    check_diagnostic_messages(
+        &diag_handler.borrow(),
+        &vec![
+            messages::LEX_STRING_MULTILINE_ERROR,
+            messages::LEX_UNEXPECTED_EOF,
+        ],
+    );
 }
 
 #[test]
@@ -469,7 +452,7 @@ fn test_escape_sequences_in_string_literal() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
     let mut lexer = YKLexer::new(
         Cursor::new("\"\\u2022 \\b \\s \\t \\n \\f \\r \\\" \\' \\\\ \""),
-        diag_handler.clone()
+        diag_handler.clone(),
     );
 
     let tokens = lexer.all();
@@ -492,10 +475,7 @@ fn test_escape_sequences_in_string_literal() {
 #[test]
 fn test_unicode_escapes() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("\"\\u2022\""),
-        diag_handler.clone()
-    );
+    let mut lexer = YKLexer::new(Cursor::new("\"\\u2022\""), diag_handler.clone());
 
     let tokens = lexer.all();
 

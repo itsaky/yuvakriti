@@ -2,7 +2,7 @@
  * Copyright (c) 2024 The YuvaKriti Lang Authors.
  *
  * This program is free software: you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software 
+ *  terms of the GNU General Public License as published by the Free Software
  *  Foundation, version 3.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY
@@ -15,7 +15,7 @@
 
 use std::fmt::Write;
 
-use crate::compiler::ast::{AssignExpr, UnaryExpr};
+use crate::compiler::ast::visitor::ASTVisitor;
 use crate::compiler::ast::BinaryExpr;
 use crate::compiler::ast::BlockStmt;
 use crate::compiler::ast::ClassDecl;
@@ -33,8 +33,8 @@ use crate::compiler::ast::Program;
 use crate::compiler::ast::ReturnStmt;
 use crate::compiler::ast::Stmt;
 use crate::compiler::ast::VarStmt;
-use crate::compiler::ast::visitor::ASTVisitor;
 use crate::compiler::ast::WhileStmt;
+use crate::compiler::ast::{AssignExpr, UnaryExpr};
 
 pub struct ASTPrinter<'a> {
     f: &'a mut dyn Write,
@@ -42,28 +42,24 @@ pub struct ASTPrinter<'a> {
 }
 
 impl<'a> ASTPrinter<'a> {
-    
     pub fn new(f: &'a mut dyn Write, pretty: bool) -> Self {
-        ASTPrinter {
-            f,
-            pretty,
-        }
+        ASTPrinter { f, pretty }
     }
 
     fn indent(&mut self, indent_level: &usize) {
         if !self.pretty {
             return;
         }
-        
+
         if indent_level == &0 {
             return;
         }
-        
+
         for _ in 0..*indent_level {
             self.f.write_str("  ").unwrap();
         }
     }
-    
+
     fn whitespace(&mut self) {
         self.f.write_char(' ').unwrap();
     }
@@ -72,7 +68,7 @@ impl<'a> ASTPrinter<'a> {
         if !self.pretty {
             return;
         }
-        
+
         self.f.write_char('\n').unwrap();
         self.indent(indent_level);
     }
@@ -164,7 +160,6 @@ impl<'a> ASTPrinter<'a> {
 }
 
 impl<'a> ASTVisitor<usize, ()> for ASTPrinter<'a> {
-    
     fn visit_program(&mut self, program: &Program, indent_level: &usize) -> Option<()> {
         self.f.write_str("(program").unwrap();
         self.linefeed(&(indent_level + 1));
@@ -296,7 +291,11 @@ impl<'a> ASTVisitor<usize, ()> for ASTPrinter<'a> {
         None
     }
 
-    fn visit_func_call_expr(&mut self, func_call_expr: &FuncCallExpr, indent_level: &usize) -> Option<()> {
+    fn visit_func_call_expr(
+        &mut self,
+        func_call_expr: &FuncCallExpr,
+        indent_level: &usize,
+    ) -> Option<()> {
         self.visit_expr(&func_call_expr.callee.0, &(indent_level + 1));
         self.f.write_str("(").unwrap();
         let mut first = true;
@@ -311,14 +310,22 @@ impl<'a> ASTVisitor<usize, ()> for ASTPrinter<'a> {
         None
     }
 
-    fn visit_member_access_expr(&mut self, member_access_expr: &MemberAccessExpr, indent_level: &usize) -> Option<()> {
+    fn visit_member_access_expr(
+        &mut self,
+        member_access_expr: &MemberAccessExpr,
+        indent_level: &usize,
+    ) -> Option<()> {
         self.print_expr(&member_access_expr.receiver.0, indent_level);
         self.f.write_str(".").unwrap();
         self.f.write_str(&member_access_expr.member.0).unwrap();
         None
     }
 
-    fn visit_primary_expr(&mut self, primary_expr: &PrimaryExpr, _indent_level: &usize) -> Option<()> {
+    fn visit_primary_expr(
+        &mut self,
+        primary_expr: &PrimaryExpr,
+        _indent_level: &usize,
+    ) -> Option<()> {
         self.f.write_str(&format!("{:?}", primary_expr)).unwrap();
         None
     }

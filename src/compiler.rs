@@ -2,7 +2,7 @@
  * Copyright (c) 2024 The YuvaKriti Lang Authors.
  *
  * This program is free software: you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software 
+ *  terms of the GNU General Public License as published by the Free Software
  *  Foundation, version 3.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY
@@ -14,12 +14,10 @@
  */
 
 pub(crate) mod ast;
+pub(crate) mod bytecode;
 pub(crate) mod diagnostics;
 pub(crate) mod lexer;
 pub(crate) mod location;
 pub(crate) mod messages;
 pub(crate) mod parser;
 pub(crate) mod tokens;
-pub(crate) mod ykbfile;
-pub(crate) mod ykbversion;
-pub(crate) mod ykbwriter;

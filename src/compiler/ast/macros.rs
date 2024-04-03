@@ -172,49 +172,76 @@ macro_rules! expr {
 #[macro_export]
 macro_rules! primary_expr {
     (true) => {
-        spanned!($crate::compiler::ast::PrimaryExpr::True, $crate::compiler::location::Range::NO_RANGE)
+        spanned!(
+            $crate::compiler::ast::PrimaryExpr::True,
+            $crate::compiler::location::Range::NO_RANGE
+        )
     };
     (true $range:expr) => {
         spanned!($crate::compiler::ast::PrimaryExpr::True, $range)
     };
     (false) => {
-        spanned!($crate::compiler::ast::PrimaryExpr::False, $crate::compiler::location::Range::NO_RANGE)
+        spanned!(
+            $crate::compiler::ast::PrimaryExpr::False,
+            $crate::compiler::location::Range::NO_RANGE
+        )
     };
     (false $range:expr) => {
         spanned!($crate::compiler::ast::PrimaryExpr::False, $range)
     };
     (nil) => {
-        spanned!($crate::compiler::ast::PrimaryExpr::Nil, $crate::compiler::location::Range::NO_RANGE)
+        spanned!(
+            $crate::compiler::ast::PrimaryExpr::Nil,
+            $crate::compiler::location::Range::NO_RANGE
+        )
     };
     (nil $range:expr) => {
         spanned!($crate::compiler::ast::PrimaryExpr::Nil, $range)
     };
     (this) => {
-        spanned!($crate::compiler::ast::PrimaryExpr::This, $crate::compiler::location::Range::NO_RANGE)
+        spanned!(
+            $crate::compiler::ast::PrimaryExpr::This,
+            $crate::compiler::location::Range::NO_RANGE
+        )
     };
     (this $range:expr) => {
         spanned!($crate::compiler::ast::PrimaryExpr::This, $range)
     };
     (num $num:expr) => {
-        spanned!($crate::compiler::ast::PrimaryExpr::Number($num), $crate::compiler::location::Range::NO_RANGE)
+        spanned!(
+            $crate::compiler::ast::PrimaryExpr::Number($num),
+            $crate::compiler::location::Range::NO_RANGE
+        )
     };
     (num $num:expr, $range:expr) => {
         spanned!($crate::compiler::ast::PrimaryExpr::Number($num), $range)
     };
     (str $str:expr) => {
-        spanned!($crate::compiler::ast::PrimaryExpr::String($str), $crate::compiler::location::Range::NO_RANGE)
+        spanned!(
+            $crate::compiler::ast::PrimaryExpr::String($str),
+            $crate::compiler::location::Range::NO_RANGE
+        )
     };
     (str $str:expr, $range:expr) => {
         spanned!($crate::compiler::ast::PrimaryExpr::String($str), $range)
     };
     (ident $ident:expr) => {
-        spanned!($crate::compiler::ast::PrimaryExpr::Identifier($ident), $crate::compiler::location::Range::NO_RANGE)
+        spanned!(
+            $crate::compiler::ast::PrimaryExpr::Identifier($ident),
+            $crate::compiler::location::Range::NO_RANGE
+        )
     };
     (ident $ident:expr, $range:expr) => {
-        spanned!($crate::compiler::ast::PrimaryExpr::Identifier($ident), $range)
+        spanned!(
+            $crate::compiler::ast::PrimaryExpr::Identifier($ident),
+            $range
+        )
     };
     (group $expr:expr) => {
-        spanned!($crate::compiler::ast::PrimaryExpr::Grouping($expr), $crate::compiler::location::Range::NO_RANGE)
+        spanned!(
+            $crate::compiler::ast::PrimaryExpr::Grouping($expr),
+            $crate::compiler::location::Range::NO_RANGE
+        )
     };
     (group $expr:expr, $range:expr) => {
         spanned!($crate::compiler::ast::PrimaryExpr::Grouping($expr), $range)

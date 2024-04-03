@@ -35,34 +35,31 @@ pub(crate) struct YKLexer<'a, R: Read> {
     token_text: Vec<char>,
     token_start: Position,
     position: Position,
-    pub(crate) ignore_comments: bool
+    pub(crate) ignore_comments: bool,
 }
 
-impl <R: Read> YKLexer<'_, R> {
+impl<R: Read> YKLexer<'_, R> {
     fn report(&mut self, diagnostic_kind: DiagnosticKind, message: &str) {
-        self.diagnostics.borrow_mut().handle(self.create_diagnostic(diagnostic_kind, message));
+        self.diagnostics
+            .borrow_mut()
+            .handle(self.create_diagnostic(diagnostic_kind, message));
     }
 
-    fn create_diagnostic(
-        &self,
-        diagnostic_kind: DiagnosticKind,
-        message: &str,
-    ) -> Diagnostic {
+    fn create_diagnostic(&self, diagnostic_kind: DiagnosticKind, message: &str) -> Diagnostic {
         Diagnostic {
             range: Range {
                 start: self.token_start,
-                end: self.position
+                end: self.position,
             },
 
             message: String::from(message),
 
-            kind: diagnostic_kind
+            kind: diagnostic_kind,
         }
     }
 }
 
 impl<R: Read> YKLexer<'_, R> {
-
     /// Initial capacity of the vector in the lexer which is used to store the
     /// characters of the current word
     const VECTOR_TKN_TXT_INITIAL_CAPACITY: usize = 64;
@@ -90,30 +87,26 @@ impl<R: Read> YKLexer<'_, R> {
     }
 }
 
-impl <R: Read> YKLexer<'_, R> {
-
+impl<R: Read> YKLexer<'_, R> {
     /// Tokenizes the input source and returns all the recognized tokens.
     pub(crate) fn all(&mut self) -> Vec<Token> {
         let mut tokens: Vec<Token> = Vec::new();
         while !self.is_at_eof() {
             if let Some(token) = self.next() {
-
-                if self.ignore_comments
-                    && token.token_type == TokenType::Comment {
+                if self.ignore_comments && token.token_type == TokenType::Comment {
                     // ignore comments
-                    continue
+                    continue;
                 }
 
                 tokens.push(token)
             }
         }
-        return tokens
+        return tokens;
     }
 
     /// Advance to the next token in the input source. This returns [Some] if a valid token
     /// is recognized, otherwise return [None].
     pub(crate) fn next(&mut self) -> Option<Token> {
-
         // Skip all whitespaces
         self.skip_whitespaces();
 
@@ -124,7 +117,6 @@ impl <R: Read> YKLexer<'_, R> {
         let result = match self.advance() {
             None => None,
             Some(char) => {
-
                 if is_identifier_start(char) {
                     return self.identifier();
                 }
@@ -152,22 +144,22 @@ impl <R: Read> YKLexer<'_, R> {
 
                     '!' => match self.cmatch('=') {
                         true => Some(self.token(TokenType::BangEq)),
-                        false => Some(self.token(TokenType::Bang))
+                        false => Some(self.token(TokenType::Bang)),
                     },
 
                     '=' => match self.cmatch('=') {
                         true => Some(self.token(TokenType::EqEq)),
-                        false => Some(self.token(TokenType::Eq))
+                        false => Some(self.token(TokenType::Eq)),
                     },
 
                     '>' => match self.cmatch('=') {
                         true => Some(self.token(TokenType::GtEq)),
-                        false => Some(self.token(TokenType::Gt))
+                        false => Some(self.token(TokenType::Gt)),
                     },
 
                     '<' => match self.cmatch('=') {
                         true => Some(self.token(TokenType::LtEq)),
-                        false => Some(self.token(TokenType::Lt))
+                        false => Some(self.token(TokenType::Lt)),
                     },
 
                     '/' => {
@@ -175,12 +167,13 @@ impl <R: Read> YKLexer<'_, R> {
                             // comments start with a '//' token and span the entire line
                             // we seek to the end of line and return a comment token
                             if next == '/' {
-                                while self.peek().unwrap_or(NULL_CHAR) != '\n' && !self.is_at_eof() {
+                                while self.peek().unwrap_or(NULL_CHAR) != '\n' && !self.is_at_eof()
+                                {
                                     // we ignore comments
                                     self.advance();
                                 }
 
-                                return Some(self.token(TokenType::Comment))
+                                return Some(self.token(TokenType::Comment));
                             }
                         }
 
@@ -189,9 +182,9 @@ impl <R: Read> YKLexer<'_, R> {
 
                     _ => {
                         self.report(DiagnosticKind::Error, messages::LEX_UNKNOWN_TOKEN);
-                        return None
+                        return None;
                     }
-                }
+                };
             }
         };
 
@@ -204,7 +197,7 @@ impl <R: Read> YKLexer<'_, R> {
             self.advance();
         }
 
-        return Some(self.token(self.identifier_type()))
+        return Some(self.token(self.identifier_type()));
     }
 
     /// Returns the type of identifier at the current lexer position
@@ -219,8 +212,8 @@ impl <R: Read> YKLexer<'_, R> {
                         'u' => self.match_word_rest(2, "n", TokenType::Fun),
                         'o' => self.match_word_rest(2, "r", TokenType::For),
                         'a' => self.match_word_rest(2, "lse", TokenType::False),
-                        _ => None
-                    }
+                        _ => None,
+                    },
                 },
                 'i' => self.match_word_rest(1, "f", TokenType::If),
                 'n' => self.match_word_rest(1, "il", TokenType::Nil),
@@ -233,14 +226,14 @@ impl <R: Read> YKLexer<'_, R> {
                     Some(c2) => match c2 {
                         'r' => self.match_word_rest(2, "ue", TokenType::True),
                         'h' => self.match_word_rest(2, "is", TokenType::This),
-                        _ => None
-                    }
+                        _ => None,
+                    },
                 },
                 'v' => self.match_word_rest(1, "ar", TokenType::Var),
                 'w' => self.match_word_rest(1, "hile", TokenType::While),
                 _ => None,
-            }
-            None => None
+            },
+            None => None,
         };
 
         return match_result.unwrap_or(TokenType::Identifier);
@@ -253,30 +246,34 @@ impl <R: Read> YKLexer<'_, R> {
     /// never match in such cases).
     ///
     /// The behavior is similar to how a 'trie' works.
-    fn match_word_rest(&self, start: usize, rest: &str, result_type: TokenType) -> Option<TokenType> {
+    fn match_word_rest(
+        &self,
+        start: usize,
+        rest: &str,
+        result_type: TokenType,
+    ) -> Option<TokenType> {
         if start < 0 || start >= self.token_text.len() {
-            return None
+            return None;
         }
 
         if self.token_text.len() > rest.len() + start {
-            return None
+            return None;
         }
 
         let bytes = rest.as_bytes();
         for i in start..self.token_text.len() {
             if let Some(char) = self.token_text.get(i) {
                 if char != &char::from(bytes[i - start]) {
-                    return None
+                    return None;
                 }
             }
         }
 
-        return Some(result_type)
+        return Some(result_type);
     }
 
     /// Scans a number literal in the input source
     fn number(&mut self) -> Option<Token> {
-
         // TODO: Add support for '_' in numbers
         //  For example, 10000 could be written as 10_000
         //  Constrains are simple :
@@ -291,8 +288,8 @@ impl <R: Read> YKLexer<'_, R> {
 
         // check if the number is followed by a decimal point and more numbers
         if self.peek().unwrap_or(NULL_CHAR) == '.'
-            && is_digit(self.peek_next().unwrap_or(NULL_CHAR)) {
-
+            && is_digit(self.peek_next().unwrap_or(NULL_CHAR))
+        {
             // consume the decimal point and the following numbers
             self.advance();
             while is_digit(self.peek().unwrap_or(NULL_CHAR)) {
@@ -309,22 +306,21 @@ impl <R: Read> YKLexer<'_, R> {
             let peek = self.peek().unwrap_or(NULL_CHAR);
             if self.is_at_eof() || peek == NULL_CHAR {
                 self.report(DiagnosticKind::Error, messages::LEX_UNEXPECTED_EOF);
-                return None
+                return None;
             }
 
             match peek {
                 '"' => break, // reached end of string
                 '\n' => {
                     self.report(DiagnosticKind::Error, messages::LEX_STRING_MULTILINE_ERROR);
-                    return None
-                },
+                    return None;
+                }
                 '\\' => {
-
                     // this consumes the whole escape sequence,
                     // so we need to continue the loop, instead of calling advance() below
                     let _ = self.expect_esc_seq();
-                    continue
-                },
+                    continue;
+                }
                 _ => {}
             }
 
@@ -349,21 +345,26 @@ impl <R: Read> YKLexer<'_, R> {
 
         char = self.advance().unwrap_or(NULL_CHAR);
         match char {
-            'b' | 's'  | 't' | 'n' | 'f' | 'r' |
-            '"' | '\\' | '\'' => {}
+            'b' | 's' | 't' | 'n' | 'f' | 'r' | '"' | '\\' | '\'' => {}
             'u' => {
                 // a unicode escape
                 // we have consumer '\u'
                 // check for the remaining 4 unicode HEX characters
                 for _ in 0..4 {
                     if !is_hex_digit(self.advance().unwrap_or(NULL_CHAR)) {
-                        self.report(DiagnosticKind::Error, messages::LEX_STRING_ILLEGAL_UNICODE_ESC);
+                        self.report(
+                            DiagnosticKind::Error,
+                            messages::LEX_STRING_ILLEGAL_UNICODE_ESC,
+                        );
                         return Err(());
                     }
                 }
             }
             _ => {
-                self.report(DiagnosticKind::Error, messages::LEX_STRING_UNRECOGNIZED_ESC_SEQ);
+                self.report(
+                    DiagnosticKind::Error,
+                    messages::LEX_STRING_UNRECOGNIZED_ESC_SEQ,
+                );
                 return Err(());
             }
         }
@@ -378,7 +379,7 @@ impl <R: Read> YKLexer<'_, R> {
 
         self.current_char = match next_char {
             None => None,
-            Some(result) => u8_to_char(&result)
+            Some(result) => u8_to_char(&result),
         };
 
         if let Some(char) = result {
@@ -391,7 +392,7 @@ impl <R: Read> YKLexer<'_, R> {
             self.position = Position {
                 line: 0,
                 column: 0,
-                index: 0
+                index: 0,
             }
         } else {
             self.position.column += 1;
@@ -419,7 +420,7 @@ impl <R: Read> YKLexer<'_, R> {
         let result = self.input.peek();
         match result {
             None => None,
-            Some(result) => u8_to_char(result)
+            Some(result) => u8_to_char(result),
         }
     }
 
@@ -427,7 +428,6 @@ impl <R: Read> YKLexer<'_, R> {
     fn reset_word(&mut self) {
         self.token_text.clear();
     }
-
 
     /// Skips through the input source until a non-whitespace character or EOF is encountered.
     fn skip_whitespaces(&mut self) {
@@ -457,23 +457,20 @@ impl <R: Read> YKLexer<'_, R> {
     }
 
     /// Create a token
-    fn token(
-        &self,
-        token_type: TokenType,
-    ) -> Token {
+    fn token(&self, token_type: TokenType) -> Token {
         return Token {
             token_type,
             text: self.token_text.iter().collect(),
             range: Range {
                 start: self.token_start,
-                end: self.position.clone()
-            }
+                end: self.position.clone(),
+            },
         };
     }
 
     /// Returns whether the current character represents an end-of-file (EOF)
     fn is_at_eof(&self) -> bool {
-        return self.peek().unwrap_or(NULL_CHAR) == NULL_CHAR
+        return self.peek().unwrap_or(NULL_CHAR) == NULL_CHAR;
     }
 }
 
@@ -483,8 +480,8 @@ fn u8_to_char(result: &io::Result<u8>) -> Option<char> {
         Err(err) => {
             error!("Failed to convert u8 to char: {:?}", err);
             None
-        },
-        Ok(character) => Some(char::from(*character))
+        }
+        Ok(character) => Some(char::from(*character)),
     }
 }
 
@@ -501,9 +498,7 @@ fn is_identifier_part(char: char) -> bool {
 
 /// Checks whether the given character is a valid alphabet in YuvaKriti lang
 fn is_alpha(char: char) -> bool {
-    return (char >= 'a' && char <= 'z') ||
-        (char >= 'A' && char <= 'Z') ||
-        char == '_';
+    return (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || char == '_';
 }
 
 /// Checks whether the given character is a valid digit in YuvaKriti lang
@@ -513,15 +508,10 @@ fn is_digit(char: char) -> bool {
 
 /// Checks whether the given character is a valid hex digit
 fn is_hex_digit(char: char) -> bool {
-    return is_digit(char) ||
-        (char >= 'a' && char <= 'f') ||
-        (char >= 'A' && char <= 'F');
+    return is_digit(char) || (char >= 'a' && char <= 'f') || (char >= 'A' && char <= 'F');
 }
 
 /// Returns whether the given character is a whitespace
 fn is_whitespace(c: char) -> bool {
-    return c == ' '
-        || c == '\t'
-        || c == '\r'
-        || c == '\n'
+    return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }

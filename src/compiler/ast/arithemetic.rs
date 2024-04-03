@@ -2,7 +2,7 @@
  * Copyright (c) 2024 The YuvaKriti Lang Authors.
  *
  * This program is free software: you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software 
+ *  terms of the GNU General Public License as published by the Free Software
  *  Foundation, version 3.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY
@@ -15,11 +15,11 @@
 
 use std::fmt::Write;
 
+use crate::compiler::ast::ASTVisitor;
 use crate::compiler::ast::BinaryExpr;
 use crate::compiler::ast::Expr;
 use crate::compiler::ast::PrimaryExpr;
 use crate::compiler::ast::UnaryExpr;
-use crate::compiler::ast::visitor::ASTVisitor;
 
 pub struct ArithmeticASTPrinter<'a> {
     f: &'a mut dyn Write,
@@ -32,30 +32,39 @@ impl<'a> ArithmeticASTPrinter<'a> {
 }
 
 impl<'a> ASTVisitor<(), ()> for ArithmeticASTPrinter<'a> {
-    
     fn visit_binary_expr(&mut self, binary_expr: &BinaryExpr, p: &()) -> Option<()> {
         self.f.write_str("(").unwrap();
         self.visit_expr(&binary_expr.left.0, &());
-        self.f.write_str(&format!(" {} ", binary_expr.op.sym())).unwrap();
+        self.f
+            .write_str(&format!(" {} ", binary_expr.op.sym()))
+            .unwrap();
         self.visit_expr(&binary_expr.right.0, &());
         self.f.write_str(")").unwrap();
         None
     }
 
     fn visit_unary_expr(&mut self, unary_expr: &UnaryExpr, p: &()) -> Option<()> {
-        self.f.write_str(&format!("{}", unary_expr.op.sym())).unwrap();
+        self.f
+            .write_str(&format!("{}", unary_expr.op.sym()))
+            .unwrap();
         self.visit_expr(&unary_expr.expr.0, &());
         None
     }
 
     fn visit_primary_expr(&mut self, _primary_expr: &PrimaryExpr, _p: &()) -> Option<()> {
         match _primary_expr {
-            PrimaryExpr::Number(num) => { let _ = self.f.write_str(&format!("{}", num)).unwrap(); },
-            PrimaryExpr::Identifier(name) => { let _ = self.f.write_str(&format!("{}", name)).unwrap(); },
-            PrimaryExpr::Grouping(expr) => { let _ = self.visit_expr(&expr.0, _p); },
-            _ => panic!("Not an arithemetic expression")
+            PrimaryExpr::Number(num) => {
+                let _ = self.f.write_str(&format!("{}", num)).unwrap();
+            }
+            PrimaryExpr::Identifier(name) => {
+                let _ = self.f.write_str(&format!("{}", name)).unwrap();
+            }
+            PrimaryExpr::Grouping(expr) => {
+                let _ = self.visit_expr(&expr.0, _p);
+            }
+            _ => panic!("Not an arithemetic expression"),
         };
-        
+
         None
     }
 
@@ -64,9 +73,9 @@ impl<'a> ASTVisitor<(), ()> for ArithmeticASTPrinter<'a> {
             Expr::Binary(binary_expr) => self.visit_binary_expr(binary_expr, &()),
             Expr::Unary(unary_expr) => self.visit_unary_expr(unary_expr, &()),
             Expr::Primary(primary_expr) => self.visit_primary_expr(&primary_expr.0, &()),
-            _ => panic!("Not an arithemetic expression")
+            _ => panic!("Not an arithemetic expression"),
         };
-        
+
         None
     }
 }

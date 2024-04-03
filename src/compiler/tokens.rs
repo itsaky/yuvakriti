@@ -13,12 +13,11 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::fmt::{Display, Formatter};
 use crate::compiler::location::Range;
+use std::fmt::{Display, Formatter};
 
 #[derive(Eq, Debug)]
 pub(crate) struct Token {
-
     /// See [TokenType] for a list of valid tokens.
     pub(crate) token_type: TokenType,
 
@@ -27,75 +26,73 @@ pub(crate) struct Token {
 
     /// The range of the token
     /// The column and index in end position of token is exclusive
-    pub(crate) range: Range
+    pub(crate) range: Range,
 }
 
 impl PartialEq<Self> for Token {
     fn eq(&self, other: &Self) -> bool {
         return self.token_type == other.token_type
             && self.text == other.text
-            && self.range == other.range
+            && self.range == other.range;
     }
 }
-
 
 /// Token types for YKLang
 #[derive(Eq, Debug)]
 pub(crate) enum TokenType {
+    LParen, // (
+    RParen, // )
+    LBrack, // [
+    RBrack, // ]
+    LBrace, // {
+    RBrace, // }
 
-    LParen,         // (
-    RParen,         // )
-    LBrack,         // [
-    RBrack,         // ]
-    LBrace,         // {
-    RBrace,         // }
+    Plus,      // +
+    Minus,     // -
+    Asterisk,  // *
+    Slash,     // /
+    Comma,     // ,
+    Dot,       // .
+    Colon,     // :
+    Semicolon, // ;
 
-    Plus,           // +
-    Minus,          // -
-    Asterisk,       // *
-    Slash,          // /
-    Comma,          // ,
-    Dot,            // .
-    Colon,          // :
-    Semicolon,      // ;
+    Bang,   // !
+    Eq,     // =
+    BangEq, // !=
+    EqEq,   // ==
+    Gt,     // >
+    GtEq,   // >=
+    Lt,     // <
+    LtEq,   // <=
 
-    Bang,           // !
-    Eq,             // =
-    BangEq,         // !=
-    EqEq,           // ==
-    Gt,             // >
-    GtEq,           // >=
-    Lt,             // <
-    LtEq,           // <=
+    And, // and
+    Or,  // or
 
-    And,            // and
-    Or,             // or
-
-    If,             // if
-    Else,           // else
-    Fun,            // fun
-    For,            // for
-    While,          // while
-    Nil,            // nil
-    Return,         // return
-    Var,            // var
-    Super,          // super
-    This,           // this
-    Print,           // print
+    If,     // if
+    Else,   // else
+    Fun,    // fun
+    For,    // for
+    While,  // while
+    Nil,    // nil
+    Return, // return
+    Var,    // var
+    Super,  // super
+    This,   // this
+    Print,  // print
 
     Identifier,
     String,
     Number,
 
-    True,           // true
-    False,          // false
+    True,  // true
+    False, // false
 
-    Comment,        // Anything after a '//' (inclusive)
+    Comment, // Anything after a '//' (inclusive)
 }
 
 impl PartialEq<Self> for TokenType {
     fn eq(&self, other: &Self) -> bool {
-        return std::mem::discriminant(self) == std::mem::discriminant(other)
+        return std::mem::discriminant(self) == std::mem::discriminant(other);
     }
 }
 
