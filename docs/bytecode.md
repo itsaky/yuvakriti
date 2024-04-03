@@ -46,8 +46,7 @@ The value of `constant_pool_count` is the number of entries available in the `co
 _Size: Variable_
 
 The constant_pool is a table of structures representing various string
-constants, class and interface names, field names, and other constants that are
-referred to within the `YKBFile` structure and its substructures. The format of
-each `constant_pool` table entry is indicated by its first "tag" byte.
+constants, class names, field names, and other constants that are
+referred to within the `YKBFile` structure and its substructures. The format of each `constant_pool` table entry is indicated by its first `tag` byte.
 
-The constant_pool table is indexed from 1 to constant_pool_count - 1.
+The constant_pool table is indexed from 1 to constant_pool_count - 1. See [Constant Pool](./constant_pool.md) for more details.
