@@ -13,4 +13,25 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub(crate) mod bytecode;
+pub(crate) struct YKBVersion {
+    major_version: u16,
+    minor_version: u16,
+}
+
+impl YKBVersion {
+    
+    /// Creates a new YKBVersion.
+    pub(crate) const fn new(major_version: u16, minor_version: u16) -> YKBVersion {
+        return YKBVersion {
+            major_version,
+            minor_version,
+        }
+    }
+} 
+
+impl YKBVersion {
+    pub(crate) const NONE: YKBVersion = YKBVersion::new(0, 0);
+    
+    /// The version 0.1 of the YKB file.
+    pub(crate) const VERSION_0_1: YKBVersion = YKBVersion::new(0, 1);
+}

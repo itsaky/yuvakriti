@@ -13,4 +13,15 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-pub(crate) mod bytecode;
+use crate::compiler::ykbfile::YKBFile;
+
+/// Writes the bytecode for the given YKB file.
+pub(crate) struct YKBFileWriter;
+
+impl YKBFileWriter {
+    
+    /// Writes the bytecode for the given YKB file.
+    pub(crate) fn write(file: &YKBFile) {
+        
+    }
+} 

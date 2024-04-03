@@ -1,7 +1,8 @@
 use std::process::ExitCode;
 
-mod compiler;
-mod vm;
+pub(crate) mod compiler;
+pub(crate) mod logging;
+pub(crate) mod vm;
 
 #[cfg(test)]
 mod tests;
@@ -10,6 +11,7 @@ mod tests;
 mod tests;
 
 fn main() -> ExitCode {
+    
     // let path = Path::new("test.yk");
     // let path_display = path.display();
     //

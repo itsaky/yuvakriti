@@ -13,12 +13,6 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-/// Magic number for the YuvaKriti Binary file format (`.ykb`).
-/// The first 4 bytes of all YKB files have this value to help recognize
-/// the file format.
-pub(crate) const MAGIC_NUMBER: u32 = 0x59564B52; // ASCII codes for 'YVKR'x
-
-
 /// The opcodes in YKB files.
 pub(crate) struct OpCode;
 impl OpCode {

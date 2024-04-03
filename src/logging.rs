@@ -16,7 +16,7 @@
 use colored::{ColoredString, Colorize};
 use log::{Level, LevelFilter, Log, Metadata, Record, SetLoggerError};
 
-pub const LOG_LEVEL: Level = Level::Debug;
+pub(crate) const LOG_LEVEL: Level = Level::Debug;
 const LOG_LEVEL_FILTER: LevelFilter = LevelFilter::Debug;
 static LOGGER: YKLogger = YKLogger;
 

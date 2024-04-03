@@ -15,3 +15,8 @@
 
 pub(crate) mod chunk;
 pub(crate) mod opcode;
+
+/// Magic number for the YuvaKriti Binary file format (`.ykb`).
+/// The first 4 bytes of all YKB files have this value to help recognize
+/// the file format.
+pub const MAGIC_NUMBER: u32 = 0x59564B52; // ASCII codes for 'YVKR'x
