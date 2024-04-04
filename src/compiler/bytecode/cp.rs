@@ -19,8 +19,8 @@ use crate::compiler::bytecode::cp_info::Utf8Info;
 
 /// The constant pool in a YKB file.
 ///
-/// The entries in the contant pool are 1-indexed. The first entry is always the [ConstantEntry::None]
-/// entry.
+/// The first entry is always the reserved [ConstantEntry::None]
+/// entry. As a result, the entries in the contant pool are 1-indexed.
 #[allow(unused)]
 pub(crate) struct ConstantPool {
     entries: Vec<ConstantEntry>,

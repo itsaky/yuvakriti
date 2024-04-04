@@ -15,7 +15,7 @@
 
 use crate::compiler::bytecode::{ConstantEntry, YKBFileWriter};
 use crate::compiler::bytecode::ConstantPool;
-use crate::compiler::bytecode::cp_info::NumberInfo;
+use crate::compiler::bytecode::cp_info::{NumberInfo, StringInfo};
 use crate::compiler::bytecode::cp_info::Utf8Info;
 use crate::tests::compiler::util::parse;
 
@@ -56,16 +56,27 @@ fn test_cp_duplicate_push() {
 
 #[test]
 fn test_cp_push_from_program() {
-    let mut program = parse("var a = 123; var b = 123; var c = \"something\"; var d = \"something\"; var e = \"something else\";");
+    let mut program = parse(
+    "var a = 123;\
+     var b = 123;\
+     var c = \"something\";\
+     var d = \"something\";\
+     var e = \"something else\";\
+    ");
     let mut writer = YKBFileWriter::new();
     let file = writer.write(&mut program);
     let constant_pool = file.constant_pool();
     
     // 0 -> ConstantEntry::None
-    // 1 -> NumberInfo
-    // 2 -> Utf8Info
-    // 3 -> StringInfo
-    // 4 -> Utf8Info
-    // 5 -> StringInfo
+    // 1 -> NumberInfo => 123
+    // 2 -> Utf8Info => "something"
+    // 3 -> StringInfo => cp[2]
+    // 4 -> Utf8Info => "something else"
+    // 5 -> StringInfo => cp[4]
     assert_eq!(6, constant_pool.len());
+    assert_eq!(1, constant_pool.lookup(&ConstantEntry::Number(NumberInfo::from(&123f64))).unwrap());
+    assert_eq!(2, constant_pool.lookup(&ConstantEntry::Utf8(Utf8Info::from("something"))).unwrap());
+    assert_eq!(3, constant_pool.lookup(&ConstantEntry::String(StringInfo { string_index: 2,})).unwrap());
+    assert_eq!(4, constant_pool.lookup(&ConstantEntry::Utf8(Utf8Info::from("something else"))).unwrap());
+    assert_eq!(5, constant_pool.lookup(&ConstantEntry::String(StringInfo { string_index: 4,})).unwrap());
 }

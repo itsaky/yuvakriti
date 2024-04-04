@@ -61,6 +61,7 @@ impl ASTVisitor<(), u16> for YKBFileWriter {
                 constant_pool.push(ConstantEntry::Number(NumberInfo::from(num)))
             }
             PrimaryExpr::String(str) => {
+                let str = &str[1..str.len() - 1]; // remove double quotes
                 let utf8info = constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(str)));
                 constant_pool.push(ConstantEntry::String(StringInfo {
                     string_index: utf8info,
