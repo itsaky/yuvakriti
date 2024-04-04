@@ -14,7 +14,7 @@ YKBFile {
     u2 major_version;
     u2 minor_version;
     u2 constant_pool_count;
-    constant_pool constant_pool_entry[constant_pool_count];
+    constant_pool constant_pool_entry[constant_pool_count-1];
 }
 ```
 
@@ -30,7 +30,7 @@ _Size: 16-bit, 16-bit_
 
 The values of the `minor_version` and `major_version` items are the minor
 and major version numbers of this `ykb` file. Together, a major and a minor
-version number determine the version of the `ykb` file format. If a class file
+version number determine the version of the `ykb` file format. If a `ykb` file
 has major version number `M` and minor version number `m`, we denote the version
 of its `ykb` file format as `M.m`.
 
@@ -45,7 +45,7 @@ The value of `constant_pool_count` is the number of entries available in the `co
 
 _Size: Variable_
 
-The constant_pool is a table of structures representing various string
+The `constant_pool` is a table of structures representing various string
 constants, class names, field names, and other constants that are
 referred to within the `YKBFile` structure and its substructures. The format of each `constant_pool` table entry is indicated by its first `tag` byte.
 
