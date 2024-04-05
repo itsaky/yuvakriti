@@ -3,6 +3,14 @@
 version = 3
 
 [[package]]
+name = "bytecode"
+version = "0.1.0"
+dependencies = [
+ "compiler",
+ "proc_macros",
+]
+
+[[package]]
 name = "colored"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10,6 +18,13 @@ checksum = "cbf2150cce219b664a8a70df7a1f933836724b503f8a413af9365b4dcc4d90b8"
 dependencies = [
  "lazy_static",
  "windows-sys",
+]
+
+[[package]]
+name = "compiler"
+version = "0.1.0"
+dependencies = [
+ "log",
 ]
 
 [[package]]
@@ -23,6 +38,14 @@ name = "log"
 version = "0.4.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90ed8c1e510134f979dbc4f070f87d4313098b704861a105fe34231c70a3901c"
+
+[[package]]
+name = "logging"
+version = "0.1.0"
+dependencies = [
+ "colored",
+ "log",
+]
 
 [[package]]
 name = "proc-macro2"
@@ -67,6 +90,10 @@ name = "unicode-ident"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
+
+[[package]]
+name = "vm"
+version = "0.1.0"
 
 [[package]]
 name = "windows-sys"
@@ -137,8 +164,3 @@ checksum = "ed94fce61571a4006852b7389a063ab983c02eb1bb37b47f8272ce92d06d9538"
 [[package]]
 name = "yuvakriti"
 version = "0.1.0"
-dependencies = [
- "colored",
- "log",
- "proc_macros",
-]

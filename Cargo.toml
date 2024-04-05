@@ -1,8 +1,15 @@
 [workspace]
-members = ["proc_macros"]
+resolver = "2"
+members = [
+    "bytecode",
+    "compiler",
+    "logging",
+    "proc_macros",
+    "vm",
+    "yuvakriti"
+]
 
-[package]
-name = "yuvakriti"
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
 authors = ["Akash Yadav <contact@itsaky.com>"]
@@ -28,7 +35,11 @@ opt-level = "s"       # Optimize for size.
 inherits = "optimize"
 strip = false
 
-[dependencies]
+[workspace.dependencies]
 log = "0.4"
 colored = "2"
+bytecode = { path = "bytecode" }
+compiler = { path = "compiler" }
+logging = { path = "logging" }
 proc_macros =  { path = "proc_macros" }
+vm = { path = "vm" }

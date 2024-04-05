@@ -1,0 +1,13 @@
+[package]
+name = "vm"
+description = "The virtual machine implementation for the YuvaKriti Language"
+readme = "README.md"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
