@@ -17,6 +17,9 @@ use crate::compiler::bytecode::cp_info::NumberInfo;
 use crate::compiler::bytecode::cp_info::StringInfo;
 use crate::compiler::bytecode::cp_info::Utf8Info;
 
+/// The size of the constant pool entry indices.
+pub(crate) type CpSize = u16;
+
 /// The constant pool in a YKB file.
 ///
 /// The first entry is always the reserved [ConstantEntry::None]
@@ -24,6 +27,12 @@ use crate::compiler::bytecode::cp_info::Utf8Info;
 #[allow(unused)]
 pub(crate) struct ConstantPool {
     entries: Vec<ConstantEntry>,
+}
+
+impl ConstantPool {
+    
+    /// The maximum number of entries that can be stored in a constant pool.
+    pub(crate) const MAX_ENTRIES: CpSize = 0xFFFF;
 }
 
 /// An entry in the constant pool.
@@ -61,30 +70,34 @@ impl ConstantPool {
         };
     }
 
-    pub(crate) fn len(&self) -> u16 {
-        return self.entries.len() as u16;
+    pub(crate) fn len(&self) -> CpSize {
+        return self.entries.len() as CpSize;
     }
 
     /// Pushes a constant to the constant pool and returns the index of the constant entry.
-    pub(crate) fn push(&mut self, constant: ConstantEntry) -> u16 {
+    pub(crate) fn push(&mut self, constant: ConstantEntry) -> CpSize {
+        if self.len() >= ConstantPool::MAX_ENTRIES {
+            panic!("Pool overflow");
+        }
+        
         if let Some(index) = self.lookup(&constant) {
             return index;
         }
 
         self.entries.push(constant);
-        return (self.entries.len() as u16) - 1;
+        return (self.entries.len() as CpSize) - 1;
     }
 
-    pub(crate) fn lookup(&self, constant: &ConstantEntry) -> Option<u16> {
+    pub(crate) fn lookup(&self, constant: &ConstantEntry) -> Option<CpSize> {
         if let Some(index) = self.entries.iter().position(|x| x == constant) {
-            return Some(index as u16);
+            return Some(index as CpSize);
         }
 
         return None;
     }
 
     /// Returns the constant entry at the given index.
-    pub(crate) fn get(&self, index: u16) -> Option<&ConstantEntry> {
+    pub(crate) fn get(&self, index: CpSize) -> Option<&ConstantEntry> {
         return self.entries.get(index as usize);
     }
 }
