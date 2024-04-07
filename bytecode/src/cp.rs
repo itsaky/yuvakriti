@@ -24,6 +24,7 @@ pub type CpSize = u16;
 ///
 /// The first entry is always the reserved [ConstantEntry::None]
 /// entry. As a result, the entries in the contant pool are 1-indexed.
+#[derive(Eq, PartialEq, Hash, Debug)]
 #[allow(unused)]
 pub struct ConstantPool {
     entries: Vec<ConstantEntry>,
@@ -35,7 +36,7 @@ impl ConstantPool {
 }
 
 /// An entry in the constant pool.
-#[derive(Hash, Debug)]
+#[derive(Hash, Debug, Eq)]
 pub enum ConstantEntry {
     Utf8(Utf8Info),
     String(StringInfo),
@@ -67,6 +68,13 @@ impl ConstantPool {
         return ConstantPool {
             entries: vec![ConstantEntry::None],
         };
+    }
+
+    /// Creates a new ConstantPool with the given initial capacity.
+    pub fn with_capacity(capacity: CpSize) -> ConstantPool {
+        let mut entries = Vec::with_capacity(capacity as usize);
+        entries.push(ConstantEntry::None);
+        return ConstantPool { entries };
     }
 
     pub fn len(&self) -> CpSize {

@@ -314,7 +314,7 @@ impl<R: Read> YKParser<'_, R> {
     fn for_stmt(&mut self) -> Option<ForStmt> {
         self.accept(TokenType::For, &err_exp_kywrd("for"))?;
         self.accept(TokenType::LParen, &err_exp_sym("("))?;
-        
+
         let token = self.peek()?;
 
         let init = if token.token_type == TokenType::Var {

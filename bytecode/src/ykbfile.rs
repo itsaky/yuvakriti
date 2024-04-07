@@ -13,10 +13,17 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::io::{Error, Write};
+
+use crate::bytes::ByteOutput;
 use crate::cp::ConstantPool;
+use crate::cp_info::CpInfoTag;
 use crate::decls::YKBDecl;
 use crate::insns::Insn;
 use crate::ykbversion::YKBVersion;
+use crate::ConstantEntry;
+
+pub const MAGIC_NUMBER: u32 = 0x59754B72;
 
 /// Represents a YKB file.
 pub struct YKBFile {
@@ -35,13 +42,17 @@ pub struct YKBFile {
 
 impl YKBFile {
     /// Creates a new YKBFile.
-    pub fn new() -> YKBFile {
+    pub fn new(version: YKBVersion) -> YKBFile {
         return YKBFile {
-            version: YKBVersion::NONE,
+            version,
             constant_pool: ConstantPool::new(),
             declarations: Vec::with_capacity(0),
             instructions: Vec::with_capacity(0),
         };
+    }
+
+    pub fn version(&self) -> &YKBVersion {
+        return &self.version;
     }
 
     /// Get the constant pool for this YKB file.
@@ -60,5 +71,48 @@ impl YKBFile {
 
     pub fn declarations_mut(&mut self) -> &mut Vec<Box<dyn YKBDecl>> {
         return &mut self.declarations;
+    }
+}
+
+impl YKBFile {
+    pub fn write_to<W: Write>(&self, writer: &mut ByteOutput<W>) -> Result<usize, Error> {
+        let mut size = writer.write_u32(MAGIC_NUMBER)?;
+        size += writer.write_u16(self.version.major_version())?;
+        size += writer.write_u16(self.version.minor_version())?;
+        size += self.write_constant_pool(writer)?;
+        Ok(size)
+    }
+
+    fn write_constant_pool<W: Write>(&self, writer: &mut ByteOutput<W>) -> Result<usize, Error> {
+        let constant_pool = self.constant_pool();
+        let mut size = writer.write_u16(constant_pool.len())?;
+        if constant_pool.len() <= 1 && constant_pool.get(0).unwrap() == &ConstantEntry::None {
+            return Ok(size);
+        }
+
+        for index in 1..constant_pool.len() {
+            let entry = constant_pool.get(index).unwrap();
+            match entry {
+                ConstantEntry::Utf8(utf8) => {
+                    size += writer.write_u8(CpInfoTag::UTF8)?;
+                    size += writer.write_u16(utf8.bytes.len() as u16)?;
+                    size += writer.write_bytes(utf8.bytes.as_slice())?;
+                }
+                ConstantEntry::String(str) => {
+                    size += writer.write_u8(CpInfoTag::STRING)?;
+                    size += writer.write_u16(str.string_index)?;
+                }
+                ConstantEntry::Number(num) => {
+                    size += writer.write_u8(CpInfoTag::NUMBER)?;
+                    size += writer.write_u32(num.high_bytes)?;
+                    size += writer.write_u32(num.low_bytes)?;
+                }
+                ConstantEntry::None => {
+                    unreachable!("None should not be written to the constant pool")
+                }
+            }
+        }
+
+        Ok(size)
     }
 }

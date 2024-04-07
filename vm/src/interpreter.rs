@@ -13,8 +13,11 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-mod cp;
-mod cp_info;
-mod disassembler;
-mod util;
-mod ykbwriter;
+use std::io::Read;
+
+use bytecode::{ByteInput, YKBFileReader};
+
+pub fn interpret<R: Read>(input: R) {
+    let mut reader = YKBFileReader::new(ByteInput::new(input));
+    let file = reader.read_file().unwrap();
+}

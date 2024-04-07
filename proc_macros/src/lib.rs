@@ -30,6 +30,10 @@ pub fn derive_cp_info(input: TokenStream) -> TokenStream {
 
     let name = &ast.ident;
     TokenStream::from(quote! {
-        impl CpInfo for #name {}
+        impl CpInfo for #name {
+            fn typ(&self) -> &'static str {
+                return stringify!(#name);
+            }
+        }
     })
 }

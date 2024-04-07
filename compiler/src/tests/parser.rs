@@ -17,7 +17,6 @@ use std::cell::RefCell;
 use std::io::Cursor;
 use std::rc::Rc;
 
-use crate::{diagnostics, messages};
 use crate::ast::ArithmeticASTPrinter;
 use crate::ast::AstNode;
 use crate::ast::Decl;
@@ -29,6 +28,7 @@ use crate::lexer::YKLexer;
 use crate::parser::YKParser;
 use crate::tests::util::parse;
 use crate::tests::util::parse_to_string;
+use crate::{diagnostics, messages};
 
 #[test]
 fn test_simple_var_decl() {

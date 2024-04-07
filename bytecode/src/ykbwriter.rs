@@ -14,8 +14,8 @@
  */
 
 use compiler::ast;
-use compiler::ast::AstNode;
 use compiler::ast::ASTVisitor;
+use compiler::ast::AstNode;
 use compiler::ast::FuncDecl;
 use compiler::ast::PrimaryExpr;
 use compiler::ast::Program;
@@ -24,8 +24,8 @@ use crate::cp::ConstantEntry;
 use crate::cp_info::NumberInfo;
 use crate::cp_info::StringInfo;
 use crate::cp_info::Utf8Info;
-use crate::decls;
 use crate::ykbfile::YKBFile;
+use crate::{decls, YKBVersion};
 
 /// Converts a program into a YKB file.
 pub struct YKBFileWriter {
@@ -35,7 +35,7 @@ pub struct YKBFileWriter {
 impl YKBFileWriter {
     pub fn new() -> Self {
         return YKBFileWriter {
-            file: YKBFile::new(),
+            file: YKBFile::new(YKBVersion::LATEST.clone()),
         };
     }
 
@@ -57,7 +57,7 @@ impl YKBFileWriter {
 struct FirstPassVisitor<'a> {
     file: &'a mut YKBFile,
 }
-impl <'a> FirstPassVisitor<'a> {
+impl<'a> FirstPassVisitor<'a> {
     fn new(file: &'a mut YKBFile) -> Self {
         return FirstPassVisitor { file };
     }
@@ -68,15 +68,20 @@ impl ASTVisitor<(), ()> for FirstPassVisitor<'_> {
         let constant_pool = self.file.constant_pool_mut();
         let name_index =
             constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&class_decl.name.0)));
-        self.file.declarations_mut().push(Box::new(decls::ClassDecl::new(name_index)));
+        self.file
+            .declarations_mut()
+            .push(Box::new(decls::ClassDecl::new(name_index)));
         None
     }
 
-    fn visit_func_decl(&mut self, func_decl: &FuncDecl, _p: &()) -> Option<()> {
+    fn visit_func_decl(&mut self, func_decl: &FuncDecl, p: &()) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         let name_index = constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&func_decl.name.0)));
-        self.file.declarations_mut().push(Box::new(decls::FuncDecl::new(name_index)));
-        None
+        self.file
+            .declarations_mut()
+            .push(Box::new(decls::FuncDecl::new(name_index)));
+
+        self.default_visit_func_decl(func_decl, p)
     }
 
     fn visit_primary_expr(&mut self, _primary_expr: &PrimaryExpr, p: &()) -> Option<()> {

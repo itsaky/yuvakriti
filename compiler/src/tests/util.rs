@@ -2,7 +2,7 @@
  * Copyright (c) 2024 The YuvaKriti Lang Authors.
  *
  * This program is free software: you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software 
+ *  terms of the GNU General Public License as published by the Free Software
  *  Foundation, version 3.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY
@@ -17,8 +17,8 @@ use std::cell::RefCell;
 use std::io::Cursor;
 use std::rc::Rc;
 
-use crate::ast::AstNode;
 use crate::ast::ASTPrinter;
+use crate::ast::AstNode;
 use crate::ast::Program;
 use crate::diagnostics;
 use crate::lexer::YKLexer;

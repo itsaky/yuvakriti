@@ -13,15 +13,24 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 
 use proc_macros::CpInfo;
 
-pub trait CpInfo: Eq + Hash {}
+pub trait CpInfo: Eq + Hash + ToString {
+    fn typ(&self) -> &'static str;
+}
 
 #[derive(CpInfo, Eq, PartialEq, Hash, Debug)]
 pub struct Utf8Info {
     pub bytes: Vec<u8>,
+}
+
+impl Utf8Info {
+    pub fn new(bytes: Vec<u8>) -> Utf8Info {
+        return Utf8Info { bytes };
+    }
 }
 
 impl From<&String> for Utf8Info {
@@ -31,6 +40,7 @@ impl From<&String> for Utf8Info {
         };
     }
 }
+
 impl From<&str> for Utf8Info {
     fn from(value: &str) -> Self {
         return Utf8Info {
@@ -39,10 +49,34 @@ impl From<&str> for Utf8Info {
     }
 }
 
+impl Display for Utf8Info {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        return write!(f, "{}", String::from_utf8(self.bytes.clone()).unwrap());
+    }
+}
+
 #[derive(CpInfo, Eq, PartialEq, Hash, Debug)]
 pub struct NumberInfo {
     pub high_bytes: u32,
     pub low_bytes: u32,
+}
+
+impl NumberInfo {
+    pub fn new(high_bytes: u32, low_bytes: u32) -> NumberInfo {
+        return NumberInfo {
+            high_bytes,
+            low_bytes,
+        };
+    }
+    pub fn to_f64(&self) -> f64 {
+        return f64::from_bits(((self.high_bytes as u64) << 32) | self.low_bytes as u64);
+    }
+}
+
+impl Display for NumberInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        return write!(f, "{}", self.to_f64());
+    }
 }
 
 impl From<&f64> for NumberInfo {
@@ -57,15 +91,21 @@ impl From<&f64> for NumberInfo {
     }
 }
 
-impl NumberInfo {
-    pub fn to_f64(&self) -> f64 {
-        return f64::from_bits(((self.high_bytes as u64) << 32) | self.low_bytes as u64);
-    }
-}
-
 #[derive(CpInfo, Eq, PartialEq, Hash, Debug)]
 pub struct StringInfo {
     pub string_index: u16,
+}
+
+impl StringInfo {
+    pub fn new(string_index: u16) -> StringInfo {
+        return StringInfo { string_index };
+    }
+}
+
+impl Display for StringInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        return write!(f, "#{}", self.string_index);
+    }
 }
 
 pub struct CpInfoTag;

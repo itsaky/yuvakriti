@@ -13,6 +13,7 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#[derive(Eq, PartialEq, Hash, Debug, Clone, Copy)]
 pub struct YKBVersion {
     major_version: u16,
     minor_version: u16,
@@ -25,6 +26,14 @@ impl YKBVersion {
             major_version,
             minor_version,
         };
+    }
+
+    pub const fn major_version(&self) -> u16 {
+        return self.major_version;
+    }
+
+    pub const fn minor_version(&self) -> u16 {
+        return self.minor_version;
     }
 }
 
