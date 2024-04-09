@@ -16,15 +16,14 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::io::{Error, Write};
 
-use crate::attrs::{Attr, CodeSize};
+use crate::attrs::Attr;
 use crate::bytes::AssertingByteConversions;
 use crate::bytes::ByteOutput;
 use crate::cp::ConstantPool;
 use crate::cp_info::{CpInfoTag, Utf8Info};
 use crate::decls::YKBDecl;
-use crate::opcode::OpCode;
 use crate::ykbversion::YKBVersion;
-use crate::{ConstantEntry, CpSize};
+use crate::ConstantEntry;
 
 pub const MAGIC_NUMBER: u32 = 0x59754B72;
 
@@ -110,7 +109,7 @@ impl YKBFile {
             match entry {
                 ConstantEntry::Utf8(utf8) => {
                     size += writer.write_u8(CpInfoTag::UTF8)?;
-                    size += writer.write_u16(utf8.bytes.len() as u16)?;
+                    size += writer.write_u16(utf8.bytes.len().as_u16())?;
                     size += writer.write_bytes(utf8.bytes.as_slice())?;
                 }
                 ConstantEntry::String(str) => {
@@ -133,7 +132,7 @@ impl YKBFile {
 
     fn write_attrs<W: Write>(&mut self, writer: &mut ByteOutput<W>) -> Result<usize, Error> {
         let attrs = self.attributes();
-        let mut size = writer.write_u16(attrs.len() as u16)?;
+        let mut size = writer.write_u16(attrs.len().as_u16())?;
         let attr_count = attrs.len();
         for i in 0..attr_count {
             size += self.write_attr(&attrs[i], writer)?;
@@ -150,12 +149,12 @@ impl YKBFile {
             .constant_pool()
             .lookup(&ConstantEntry::Utf8(Utf8Info::from(attr.name())))
             .expect(format!("Could not find {} in constant pool", attr.name()).as_str());
-        
+
         let mut size = writer.write_u16(name_index)?;
 
         match attr {
             Attr::Code(code) => {
-                size += writer.write_u32(code.instructions().len() as CodeSize)?;
+                size += writer.write_u32(code.instructions().len().as_code_size())?;
                 size += writer.write_bytes(code.instructions())?;
             }
             Attr::SourceFile(source_file) => {}

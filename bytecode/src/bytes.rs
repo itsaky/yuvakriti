@@ -13,6 +13,9 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::attrs::CodeSize;
+use crate::opcode::OpSize;
+use crate::CpSize;
 use std::io::BufReader;
 use std::io::BufWriter;
 use std::io::Error;
@@ -115,5 +118,111 @@ impl<W: Write> ByteOutput<W> {
 
     pub fn write_u64(&mut self, bytes: u64) -> Result<usize, Error> {
         self.write_bytes(&bytes.to_be_bytes())
+    }
+}
+
+pub trait AssertingByteConversions {
+    fn as_u8(&self) -> u8;
+    fn as_u16(&self) -> u16;
+    fn as_u32(&self) -> u32;
+    fn as_u64(&self) -> u64;
+    fn as_op_size(&self) -> OpSize {
+        return self.as_u8();
+    }
+    fn as_cp_size(&self) -> CpSize {
+        return self.as_u16();
+    }
+    fn as_code_size(&self) -> CodeSize {
+        return self.as_u32();
+    }
+}
+
+impl AssertingByteConversions for u8 {
+    fn as_u8(&self) -> u8 {
+        return *self;
+    }
+
+    fn as_u16(&self) -> u16 {
+        return u16::try_from(*self).expect("Could not convert u8 to u16");
+    }
+
+    fn as_u32(&self) -> u32 {
+        return u32::try_from(*self).expect("Could not convert u8 to u32");
+    }
+
+    fn as_u64(&self) -> u64 {
+        return u64::try_from(*self).expect("Could not convert u8 to u64");
+    }
+}
+
+impl AssertingByteConversions for u16 {
+    fn as_u8(&self) -> u8 {
+        return u8::try_from(*self).expect("Could not convert u16 to u8");
+    }
+
+    fn as_u16(&self) -> u16 {
+        return *self;
+    }
+
+    fn as_u32(&self) -> u32 {
+        return u32::try_from(*self).expect("Could not convert u16 to u32");
+    }
+
+    fn as_u64(&self) -> u64 {
+        return u64::try_from(*self).expect("Could not convert u16 to u64");
+    }
+}
+
+impl AssertingByteConversions for u32 {
+    fn as_u8(&self) -> u8 {
+        return u8::try_from(*self).expect("Could not convert u32 to u8");
+    }
+
+    fn as_u16(&self) -> u16 {
+        return u16::try_from(*self).expect("Could not convert u32 to u16");
+    }
+
+    fn as_u32(&self) -> u32 {
+        return *self;
+    }
+
+    fn as_u64(&self) -> u64 {
+        return u64::try_from(*self).expect("Could not convert u32 to u64");
+    }
+}
+
+impl AssertingByteConversions for u64 {
+    fn as_u8(&self) -> u8 {
+        return u8::try_from(*self).expect("Could not convert u64 to u8");
+    }
+
+    fn as_u16(&self) -> u16 {
+        return u16::try_from(*self).expect("Could not convert u64 to u16");
+    }
+
+    fn as_u32(&self) -> u32 {
+        return u32::try_from(*self).expect("Could not convert u64 to u32");
+    }
+
+    fn as_u64(&self) -> u64 {
+        return *self;
+    }
+}
+
+impl AssertingByteConversions for usize {
+    fn as_u8(&self) -> u8 {
+        return u8::try_from(*self).expect("Could not convert usize to u8");
+    }
+
+    fn as_u16(&self) -> u16 {
+        return u16::try_from(*self).expect("Could not convert usize to u16");
+    }
+
+    fn as_u32(&self) -> u32 {
+        return u32::try_from(*self).expect("Could not convert usize to u32");
+    }
+
+    fn as_u64(&self) -> u64 {
+        return u64::try_from(*self).expect("Could not convert usize to u64");
     }
 }

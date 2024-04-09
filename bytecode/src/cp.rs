@@ -13,10 +13,12 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::fmt::{Debug, Display};
+
+use crate::bytes::AssertingByteConversions;
 use crate::cp_info::NumberInfo;
 use crate::cp_info::StringInfo;
 use crate::cp_info::Utf8Info;
-use std::fmt::{write, Debug, Display};
 
 /// The size of the constant pool entry indices.
 pub type CpSize = u16;
@@ -115,7 +117,7 @@ impl ConstantPool {
     }
 
     pub fn len(&self) -> CpSize {
-        return self.entries.len() as CpSize;
+        return self.entries.len().as_cp_size();
     }
 
     /// Pushes a constant to the constant pool and returns the index of the constant entry.
@@ -129,12 +131,12 @@ impl ConstantPool {
         }
 
         self.entries.push(constant);
-        return (self.entries.len() as CpSize) - 1;
+        return (self.entries.len().as_cp_size()) - 1;
     }
 
     pub fn lookup(&self, constant: &ConstantEntry) -> Option<CpSize> {
         if let Some(index) = self.entries.iter().position(|x| x == constant) {
-            return Some(index as CpSize);
+            return Some(index.as_cp_size());
         }
 
         return None;

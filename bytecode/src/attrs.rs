@@ -13,13 +13,14 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::bytes::AssertingByteConversions;
 use std::cmp::max;
 use std::mem::size_of;
 
+use crate::opcode::{OpCode, OpSize};
 #[allow(unused_imports)]
 use crate::ConstantEntry;
 use crate::CpSize;
-use crate::opcode::{OpCode, OpSize};
 
 pub type CodeSize = u32;
 pub const OP_SIZE: CodeSize = size_of::<OpSize>() as CodeSize;
@@ -73,7 +74,7 @@ impl Code {
     }
 
     fn check_size(&self, extend: CodeSize) {
-        if self.instructions.len() as CodeSize + extend > Self::MAX_INSN_SIZE {
+        if self.instructions.len().as_code_size() + extend > Self::MAX_INSN_SIZE {
             panic!("Instruction size too large!");
         }
     }
@@ -95,20 +96,20 @@ impl Code {
 
     pub fn push_insns_0(&mut self, opcode: OpCode) {
         self.ensure_size_incr(OP_SIZE);
-        self.instructions[self.pc as usize] = opcode as OpSize;
+        self.instructions[self.pc as usize] = opcode.as_op_size();
         self.pc += 1;
     }
 
     pub fn push_insns_1(&mut self, opcode: OpCode, operand: u8) {
         self.ensure_size_incr(OP_SIZE + 1);
-        self.instructions[self.pc as usize] = opcode as OpSize;
+        self.instructions[self.pc as usize] = opcode.as_op_size();
         self.instructions[self.pc as usize + 1] = operand;
         self.pc += 2;
     }
 
     pub fn push_insns_1_16(&mut self, opcode: OpCode, operand: u16) {
         self.ensure_size_incr(OP_SIZE + 2);
-        self.instructions[self.pc as usize] = opcode as OpSize;
+        self.instructions[self.pc as usize] = opcode.as_op_size();
         self.instructions[self.pc as usize + 1] = (operand >> 8) as u8;
         self.instructions[self.pc as usize + 2] = operand as u8;
         self.pc += 3;
@@ -116,7 +117,7 @@ impl Code {
 
     pub fn push_insns_2(&mut self, opcode: OpCode, operand1: u8, operand2: u8) {
         self.ensure_size_incr(OP_SIZE + 2);
-        self.instructions[self.pc as usize] = opcode as OpSize;
+        self.instructions[self.pc as usize] = opcode.as_op_size();
         self.instructions[self.pc as usize + 1] = operand1;
         self.instructions[self.pc as usize + 2] = operand2;
         self.pc += 3;
@@ -124,7 +125,7 @@ impl Code {
 
     pub fn push_insns_3(&mut self, opcode: OpCode, operand1: u8, operand2: u8, operand3: u8) {
         self.ensure_size_incr(OP_SIZE + 3);
-        self.instructions[self.pc as usize] = opcode as OpSize;
+        self.instructions[self.pc as usize] = opcode.as_op_size();
         self.instructions[self.pc as usize + 1] = operand1;
         self.instructions[self.pc as usize + 2] = operand2;
         self.instructions[self.pc as usize + 3] = operand3;
@@ -133,14 +134,14 @@ impl Code {
 
     pub fn push_insns_n(&mut self, opcode: OpCode, operands: &[u8]) {
         let len = operands.len();
-        self.ensure_size_incr(OP_SIZE + len as CodeSize);
-        
-        self.instructions[self.pc as usize] = opcode as OpSize;
+        self.ensure_size_incr(OP_SIZE + len.as_code_size());
+
+        self.instructions[self.pc as usize] = opcode.as_op_size();
         for i in 0..len {
             self.instructions[self.pc as usize + i + 1] = operands[i];
         }
-        
-        self.pc += len as CodeSize + 1;
+
+        self.pc += len.as_code_size() + 1;
     }
 }
 

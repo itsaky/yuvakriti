@@ -16,6 +16,7 @@
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 
+use crate::bytes::AssertingByteConversions;
 use proc_macros::CpInfo;
 
 pub trait CpInfo: Eq + Hash + ToString {
@@ -69,7 +70,7 @@ impl NumberInfo {
         };
     }
     pub fn to_f64(&self) -> f64 {
-        return f64::from_bits(((self.high_bytes as u64) << 32) | self.low_bytes as u64);
+        return f64::from_bits(((self.high_bytes.as_u64()) << 32) | self.low_bytes.as_u64());
     }
 }
 
@@ -82,8 +83,8 @@ impl Display for NumberInfo {
 impl From<&f64> for NumberInfo {
     fn from(value: &f64) -> Self {
         let bits = value.to_bits();
-        let high = (bits >> 32) as u32;
-        let low = bits as u32;
+        let high = (bits >> 32).as_u32();
+        let low = bits.as_u32();
         return NumberInfo {
             high_bytes: high,
             low_bytes: low,

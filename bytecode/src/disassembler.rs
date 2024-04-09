@@ -19,6 +19,7 @@ use std::io::Read;
 use crate::attrs;
 use crate::attrs::Attr;
 use crate::attrs::Code;
+use crate::bytes::AssertingByteConversions;
 use crate::bytes::ByteInput;
 use crate::cp_info::CpInfo;
 use crate::opcode::get_opcode;
@@ -142,7 +143,6 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
         let attr_name = match attr {
             Attr::Code(_) => attrs::CODE,
             Attr::SourceFile(_) => attrs::SOURCE_FILE,
-            _ => panic!("Unknown attribute: {:?}", attr),
         };
 
         self.write(format!("{}: ", attr_name).as_str());
@@ -200,7 +200,7 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
                 let const_index_low = instructions[from_index];
                 from_index += 1;
 
-                let const_index = (const_index_high as u16) << 8 | const_index_low as u16;
+                let const_index = (const_index_high.as_u16()) << 8 | const_index_low as u16;
                 let constant = constant_pool.get(const_index).unwrap();
                 self.write(&format!("#{} // {}", const_index, constant))
             }

@@ -40,6 +40,12 @@ pub enum OpCode {
     OpCount = 0x0E,
 }
 
+impl OpCode {
+    pub fn as_op_size(self) -> OpSize {
+        return self as OpSize;
+    }
+}
+
 impl Display for OpCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", get_opcode_mnemonic(*self))
