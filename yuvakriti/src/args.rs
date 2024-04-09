@@ -15,7 +15,6 @@
 
 use clap::Parser;
 use clap::Subcommand;
-use std::process::ExitCode;
 
 use crate::compile::CompileArgs;
 use crate::disassemble::DisassembleArgs;

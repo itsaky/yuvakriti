@@ -157,7 +157,9 @@ impl YKBFile {
                 size += writer.write_u32(code.instructions().len().as_code_size())?;
                 size += writer.write_bytes(code.instructions())?;
             }
-            Attr::SourceFile(source_file) => {}
+            Attr::SourceFile(source_file) => {
+                size += writer.write_u16(source_file.name_index)?;
+            }
         };
 
         Ok(size)

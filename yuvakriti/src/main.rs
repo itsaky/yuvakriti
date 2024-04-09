@@ -1,8 +1,7 @@
-use std::env;
 use std::process::ExitCode;
 
-use clap::{CommandFactory, FromArgMatches};
-
+use clap::CommandFactory;
+use clap::FromArgMatches;
 use crate::args::SubCommand;
 use crate::args::YkArgs;
 use crate::compile::do_compile;

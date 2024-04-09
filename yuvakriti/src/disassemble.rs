@@ -14,10 +14,10 @@
  */
 
 use std::fs::File;
-use std::io::Stderr;
 use std::path::PathBuf;
 
 use clap::Args;
+
 use bytecode::bytes::ByteInput;
 use bytecode::YKBDisassembler;
 
