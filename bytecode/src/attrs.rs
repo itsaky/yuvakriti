@@ -47,7 +47,6 @@ impl Attr {
 /// in a program.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Code {
-    pub pc: CodeSize,
     pub instructions: Vec<u8>,
 }
 
@@ -60,34 +59,24 @@ impl Code {
     }
 
     pub fn with_capacity(capacity: usize) -> Self {
-        return Code {
-            pc: 0,
-            instructions: Vec::with_capacity(capacity),
-        };
+        return Self::with_insns(Vec::with_capacity(capacity));
     }
 
     pub fn with_insns(insns: Vec<u8>) -> Self {
         return Code {
-            pc: 0,
             instructions: insns,
         };
     }
 
-    fn check_size(&self, extend: CodeSize) {
-        if self.instructions.len().as_code_size() + extend > Self::MAX_INSN_SIZE {
+    fn check_size(&self, additional: CodeSize) {
+        if self.instructions.len().as_code_size() + additional > Self::MAX_INSN_SIZE {
             panic!("Instruction size too large!");
         }
     }
 
-    fn ensure_size_incr(&mut self, extend: CodeSize) {
-        self.check_size(extend);
-        self.instructions.resize(
-            max(
-                self.instructions.len(),
-                self.instructions.len() + extend as usize,
-            ),
-            0,
-        );
+    fn ensure_size_incr(&mut self, additional: CodeSize) {
+        self.check_size(additional);
+        self.instructions.reserve(additional as usize);
     }
 
     pub fn instructions(&self) -> &Vec<u8> {
@@ -96,52 +85,36 @@ impl Code {
 
     pub fn push_insns_0(&mut self, opcode: OpCode) {
         self.ensure_size_incr(OP_SIZE);
-        self.instructions[self.pc as usize] = opcode.as_op_size();
-        self.pc += 1;
+        self.instructions.push(opcode.as_op_size());
     }
 
     pub fn push_insns_1(&mut self, opcode: OpCode, operand: u8) {
         self.ensure_size_incr(OP_SIZE + 1);
-        self.instructions[self.pc as usize] = opcode.as_op_size();
-        self.instructions[self.pc as usize + 1] = operand;
-        self.pc += 2;
+        self.instructions.extend([opcode.as_op_size(), operand]);
     }
 
     pub fn push_insns_1_16(&mut self, opcode: OpCode, operand: u16) {
         self.ensure_size_incr(OP_SIZE + 2);
-        self.instructions[self.pc as usize] = opcode.as_op_size();
-        self.instructions[self.pc as usize + 1] = (operand >> 8) as u8;
-        self.instructions[self.pc as usize + 2] = operand as u8;
-        self.pc += 3;
+        self.instructions.push(opcode.as_op_size());
+        self.instructions.extend([(operand >> 8) as u8, operand as u8]);
     }
 
     pub fn push_insns_2(&mut self, opcode: OpCode, operand1: u8, operand2: u8) {
         self.ensure_size_incr(OP_SIZE + 2);
-        self.instructions[self.pc as usize] = opcode.as_op_size();
-        self.instructions[self.pc as usize + 1] = operand1;
-        self.instructions[self.pc as usize + 2] = operand2;
-        self.pc += 3;
+        self.instructions.extend([opcode.as_op_size(), operand1, operand2]);
     }
 
     pub fn push_insns_3(&mut self, opcode: OpCode, operand1: u8, operand2: u8, operand3: u8) {
         self.ensure_size_incr(OP_SIZE + 3);
-        self.instructions[self.pc as usize] = opcode.as_op_size();
-        self.instructions[self.pc as usize + 1] = operand1;
-        self.instructions[self.pc as usize + 2] = operand2;
-        self.instructions[self.pc as usize + 3] = operand3;
-        self.pc += 4;
+        self.instructions.extend([opcode.as_op_size(), operand1, operand2, operand3]);
     }
 
     pub fn push_insns_n(&mut self, opcode: OpCode, operands: &[u8]) {
         let len = operands.len();
         self.ensure_size_incr(OP_SIZE + len.as_code_size());
 
-        self.instructions[self.pc as usize] = opcode.as_op_size();
-        for i in 0..len {
-            self.instructions[self.pc as usize + i + 1] = operands[i];
-        }
-
-        self.pc += len.as_code_size() + 1;
+        self.instructions.push(opcode.as_op_size());
+        self.instructions.extend(operands);
     }
 }
 
