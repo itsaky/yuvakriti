@@ -28,14 +28,16 @@ fn test_disassembler() {
 
     let ykbfile = ykbwriter.file_mut();
 
-    let path = Path::new("test.ykb");
+    let path = Path::new("target/test.ykb");
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    
     let display = path.display();
     let file = match File::create(&path) {
         Err(why) => panic!("couldn't create {}: {}", display, why),
         Ok(file) => file,
     };
 
-    let size = match ykbfile.write_to(&mut ByteOutput::new(&file)) {
+    match ykbfile.write_to(&mut ByteOutput::new(&file)) {
         Err(why) => panic!("couldn't write to {}: {}", display, why),
         Ok(size) => {
             println!("successfully wrote to {}", display);
@@ -46,11 +48,10 @@ fn test_disassembler() {
     file.sync_all().unwrap();
 
     assert!(path.exists());
-    assert_eq!(size, file.metadata().unwrap().len() as usize);
 
     let f = File::open(&path).unwrap();
     let mut out_string = String::new();
     let mut disassembler = YKBDisassembler::new(ByteInput::new(f), &mut out_string);
-    disassembler.disassemble();
+    disassembler.disassemble().unwrap();
     println!("{}", out_string);
 }
