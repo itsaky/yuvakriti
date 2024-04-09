@@ -14,18 +14,19 @@
  */
 
 use compiler::ast;
-use compiler::ast::ASTVisitor;
-use compiler::ast::AstNode;
 use compiler::ast::FuncDecl;
 use compiler::ast::PrimaryExpr;
 use compiler::ast::Program;
+use compiler::ast::Visitable;
+use compiler::ast::{ASTVisitor, PrintStmt};
 
 use crate::cp::ConstantEntry;
 use crate::cp_info::NumberInfo;
 use crate::cp_info::StringInfo;
 use crate::cp_info::Utf8Info;
+use crate::decls;
 use crate::ykbfile::YKBFile;
-use crate::{decls, YKBVersion};
+use crate::YKBVersion;
 
 /// Converts a program into a YKB file.
 pub struct YKBFileWriter {
@@ -57,6 +58,9 @@ impl YKBFileWriter {
 struct FirstPassVisitor<'a> {
     file: &'a mut YKBFile,
 }
+
+/// An [ASTVisitor] for the first pass of the compilation phase. This visitor is used to build up
+/// the constant pool, and the declarations.
 impl<'a> FirstPassVisitor<'a> {
     fn new(file: &'a mut YKBFile) -> Self {
         return FirstPassVisitor { file };
@@ -82,6 +86,12 @@ impl ASTVisitor<(), ()> for FirstPassVisitor<'_> {
             .push(Box::new(decls::FuncDecl::new(name_index)));
 
         self.default_visit_func_decl(func_decl, p)
+    }
+
+    fn visit_print_stmt(&mut self, print_stmt: &PrintStmt, p: &()) -> Option<()> {
+        self.visit_expr(&print_stmt.expr.0, p);
+
+        None
     }
 
     fn visit_primary_expr(&mut self, _primary_expr: &PrimaryExpr, p: &()) -> Option<()> {

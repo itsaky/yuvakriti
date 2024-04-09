@@ -99,7 +99,10 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
     fn write_constant_pool(&mut self, constant_pool: &ConstantPool, count: CpSize) {
         for i in 1..count {
             self.linindent();
-            let (info, typ): (&dyn Display, &str) = match constant_pool.get(i).expect(format!("No constant at index {}", i).as_str()) {
+            let (info, typ): (&dyn Display, &str) = match constant_pool
+                .get(i)
+                .expect(format!("No constant at index {}", i).as_str())
+            {
                 ConstantEntry::Utf8(utf8) => (utf8, utf8.typ()),
                 ConstantEntry::String(str) => (str, str.typ()),
                 ConstantEntry::Number(num) => (num, num.typ()),

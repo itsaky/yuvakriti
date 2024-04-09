@@ -166,6 +166,10 @@ impl<'a> ASTVisitor<usize, ()> for ASTPrinter<'a> {
         for decl in &program.decls {
             self.print_decl(&decl.0, &(indent_level + 1));
         }
+        for stmt in &program.stmts {
+            self.print_stmt(&stmt.0, &(indent_level + 1));
+            self.linefeed(&(indent_level + 1));
+        }
         self.indent(indent_level);
         self.f.write_str(")").unwrap();
         None

@@ -13,8 +13,6 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::ast::AssignExpr;
-use crate::ast::AstNode;
 use crate::ast::BinaryExpr;
 use crate::ast::BlockStmt;
 use crate::ast::ClassDecl;
@@ -34,6 +32,7 @@ use crate::ast::Stmt;
 use crate::ast::UnaryExpr;
 use crate::ast::VarStmt;
 use crate::ast::WhileStmt;
+use crate::ast::{AssignExpr, Visitable};
 
 /// ASTVisitor for visiting AST nodes. Methods in the visitor result an [Option<R>]. If the result
 /// is [Some], then the child nodes of the AST node will not be visited.
@@ -45,12 +44,18 @@ pub trait ASTVisitor<P, R> {
         let mut r: Option<R> = None;
         for decl in &program.decls {
             r = self.visit_decl(&decl.0, p);
-
             if r.is_some() {
-                break;
+                return r;
             }
         }
-
+        
+        for stmt in &program.stmts {
+            r = self.visit_stmt(&stmt.0, p);
+            if r.is_some() {
+                return r
+            }
+        }
+        
         r
     }
 
@@ -298,103 +303,103 @@ pub trait ASTVisitor<P, R> {
     }
 }
 
-impl AstNode for Program {
+impl Visitable for Program {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_program(self, p)
     }
 }
 
-impl AstNode for ClassDecl {
+impl Visitable for ClassDecl {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_class_decl(self, p)
     }
 }
 
-impl AstNode for FuncDecl {
+impl Visitable for FuncDecl {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_func_decl(self, p)
     }
 }
 
-impl AstNode for VarStmt {
+impl Visitable for VarStmt {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_var_decl(self, p)
     }
 }
 
-impl AstNode for BlockStmt {
+impl Visitable for BlockStmt {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_block_stmt(self, p)
     }
 }
 
-impl AstNode for ExprStmt {
+impl Visitable for ExprStmt {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_expr_stmt(self, p)
     }
 }
 
-impl AstNode for ForStmt {
+impl Visitable for ForStmt {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_for_stmt(self, p)
     }
 }
 
-impl AstNode for IfStmt {
+impl Visitable for IfStmt {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_if_stmt(self, p)
     }
 }
 
-impl AstNode for PrintStmt {
+impl Visitable for PrintStmt {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_print_stmt(self, p)
     }
 }
 
-impl AstNode for ReturnStmt {
+impl Visitable for ReturnStmt {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_return_stmt(self, p)
     }
 }
 
-impl AstNode for WhileStmt {
+impl Visitable for WhileStmt {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_while_stmt(self, p)
     }
 }
 
-impl AstNode for AssignExpr {
+impl Visitable for AssignExpr {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_assign_expr(self, p)
     }
 }
 
-impl AstNode for BinaryExpr {
+impl Visitable for BinaryExpr {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_binary_expr(self, p)
     }
 }
 
-impl AstNode for UnaryExpr {
+impl Visitable for UnaryExpr {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_unary_expr(self, p)
     }
 }
 
-impl AstNode for FuncCallExpr {
+impl Visitable for FuncCallExpr {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_func_call_expr(self, p)
     }
 }
 
-impl AstNode for MemberAccessExpr {
+impl Visitable for MemberAccessExpr {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_member_access_expr(self, p)
     }
 }
 
-impl AstNode for PrimaryExpr {
+impl Visitable for PrimaryExpr {
     fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R> {
         visitor.visit_primary_expr(self, p)
     }

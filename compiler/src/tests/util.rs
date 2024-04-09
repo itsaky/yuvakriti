@@ -18,8 +18,8 @@ use std::io::Cursor;
 use std::rc::Rc;
 
 use crate::ast::ASTPrinter;
-use crate::ast::AstNode;
 use crate::ast::Program;
+use crate::ast::Visitable;
 use crate::diagnostics;
 use crate::lexer::YKLexer;
 use crate::parser::YKParser;

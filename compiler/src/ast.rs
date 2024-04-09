@@ -25,7 +25,6 @@ use crate::tokens::Token;
 use crate::tokens::TokenType;
 
 mod arithemetic;
-mod macros;
 mod pretty;
 mod visitor;
 
@@ -35,14 +34,54 @@ pub type ExprS = Spanned<Expr>;
 pub type DeclS = Spanned<Decl>;
 pub type Identifier = Spanned<String>;
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum NodeType {
+    Program,
+    ClassDecl,
+    FuncDecl,
+    ExprStmt,
+    ForStmt,
+    WhileStmt,
+    IfStmt,
+    PrintStmt,
+    ReturnStmt,
+    VarStmt,
+    BlockStmt,
+    AssignExpr,
+    BinaryExpr,
+    UnaryExpr,
+    FuncCallExpr,
+    MemberAccessExpr,
+    PrimaryExpr,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum DeclType {
+    /// Top-level declarations, defined directly in the file.
+    TopLevel,
+
+    /// Class-level declarations, defined within a class body.
+    ClassLevel,
+
+    /// Method level declarations, defined within a method body.
+    MethodLevel,
+}
+
+/// An AST node.
 pub trait AstNode {
-    fn accept<P, R>(&mut self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R>;
+    fn typ(self: &Self) -> NodeType;
+}
+
+/// An [ASTNode] which can be visited
+pub trait Visitable {
+    fn accept<P, R>(self: &mut Self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R>;
 }
 
 /// Program : (Declaration)*
 #[derive(Clone, Debug, PartialEq)]
 pub struct Program {
     pub decls: Vec<DeclS>,
+    pub stmts: Vec<StmtS>
 }
 
 /// Decl : ClassDecl
@@ -62,6 +101,7 @@ pub struct ClassDecl {
     pub name: Identifier,
     pub supercls: Option<Identifier>,
     pub methods: Vec<Spanned<FuncDecl>>,
+    pub decl_type: DeclType,
 }
 
 /// FuncDecl : "fun" IDENTIFIER "(" ( IDENTIFIER )? ")" BlockStmt
@@ -72,17 +112,10 @@ pub struct FuncDecl {
     pub body: Spanned<BlockStmt>,
 }
 
-/// VarDecl : "var" IDENTIFIER ("=" Expr)?
 #[derive(Clone, Debug, PartialEq)]
-pub struct VarStmt {
-    pub name: Identifier,
-    pub initializer: Option<ExprS>,
-}
-
-/// BlockStmt : "{" ( Decl )* "}"
-#[derive(Clone, Debug, PartialEq)]
-pub struct BlockStmt {
-    pub decls: Vec<DeclS>,
+pub struct DeclStmt {
+    pub decl: DeclS,
+    pub typ: DeclType,
 }
 
 /// Stmt : ExprStmt
@@ -102,6 +135,19 @@ pub enum Stmt {
     While(WhileStmt),
     Var(VarStmt),
     Block(Spanned<BlockStmt>),
+}
+
+/// VarDecl : "var" IDENTIFIER ("=" Expr)?
+#[derive(Clone, Debug, PartialEq)]
+pub struct VarStmt {
+    pub name: Identifier,
+    pub initializer: Option<ExprS>,
+}
+
+/// BlockStmt : "{" ( Decl )* "}"
+#[derive(Clone, Debug, PartialEq)]
+pub struct BlockStmt {
+    pub decls: Vec<DeclS>,
 }
 
 /// ExprStmt : Expr
@@ -322,3 +368,31 @@ impl Display for UnaryOp {
         write!(f, "{:?}", self)
     }
 }
+
+macro_rules! impl_node {
+    ($node_type:ident) => {
+        impl AstNode for $node_type {
+            fn typ(&self) -> NodeType {
+                NodeType::$node_type
+            }
+        }
+    };
+}
+
+impl_node!(Program);
+impl_node!(ClassDecl);
+impl_node!(FuncDecl);
+impl_node!(ExprStmt);
+impl_node!(ForStmt);
+impl_node!(WhileStmt);
+impl_node!(IfStmt);
+impl_node!(PrintStmt);
+impl_node!(ReturnStmt);
+impl_node!(VarStmt);
+impl_node!(BlockStmt);
+impl_node!(AssignExpr);
+impl_node!(BinaryExpr);
+impl_node!(UnaryExpr);
+impl_node!(FuncCallExpr);
+impl_node!(MemberAccessExpr);
+impl_node!(PrimaryExpr);

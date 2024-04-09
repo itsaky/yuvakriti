@@ -20,13 +20,17 @@ extern crate syn;
 
 use proc_macro::TokenStream;
 
-#[proc_macro_derive(CpInfo, attributes(tag))]
-pub fn derive_cp_info(input: TokenStream) -> TokenStream {
-    let ast = syn::parse::<syn::DeriveInput>(input).unwrap();
+fn req_struct(ast: &syn::DeriveInput) {
     match ast.data {
         syn::Data::Struct(_) => {}
         _ => panic!("Only structs are supported"),
     }
+}
+
+#[proc_macro_derive(CpInfo)]
+pub fn derive_cp_info(input: TokenStream) -> TokenStream {
+    let ast = syn::parse::<syn::DeriveInput>(input).unwrap();
+    req_struct(&ast);
 
     let name = &ast.ident;
     TokenStream::from(quote! {

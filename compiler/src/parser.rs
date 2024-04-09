@@ -17,7 +17,7 @@ use std::cell::RefCell;
 use std::io::Read;
 use std::rc::Rc;
 
-use crate::ast::BinaryExpr;
+use crate::ast::{BinaryExpr, StmtS};
 use crate::ast::BinaryOp;
 use crate::ast::BlockStmt;
 use crate::ast::Decl;
@@ -54,6 +54,7 @@ use crate::tokens::TokenType;
 pub struct YKParser<'a, R: Read> {
     lexer: YKLexer<'a, R>,
     diagnostics: Rc<RefCell<dyn DiagnosticHandler + 'a>>,
+    has_error: bool,
 
     // parser state
     position: Position,
@@ -70,10 +71,10 @@ impl<R: Read> YKParser<'_, R> {
         let mut parser = YKParser {
             lexer,
             diagnostics: diagnostics_handler,
+            has_error: false,
             position: Position::NO_POS,
             current: None,
             next: None,
-            // has_error: false,
         };
 
         // initialize the parser state
@@ -85,9 +86,12 @@ impl<R: Read> YKParser<'_, R> {
     }
 
     fn report(&mut self, diagnostic_kind: DiagnosticKind, message: &str) {
+        let is_error = diagnostic_kind == DiagnosticKind::Error;
         self.diagnostics
             .borrow_mut()
             .handle(self.create_diagnostic(diagnostic_kind, message));
+        
+        self.has_error = self.has_error || is_error;
     }
 
     fn create_diagnostic(&self, diagnostic_kind: DiagnosticKind, message: &str) -> Diagnostic {
@@ -114,29 +118,30 @@ impl<R: Read> YKParser<'_, R> {
 impl<R: Read> YKParser<'_, R> {
     /// Parses the input source and returns the resulting [Program].
     pub fn parse(&mut self) -> Program {
-        let declarations = self.decls();
-        return Program {
-            decls: declarations,
-        };
-    }
-
-    fn decls(&mut self) -> Vec<DeclS> {
-        let mut declarations: Vec<DeclS> = Vec::new();
+        let mut decls: Vec<DeclS> = Vec::new();
+        let mut stmts: Vec<StmtS> = Vec::new();
         loop {
             if self.peek().is_none() {
                 // reached EOF
                 break;
             }
 
-            if let Some(decl) = self.decl() {
-                declarations.push(decl);
+            if let Some(node) = self.decl() {
+                if let Decl::Stmt(stmt) = node.0 {
+                    stmts.push((stmt, node.1));
+                } else {
+                    decls.push(node)
+                }
                 continue;
             }
 
             break;
         }
-
-        declarations
+        
+        return Program {
+            decls,
+            stmts
+        };
     }
 
     /// Returns the next declaration in the input source.

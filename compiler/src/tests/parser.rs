@@ -18,17 +18,18 @@ use std::io::Cursor;
 use std::rc::Rc;
 
 use crate::ast::ArithmeticASTPrinter;
-use crate::ast::AstNode;
 use crate::ast::Decl;
 use crate::ast::Expr;
 use crate::ast::PrimaryExpr;
 use crate::ast::Stmt;
 use crate::ast::UnaryOp;
+use crate::ast::Visitable;
+use crate::diagnostics;
 use crate::lexer::YKLexer;
+use crate::messages;
 use crate::parser::YKParser;
 use crate::tests::util::parse;
 use crate::tests::util::parse_to_string;
-use crate::{diagnostics, messages};
 
 #[test]
 fn test_simple_var_decl() {
@@ -40,23 +41,18 @@ fn test_simple_var_decl() {
     let program = parser.parse();
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 
-    let decls = program.decls;
-    assert_eq!(1, decls.len());
+    let stmts = program.stmts;
+    assert_eq!(1, stmts.len());
 
-    let decl = decls.get(0).expect("Declaration expected");
-    assert_eq!(0, decl.1.start.line);
-    assert_eq!(0, decl.1.start.column);
-    assert_eq!(0, decl.1.start.index);
-    assert_eq!(0, decl.1.end.line);
-    assert_eq!(20, decl.1.end.column as usize);
-    assert_eq!(20, decl.1.end.index as usize);
-
-    let stmt = if let Decl::Stmt(stmt) = &decl.0 {
-        stmt
-    } else {
-        panic!("Expected a statement")
-    };
-    let var = if let Stmt::Var(var) = stmt {
+    let stmt = stmts.get(0).expect("Statement expected");
+    assert_eq!(0, stmt.1.start.line);
+    assert_eq!(0, stmt.1.start.column);
+    assert_eq!(0, stmt.1.start.index);
+    assert_eq!(0, stmt.1.end.line);
+    assert_eq!(20, stmt.1.end.column as usize);
+    assert_eq!(20, stmt.1.end.index as usize);
+    
+    let var = if let Stmt::Var(var) = &stmt.0 {
         var
     } else {
         panic!("Expected a variable statement")
@@ -100,8 +96,8 @@ fn test_simple_ast_printer() {
 
     assert_eq!(
 "(program
-  (decl (stmt for ((stmt var i = (primary Number(0.0))); Lt (primary Identifier(\"i\"))(primary Number(10.0)); Eq (primary Identifier(\"i\"))(binary Plus (primary Identifier(\"i\"))(primary Number(1.0)))) {
-      (stmt print  (primary Identifier(\"i\")))}))
+  (stmt for ((stmt var i = (primary Number(0.0))); Lt (primary Identifier(\"i\"))(primary Number(10.0)); Eq (primary Identifier(\"i\"))(binary Plus (primary Identifier(\"i\"))(primary Number(1.0)))) {
+      (stmt print  (primary Identifier(\"i\")))})
   )", out);
 }
 
@@ -112,15 +108,11 @@ fn test_simple_unary_negation_expr() {
 
     let mut parser = YKParser::new(lexer, diag_handler.clone());
     let program = parser.parse();
-    let decls = program.decls;
-    assert_eq!(1, decls.len());
+    let stmts = program.stmts;
+    assert_eq!(1, stmts.len());
+    assert_eq!(&0, &program.decls.len());
 
-    let decl = decls.get(0).expect("Declaration expected");
-    let stmt = if let Decl::Stmt(stmt) = &decl.0 {
-        stmt
-    } else {
-        panic!("Expected a statement")
-    };
+    let stmt = &stmts.get(0).expect("Declaration expected").0;
     let expr = if let Stmt::Expr(expr) = stmt {
         expr
     } else {
@@ -146,7 +138,7 @@ fn test_simple_unary_negation_expr() {
 #[test]
 fn test_simple_unary_num_negation_expr() {
     assert_eq!(
-        "(program(decl (stmt expr (unary Negate (primary Number(123.0))))))",
+        "(program(stmt expr (unary Negate (primary Number(123.0)))))",
         parse_to_string("-123;", false)
     );
 }
@@ -163,14 +155,14 @@ fn test_primary_exprs() {
     // so we need to escape them here
     assert_eq!(
         "(program
-  (decl (stmt expr (primary True)))
-  (decl (stmt expr (primary False)))
-  (decl (stmt expr (primary Nil)))
-  (decl (stmt expr (primary This)))
-  (decl (stmt expr (primary Number(123.0))))
-  (decl (stmt expr (primary String(\"\\\"something\\\"\"))))
-  (decl (stmt expr (primary Identifier(\"identifier\"))))
-  (decl (stmt expr (primary String(\"\\\"grouping\\\"\"))))
+  (stmt expr (primary True))
+  (stmt expr (primary False))
+  (stmt expr (primary Nil))
+  (stmt expr (primary This))
+  (stmt expr (primary Number(123.0)))
+  (stmt expr (primary String(\"\\\"something\\\"\")))
+  (stmt expr (primary Identifier(\"identifier\")))
+  (stmt expr (primary String(\"\\\"grouping\\\"\")))
   )",
         out
     );
@@ -181,8 +173,8 @@ fn test_terms() {
     let out = parse_to_string("2 + 3; 2 - 3;", true);
     assert_eq!(
         "(program
-  (decl (stmt expr (binary Plus (primary Number(2.0))(primary Number(3.0)))))
-  (decl (stmt expr (binary Minus (primary Number(2.0))(primary Number(3.0)))))
+  (stmt expr (binary Plus (primary Number(2.0))(primary Number(3.0))))
+  (stmt expr (binary Minus (primary Number(2.0))(primary Number(3.0))))
   )",
         out
     );
@@ -193,10 +185,10 @@ fn test_terms_assoc() {
     let out = parse_to_string("2 + 3 + 4; 2 - 3 + 4; 2 + 3 - 4; 2 - 3 - 4;", true);
     assert_eq!(
 "(program
-  (decl (stmt expr (binary Plus (binary Plus (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0)))))
-  (decl (stmt expr (binary Plus (binary Minus (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0)))))
-  (decl (stmt expr (binary Minus (binary Plus (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0)))))
-  (decl (stmt expr (binary Minus (binary Minus (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0)))))
+  (stmt expr (binary Plus (binary Plus (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0))))
+  (stmt expr (binary Plus (binary Minus (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0))))
+  (stmt expr (binary Minus (binary Plus (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0))))
+  (stmt expr (binary Minus (binary Minus (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0))))
   )", out);
 }
 
@@ -205,8 +197,8 @@ fn test_factors() {
     let out = parse_to_string("2 * 3; 2 / 3;", true);
     assert_eq!(
         "(program
-  (decl (stmt expr (binary Mult (primary Number(2.0))(primary Number(3.0)))))
-  (decl (stmt expr (binary Div (primary Number(2.0))(primary Number(3.0)))))
+  (stmt expr (binary Mult (primary Number(2.0))(primary Number(3.0))))
+  (stmt expr (binary Div (primary Number(2.0))(primary Number(3.0))))
   )",
         out
     );
@@ -217,10 +209,10 @@ fn test_factors_assoc() {
     let out = parse_to_string("2 * 3 * 4; 2 / 3 * 4; 2 * 3 / 4; 2 / 3 / 4;", true);
     assert_eq!(
 "(program
-  (decl (stmt expr (binary Mult (binary Mult (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0)))))
-  (decl (stmt expr (binary Mult (binary Div (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0)))))
-  (decl (stmt expr (binary Div (binary Mult (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0)))))
-  (decl (stmt expr (binary Div (binary Div (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0)))))
+  (stmt expr (binary Mult (binary Mult (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0))))
+  (stmt expr (binary Mult (binary Div (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0))))
+  (stmt expr (binary Div (binary Mult (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0))))
+  (stmt expr (binary Div (binary Div (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0))))
   )", out);
 }
 

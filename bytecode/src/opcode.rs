@@ -13,37 +13,25 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-macro_rules! opcode {
-    ($mnemonic:ident, $value:literal) => {
-        pub const $mnemonic: OpCode = OpCode::new($value, stringify!($mnemonic));
+pub type OpSize = u8;
+
+macro_rules! opcodes {
+    ($count:literal, $($name:ident, $value:literal $(,)*)+) => {
+        $(pub const $name: OpSize = $value;)+
+
+        pub const OPCODE_COUNT: usize = $count;
+
+        pub const OPCODE_MNEMONICS: [&str; OPCODE_COUNT] = [
+            $(stringify!($name),)+
+        ];
     };
 }
 
-pub type OpSize = u8;
-
-#[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
-pub struct OpCode {
-    pub code: OpSize,
-    pub mnemonic: &'static str,
-}
-
-impl OpCode {
-    pub const fn new(code: OpSize, mnemonic: &'static str) -> OpCode {
-        return OpCode { code, mnemonic };
-    }
-}
-
-impl OpCode {
-    opcode!(HALT, 0x00);
-    opcode!(ADD, 0x01);
-    opcode!(SUB, 0x02);
-    opcode!(MULT, 0x03);
-    opcode!(DIV, 0x04);
-}
+opcodes!(
+    13, NOP, 0x00, HALT, 0x01, ADD, 0x02, SUB, 0x03, MULT, 0x04, DIV, 0x05, PRINT, 0x06, IFEQ,
+    0x07, IFNE, 0x08, IFLT, 0x09, IFLE, 0x0A, IFGT, 0x0B, IFGE, 0x0C,
+);
 
 pub fn get_mnemonic(opcode: OpSize) -> &'static str {
-    match opcode {
-        NOP => "nop",
-        _ => panic!("Unknown opcode: {}", opcode),
-    }
+    return OPCODE_MNEMONICS[opcode as usize];
 }

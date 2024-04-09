@@ -18,8 +18,8 @@ use std::io::Cursor;
 use std::rc::Rc;
 
 use compiler::ast::ASTPrinter;
-use compiler::ast::AstNode;
 use compiler::ast::Program;
+use compiler::ast::Visitable;
 use compiler::diagnostics;
 use compiler::lexer::YKLexer;
 use compiler::parser::YKParser;

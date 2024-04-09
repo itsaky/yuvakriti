@@ -38,6 +38,9 @@ strip = false
 [workspace.dependencies]
 log = "0.4"
 colored = "2"
+syn = "2.0.58"
+quote = "1.0.35"
+proc-macro2 = "1.0"
 bytecode = { path = "bytecode" }
 compiler = { path = "compiler" }
 logging = { path = "logging" }
