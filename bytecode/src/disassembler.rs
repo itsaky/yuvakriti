@@ -195,7 +195,7 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
             OpCode::IfLe => {}
             OpCode::IfGt => {}
             OpCode::IfGe => {}
-            OpCode::LoadConst => {
+            OpCode::Ldc => {
                 let const_index_high = instructions[from_index];
                 from_index += 1;
                 let const_index_low = instructions[from_index];

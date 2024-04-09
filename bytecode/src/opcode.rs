@@ -33,7 +33,7 @@ pub enum OpCode {
     IfLe = 0x0A,
     IfGt = 0x0B,
     IfGe = 0x0C,
-    LoadConst = 0x0D,
+    Ldc = 0x0D,
 
     // when introducing new opcodes,
     // increment this
@@ -67,7 +67,7 @@ pub fn get_opcode(code: OpSize) -> OpCode {
         0x0A => OpCode::IfLe,
         0x0B => OpCode::IfGt,
         0x0C => OpCode::IfGe,
-        0x0D => OpCode::LoadConst,
+        0x0D => OpCode::Ldc,
         _ => panic!("Unknown/unsupported opcode: {}", code),
     };
 }
@@ -87,7 +87,7 @@ pub fn get_opcode_mnemonic(opcode: OpCode) -> &'static str {
         OpCode::IfLe => "ifle",
         OpCode::IfGt => "ifgt",
         OpCode::IfGe => "ifge",
-        OpCode::LoadConst => "load_const",
+        OpCode::Ldc => "ldc",
         _ => panic!("Unknown/unsupported opcode: {:?}", opcode),
     };
 }

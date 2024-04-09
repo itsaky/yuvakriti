@@ -150,12 +150,12 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
         let _: () = match _primary_expr {
             PrimaryExpr::Number(num) => {
                 let idx = constant_pool.push(ConstantEntry::Number(NumberInfo::from(num)));
-                code.push_insns_1_16(OpCode::LoadConst, idx);
+                code.push_insns_1_16(OpCode::Ldc, idx);
             }
             PrimaryExpr::String(str) => {
                 let str = &str[1..str.len() - 1]; // remove double quotes
                 let idx = constant_pool.push_str(str);
-                code.push_insns_1_16(OpCode::LoadConst, idx);
+                code.push_insns_1_16(OpCode::Ldc, idx);
             }
             PrimaryExpr::Identifier(ident) => {
                 constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(ident)));
