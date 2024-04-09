@@ -17,7 +17,6 @@ use std::cell::RefCell;
 use std::io::Read;
 use std::rc::Rc;
 
-use crate::ast::{BinaryExpr, StmtS};
 use crate::ast::BinaryOp;
 use crate::ast::BlockStmt;
 use crate::ast::Decl;
@@ -39,6 +38,7 @@ use crate::ast::UnaryExpr;
 use crate::ast::UnaryOp;
 use crate::ast::VarStmt;
 use crate::ast::WhileStmt;
+use crate::ast::{BinaryExpr, StmtS};
 use crate::diagnostics::Diagnostic;
 use crate::diagnostics::DiagnosticHandler;
 use crate::diagnostics::DiagnosticKind;
@@ -90,7 +90,7 @@ impl<R: Read> YKParser<'_, R> {
         self.diagnostics
             .borrow_mut()
             .handle(self.create_diagnostic(diagnostic_kind, message));
-        
+
         self.has_error = self.has_error || is_error;
     }
 
@@ -137,11 +137,8 @@ impl<R: Read> YKParser<'_, R> {
 
             break;
         }
-        
-        return Program {
-            decls,
-            stmts
-        };
+
+        return Program { decls, stmts };
     }
 
     /// Returns the next declaration in the input source.

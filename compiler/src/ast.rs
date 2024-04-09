@@ -81,7 +81,7 @@ pub trait Visitable {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Program {
     pub decls: Vec<DeclS>,
-    pub stmts: Vec<StmtS>
+    pub stmts: Vec<StmtS>,
 }
 
 /// Decl : ClassDecl

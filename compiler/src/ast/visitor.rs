@@ -48,14 +48,14 @@ pub trait ASTVisitor<P, R> {
                 return r;
             }
         }
-        
+
         for stmt in &program.stmts {
             r = self.visit_stmt(&stmt.0, p);
             if r.is_some() {
-                return r
+                return r;
             }
         }
-        
+
         r
     }
 

@@ -51,7 +51,7 @@ fn test_simple_var_decl() {
     assert_eq!(0, stmt.1.end.line);
     assert_eq!(20, stmt.1.end.column as usize);
     assert_eq!(20, stmt.1.end.index as usize);
-    
+
     let var = if let Stmt::Var(var) = &stmt.0 {
         var
     } else {

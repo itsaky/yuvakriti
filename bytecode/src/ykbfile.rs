@@ -15,13 +15,13 @@
 
 use std::io::{Error, Write};
 
+use crate::attrs::Attr;
 use crate::bytes::ByteOutput;
+use crate::ConstantEntry;
 use crate::cp::ConstantPool;
 use crate::cp_info::CpInfoTag;
 use crate::decls::YKBDecl;
-use crate::insns::Insn;
 use crate::ykbversion::YKBVersion;
-use crate::ConstantEntry;
 
 pub const MAGIC_NUMBER: u32 = 0x59754B72;
 
@@ -37,7 +37,7 @@ pub struct YKBFile {
     declarations: Vec<Box<dyn YKBDecl>>,
 
     /// The instructions in the YKB file.
-    instructions: Vec<Box<dyn Insn>>,
+    attributes: Vec<Attr>,
 }
 
 impl YKBFile {
@@ -47,7 +47,7 @@ impl YKBFile {
             version,
             constant_pool: ConstantPool::new(),
             declarations: Vec::with_capacity(0),
-            instructions: Vec::with_capacity(0),
+            attributes: Vec::with_capacity(0),
         };
     }
 
@@ -71,6 +71,14 @@ impl YKBFile {
 
     pub fn declarations_mut(&mut self) -> &mut Vec<Box<dyn YKBDecl>> {
         return &mut self.declarations;
+    }
+    
+    pub fn attributes(&self) -> &Vec<Attr> {
+        return &self.attributes;
+    }
+    
+    pub fn attributes_mut(&mut self) -> &mut Vec<Attr> {
+        return &mut self.attributes;
     }
 }
 
