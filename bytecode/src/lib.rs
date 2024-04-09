@@ -1,10 +1,11 @@
 pub use cp::ConstantEntry;
 pub use cp::ConstantPool;
 pub use cp::CpSize;
-pub use ykbfile::YKBFile;
-pub use ykbreader::YKBFileReader;
-pub use ykbversion::YKBVersion;
-pub use ykbwriter::YKBFileWriter;
+pub use disassembler::YKBDisassembler;
+pub use file::YKBFile;
+pub use reader::YKBFileReader;
+pub use version::YKBVersion;
+pub use writer::YKBFileWriter;
 
 #[cfg(doctest)]
 mod tests;
@@ -20,7 +21,7 @@ mod decls;
 mod disassembler;
 mod insns;
 mod opcode;
-mod ykbfile;
-mod ykbreader;
-mod ykbversion;
-mod ykbwriter;
+mod file;
+mod reader;
+mod version;
+mod writer;

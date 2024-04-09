@@ -83,8 +83,8 @@ impl Display for NumberInfo {
 impl From<&f64> for NumberInfo {
     fn from(value: &f64) -> Self {
         let bits = value.to_bits();
-        let high = (bits >> 32).as_u32();
-        let low = bits.as_u32();
+        let high = (bits >> 32) as u32;
+        let low = bits as u32;
         return NumberInfo {
             high_bytes: high,
             low_bytes: low,

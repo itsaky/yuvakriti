@@ -21,7 +21,7 @@ use crate::cp_info::CpInfoTag;
 use crate::cp_info::NumberInfo;
 use crate::cp_info::StringInfo;
 use crate::cp_info::Utf8Info;
-use crate::ykbfile::MAGIC_NUMBER;
+use crate::file::MAGIC_NUMBER;
 use crate::ConstantEntry;
 use crate::ConstantPool;
 use crate::CpSize;

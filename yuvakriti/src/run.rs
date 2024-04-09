@@ -13,12 +13,15 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::io::Read;
+use clap::Args;
 
-use bytecode::bytes::ByteInput;
-use bytecode::YKBFileReader;
+#[derive(Args, Debug)]
+#[command(visible_alias = "r")]
+pub struct RunArgs {
+    #[arg(help = "Input bytecode file(s)")]
+    pub files: Vec<String>,
+}
 
-pub fn interpret<R: Read>(input: R) {
-    let mut reader = YKBFileReader::new(ByteInput::new(input));
-    let file = reader.read_file().unwrap();
+pub fn do_run(args: &RunArgs) -> Result<(), ()> {
+    Ok(())
 }

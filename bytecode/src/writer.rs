@@ -27,7 +27,7 @@ use crate::cp_info::NumberInfo;
 use crate::cp_info::Utf8Info;
 use crate::decls;
 use crate::opcode::OpCode;
-use crate::ykbfile::YKBFile;
+use crate::file::YKBFile;
 use crate::YKBVersion;
 
 /// Converts a program into a YKB file.

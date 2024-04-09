@@ -13,7 +13,8 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::fmt::{Display, Write};
+use std::fmt::Display;
+use std::fmt::Write;
 use std::io::Read;
 
 use crate::attrs;
@@ -24,7 +25,7 @@ use crate::bytes::ByteInput;
 use crate::cp_info::CpInfo;
 use crate::opcode::get_opcode;
 use crate::opcode::OpCode;
-use crate::ykbfile::MAGIC_NUMBER;
+use crate::file::MAGIC_NUMBER;
 use crate::ConstantEntry;
 use crate::ConstantPool;
 use crate::CpSize;
@@ -65,6 +66,7 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
         self.linefeed();
         self.indent(self.indent);
     }
+
     fn linefeed(&mut self) {
         self.write("\n");
     }
@@ -96,7 +98,6 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
         {
             self.linindent();
             self.write("Constant pool: ");
-
             self.indent += 1;
             self.write_constant_pool(&constant_pool, constant_pool_count);
             self.indent -= 1;

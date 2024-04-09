@@ -19,7 +19,7 @@ use crate::cp_info::NumberInfo;
 use crate::cp_info::StringInfo;
 use crate::cp_info::Utf8Info;
 use crate::tests::util::parse;
-use crate::ykbwriter::YKBFileWriter;
+use crate::writer::YKBFileWriter;
 
 #[test]
 fn test_cp_push() {

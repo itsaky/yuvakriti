@@ -22,7 +22,7 @@ use crate::bytes::ByteOutput;
 use crate::cp::ConstantPool;
 use crate::cp_info::{CpInfoTag, Utf8Info};
 use crate::decls::YKBDecl;
-use crate::ykbversion::YKBVersion;
+use crate::version::YKBVersion;
 use crate::ConstantEntry;
 
 pub const MAGIC_NUMBER: u32 = 0x59754B72;
