@@ -13,15 +13,18 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::cell::{Ref, RefCell, RefMut};
 use std::io::{Error, Write};
 
-use crate::attrs::Attr;
+use crate::attrs::{Attr, CodeSize};
+use crate::bytes::AssertingByteConversions;
 use crate::bytes::ByteOutput;
-use crate::ConstantEntry;
 use crate::cp::ConstantPool;
-use crate::cp_info::CpInfoTag;
+use crate::cp_info::{CpInfoTag, Utf8Info};
 use crate::decls::YKBDecl;
+use crate::opcode::OpCode;
 use crate::ykbversion::YKBVersion;
+use crate::{ConstantEntry, CpSize};
 
 pub const MAGIC_NUMBER: u32 = 0x59754B72;
 
@@ -34,10 +37,10 @@ pub struct YKBFile {
     constant_pool: ConstantPool,
 
     /// The declarations in the YKB file.
-    declarations: Vec<Box<dyn YKBDecl>>,
+    declarations: RefCell<Vec<Box<dyn YKBDecl>>>,
 
     /// The instructions in the YKB file.
-    attributes: Vec<Attr>,
+    attributes: RefCell<Vec<Attr>>,
 }
 
 impl YKBFile {
@@ -46,8 +49,8 @@ impl YKBFile {
         return YKBFile {
             version,
             constant_pool: ConstantPool::new(),
-            declarations: Vec::with_capacity(0),
-            attributes: Vec::with_capacity(0),
+            declarations: RefCell::new(Vec::with_capacity(0)),
+            attributes: RefCell::new(Vec::with_capacity(0)),
         };
     }
 
@@ -65,33 +68,37 @@ impl YKBFile {
         return &mut self.constant_pool;
     }
 
-    pub fn declarations(&self) -> &Vec<Box<dyn YKBDecl>> {
-        return &self.declarations;
+    pub fn declarations(&self) -> Ref<'_, Vec<Box<dyn YKBDecl>>> {
+        return self.declarations.borrow();
     }
 
-    pub fn declarations_mut(&mut self) -> &mut Vec<Box<dyn YKBDecl>> {
-        return &mut self.declarations;
+    pub fn declarations_mut(&mut self) -> RefMut<'_, Vec<Box<dyn YKBDecl>>> {
+        return self.declarations.borrow_mut();
     }
-    
-    pub fn attributes(&self) -> &Vec<Attr> {
-        return &self.attributes;
+
+    pub fn attributes(&self) -> Ref<'_, Vec<Attr>> {
+        return self.attributes.borrow();
     }
-    
-    pub fn attributes_mut(&mut self) -> &mut Vec<Attr> {
-        return &mut self.attributes;
+
+    pub fn attributes_mut(&mut self) -> RefMut<'_, Vec<Attr>> {
+        return self.attributes.borrow_mut();
     }
 }
 
 impl YKBFile {
-    pub fn write_to<W: Write>(&self, writer: &mut ByteOutput<W>) -> Result<usize, Error> {
+    pub fn write_to<W: Write>(&mut self, writer: &mut ByteOutput<W>) -> Result<usize, Error> {
         let mut size = writer.write_u32(MAGIC_NUMBER)?;
         size += writer.write_u16(self.version.major_version())?;
         size += writer.write_u16(self.version.minor_version())?;
         size += self.write_constant_pool(writer)?;
+        size += self.write_attrs(writer)?;
         Ok(size)
     }
 
-    fn write_constant_pool<W: Write>(&self, writer: &mut ByteOutput<W>) -> Result<usize, Error> {
+    fn write_constant_pool<W: Write>(
+        &mut self,
+        writer: &mut ByteOutput<W>,
+    ) -> Result<usize, Error> {
         let constant_pool = self.constant_pool();
         let mut size = writer.write_u16(constant_pool.len())?;
         if constant_pool.len() <= 1 && constant_pool.get(0).unwrap() == &ConstantEntry::None {
@@ -120,6 +127,39 @@ impl YKBFile {
                 }
             }
         }
+
+        Ok(size)
+    }
+
+    fn write_attrs<W: Write>(&mut self, writer: &mut ByteOutput<W>) -> Result<usize, Error> {
+        let attrs = self.attributes();
+        let mut size = writer.write_u16(attrs.len() as u16)?;
+        let attr_count = attrs.len();
+        for i in 0..attr_count {
+            size += self.write_attr(&attrs[i], writer)?;
+        }
+        Ok(size)
+    }
+
+    fn write_attr<W: Write>(
+        &self,
+        attr: &Attr,
+        writer: &mut ByteOutput<W>,
+    ) -> Result<usize, Error> {
+        let name_index = self
+            .constant_pool()
+            .lookup(&ConstantEntry::Utf8(Utf8Info::from(attr.name())))
+            .expect(format!("Could not find {} in constant pool", attr.name()).as_str());
+        
+        let mut size = writer.write_u16(name_index)?;
+
+        match attr {
+            Attr::Code(code) => {
+                size += writer.write_u32(code.instructions().len() as CodeSize)?;
+                size += writer.write_bytes(code.instructions())?;
+            }
+            Attr::SourceFile(source_file) => {}
+        };
 
         Ok(size)
     }

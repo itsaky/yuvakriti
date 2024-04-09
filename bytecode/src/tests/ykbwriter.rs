@@ -18,13 +18,15 @@ use std::path::Path;
 
 use crate::bytes::ByteOutput;
 use crate::tests::util::parse;
-use crate::{ByteInput, YKBFileReader, YKBFileWriter};
+use crate::{bytes::ByteInput, YKBFileReader, YKBFileWriter};
 
 #[test]
 fn test_program_writer() {
     let mut program = parse("fun main() { var str = \"str\"; var num = 123; }");
     let mut ykbwriter = YKBFileWriter::new();
-    let ykbfile = ykbwriter.write(&mut program);
+    ykbwriter.write(&mut program);
+
+    let ykbfile = ykbwriter.file_mut();
 
     let path = Path::new("test.ykb");
     let display = path.display();

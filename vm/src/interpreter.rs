@@ -15,7 +15,7 @@
 
 use std::io::Read;
 
-use bytecode::{ByteInput, YKBFileReader};
+use bytecode::{bytes::ByteInput, YKBFileReader};
 
 pub fn interpret<R: Read>(input: R) {
     let mut reader = YKBFileReader::new(ByteInput::new(input));

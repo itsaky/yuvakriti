@@ -16,9 +16,14 @@
 use std::fmt::{Display, Write};
 use std::io::Read;
 
+use crate::attrs;
+use crate::attrs::Attr;
+use crate::attrs::Code;
+use crate::bytes::ByteInput;
 use crate::cp_info::CpInfo;
+use crate::opcode::get_opcode;
+use crate::opcode::OpCode;
 use crate::ykbfile::MAGIC_NUMBER;
-use crate::ByteInput;
 use crate::ConstantEntry;
 use crate::ConstantPool;
 use crate::CpSize;
@@ -82,14 +87,25 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
             self.write1(&version.minor_version().to_string());
         }
 
+        let mut constant_pool = ConstantPool::new();
+        let constant_pool_count = self.r.read_constant_pool(&mut constant_pool).unwrap();
+
+        let attrs = self.r.read_attrs(&constant_pool).unwrap();
+
         {
             self.linindent();
             self.write("Constant pool: ");
-            let mut constant_pool = ConstantPool::new();
-            let count = self.r.read_constant_pool(&mut constant_pool).unwrap();
 
             self.indent += 1;
-            self.write_constant_pool(&constant_pool, count);
+            self.write_constant_pool(&constant_pool, constant_pool_count);
+            self.indent -= 1;
+        }
+
+        {
+            self.linindent();
+            self.write("Attributes: ");
+            self.indent += 1;
+            self.write_attrs(&attrs, &constant_pool);
             self.indent -= 1;
         }
 
@@ -113,5 +129,84 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
 
             self.write1(&format!("#{}: {:<20} {}", i, typ, info));
         }
+    }
+
+    fn write_attrs(&mut self, attrs: &Vec<Attr>, constant_pool: &ConstantPool) {
+        for attr in attrs {
+            self.write_attr(attr, constant_pool);
+        }
+    }
+
+    fn write_attr(&mut self, attr: &Attr, constant_pool: &ConstantPool) {
+        self.linindent();
+        let attr_name = match attr {
+            Attr::Code(_) => attrs::CODE,
+            Attr::SourceFile(_) => attrs::SOURCE_FILE,
+            _ => panic!("Unknown attribute: {:?}", attr),
+        };
+
+        self.write(format!("{}: ", attr_name).as_str());
+
+        match attr {
+            Attr::Code(code) => {
+                self.indent += 1;
+                self.write_code(code, constant_pool, 0);
+                self.indent -= 1;
+            }
+            Attr::SourceFile(file) => {
+                let name = constant_pool
+                    .get(file.name_index)
+                    .map(|entry| entry.as_utf8().unwrap())
+                    .expect(&format!(
+                        "Expected a Utf8Info constant pool entry at index {}",
+                        file.name_index
+                    ));
+
+                self.write1(&name.to_string());
+            }
+        }
+    }
+
+    fn write_code(&mut self, code: &Code, constant_pool: &ConstantPool, mut from_index: usize) {
+        if code.instructions.len() <= from_index {
+            return;
+        }
+
+        let instructions = code.instructions();
+        let opcode = get_opcode(instructions[from_index]);
+
+        self.linindent();
+        self.write1(&format!("{} ", opcode));
+
+        from_index += 1;
+
+        match opcode {
+            OpCode::Nop => {}
+            OpCode::Halt => {}
+            OpCode::Add => {}
+            OpCode::Sub => {}
+            OpCode::Mult => {}
+            OpCode::Div => {}
+            OpCode::Print => {}
+            OpCode::IfEq => {}
+            OpCode::IfNe => {}
+            OpCode::IfLt => {}
+            OpCode::IfLe => {}
+            OpCode::IfGt => {}
+            OpCode::IfGe => {}
+            OpCode::LoadConst => {
+                let const_index_high = instructions[from_index];
+                from_index += 1;
+                let const_index_low = instructions[from_index];
+                from_index += 1;
+
+                let const_index = (const_index_high as u16) << 8 | const_index_low as u16;
+                let constant = constant_pool.get(const_index).unwrap();
+                self.write(&format!("#{} // {}", const_index, constant))
+            }
+            _ => panic!("Unknown/unsupported opcode: {}", instructions[0]),
+        }
+
+        self.write_code(code, constant_pool, from_index)
     }
 }

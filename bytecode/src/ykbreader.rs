@@ -22,12 +22,12 @@ use crate::cp_info::NumberInfo;
 use crate::cp_info::StringInfo;
 use crate::cp_info::Utf8Info;
 use crate::ykbfile::MAGIC_NUMBER;
-use crate::ByteInput;
 use crate::ConstantEntry;
 use crate::ConstantPool;
 use crate::CpSize;
 use crate::YKBFile;
 use crate::YKBVersion;
+use crate::{attrs, bytes::ByteInput};
 
 pub struct YKBFileReader<R: Read> {
     buf: ByteInput<R>,
@@ -121,5 +121,49 @@ impl<R: Read> YKBFileReader<R> {
     pub fn read_string_constant_entry(&mut self) -> Result<ConstantEntry, Error> {
         let string_index = Self::map_err(self.buf.read_u16(), "Unable to read string index")?;
         Ok(ConstantEntry::String(StringInfo::new(string_index)))
+    }
+
+    pub fn read_attrs(&mut self, constant_pool: &ConstantPool) -> Result<Vec<attrs::Attr>, Error> {
+        let count = Self::map_err(self.buf.read_u16(), "Unable to read attribute count")?;
+        let mut attrs = Vec::with_capacity(count as usize);
+        for _ in 0..count {
+            let attr = Self::map_err(self.read_attr(constant_pool), "Unable to read attribute")?;
+            attrs.push(attr);
+        }
+
+        return Ok(attrs);
+    }
+
+    pub fn read_attr(&mut self, constant_pool: &ConstantPool) -> Result<attrs::Attr, Error> {
+        let name_index: CpSize =
+            Self::map_err(self.buf.read_u16(), "Unable to read attribute name index")?;
+        let info = constant_pool
+            .get(name_index)
+            .map(|entry| entry.as_utf8().unwrap())
+            .expect(&format!(
+                "Expected a Utf8Info entry at constant pool index {}",
+                name_index
+            ));
+
+        let name = info.to_string();
+
+        let attr = match name.as_str() {
+            attrs::CODE => {
+                let insn_count =
+                    Self::map_err(self.buf.read_u32(), "Unable to read instruction count")?;
+                let buf = self.buf.read_n_bytes(insn_count as usize)?;
+                attrs::Attr::Code(attrs::Code::with_insns(buf))
+            }
+            attrs::SOURCE_FILE => {
+                let name_index =
+                    Self::map_err(self.buf.read_u16(), "Unable to read source file name index")?;
+                attrs::Attr::SourceFile(attrs::SourceFile::new(name_index))
+            }
+            _ => {
+                panic!("Unknown attribute: {}", name);
+            }
+        };
+
+        Ok(attr)
     }
 }

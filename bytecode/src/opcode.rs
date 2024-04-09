@@ -13,25 +13,75 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::fmt::Display;
+
 pub type OpSize = u8;
 
-macro_rules! opcodes {
-    ($count:literal, $($name:ident, $value:literal $(,)*)+) => {
-        $(pub const $name: OpSize = $value;)+
+#[derive(Debug, PartialEq, Clone, Copy)]
+#[repr(u8)]
+pub enum OpCode {
+    Nop = 0x00,
+    Halt = 0x01,
+    Add = 0x02,
+    Sub = 0x03,
+    Mult = 0x04,
+    Div = 0x05,
+    Print = 0x06,
+    IfEq = 0x07,
+    IfNe = 0x08,
+    IfLt = 0x09,
+    IfLe = 0x0A,
+    IfGt = 0x0B,
+    IfGe = 0x0C,
+    LoadConst = 0x0D,
 
-        pub const OPCODE_COUNT: usize = $count;
+    // when introducing new opcodes,
+    // increment this
+    OpCount = 0x0E,
+}
 
-        pub const OPCODE_MNEMONICS: [&str; OPCODE_COUNT] = [
-            $(stringify!($name),)+
-        ];
+impl Display for OpCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", get_opcode_mnemonic(*self))
+    }
+}
+
+pub fn get_opcode(code: OpSize) -> OpCode {
+    return match code {
+        0x00 => OpCode::Nop,
+        0x01 => OpCode::Halt,
+        0x02 => OpCode::Add,
+        0x03 => OpCode::Sub,
+        0x04 => OpCode::Mult,
+        0x05 => OpCode::Div,
+        0x06 => OpCode::Print,
+        0x07 => OpCode::IfEq,
+        0x08 => OpCode::IfNe,
+        0x09 => OpCode::IfLt,
+        0x0A => OpCode::IfLe,
+        0x0B => OpCode::IfGt,
+        0x0C => OpCode::IfGe,
+        0x0D => OpCode::LoadConst,
+        _ => panic!("Unknown/unsupported opcode: {}", code),
     };
 }
 
-opcodes!(
-    13, NOP, 0x00, HALT, 0x01, ADD, 0x02, SUB, 0x03, MULT, 0x04, DIV, 0x05, PRINT, 0x06, IFEQ,
-    0x07, IFNE, 0x08, IFLT, 0x09, IFLE, 0x0A, IFGT, 0x0B, IFGE, 0x0C,
-);
-
-pub fn get_mnemonic(opcode: OpSize) -> &'static str {
-    return OPCODE_MNEMONICS[opcode as usize];
+pub fn get_opcode_mnemonic(opcode: OpCode) -> &'static str {
+    return match opcode {
+        OpCode::Nop => "nop",
+        OpCode::Halt => "halt",
+        OpCode::Add => "add",
+        OpCode::Sub => "sub",
+        OpCode::Mult => "mult",
+        OpCode::Div => "div",
+        OpCode::Print => "print",
+        OpCode::IfEq => "ifeq",
+        OpCode::IfNe => "ifne",
+        OpCode::IfLt => "iflt",
+        OpCode::IfLe => "ifle",
+        OpCode::IfGt => "ifgt",
+        OpCode::IfGe => "ifge",
+        OpCode::LoadConst => "load_const",
+        _ => panic!("Unknown/unsupported opcode: {:?}", opcode),
+    };
 }

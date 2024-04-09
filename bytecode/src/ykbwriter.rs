@@ -16,15 +16,17 @@
 use compiler::ast;
 use compiler::ast::FuncDecl;
 use compiler::ast::PrimaryExpr;
+use compiler::ast::PrintStmt;
 use compiler::ast::Program;
 use compiler::ast::Visitable;
-use compiler::ast::{ASTVisitor, PrintStmt};
+use compiler::ast::{ASTVisitor, BinaryExpr, BinaryOp};
 
+use crate::attrs;
 use crate::cp::ConstantEntry;
 use crate::cp_info::NumberInfo;
-use crate::cp_info::StringInfo;
 use crate::cp_info::Utf8Info;
 use crate::decls;
+use crate::opcode::OpCode;
 use crate::ykbfile::YKBFile;
 use crate::YKBVersion;
 
@@ -49,25 +51,55 @@ impl YKBFileWriter {
     }
 
     pub fn write(&mut self, program: &mut Program) -> &YKBFile {
-        let mut fpv = FirstPassVisitor::new(&mut self.file);
+        let mut fpv = CodeGen::new(&mut self.file);
         program.accept(&mut fpv, &());
         return self.file();
     }
 }
 
-struct FirstPassVisitor<'a> {
+struct CodeGen<'a> {
     file: &'a mut YKBFile,
+    code: Option<attrs::Code>,
 }
 
-/// An [ASTVisitor] for the first pass of the compilation phase. This visitor is used to build up
-/// the constant pool, and the declarations.
-impl<'a> FirstPassVisitor<'a> {
+impl<'a> CodeGen<'a> {
     fn new(file: &'a mut YKBFile) -> Self {
-        return FirstPassVisitor { file };
+        return CodeGen { file, code: None };
     }
 }
 
-impl ASTVisitor<(), ()> for FirstPassVisitor<'_> {
+impl ASTVisitor<(), ()> for CodeGen<'_> {
+    fn visit_program(&mut self, program: &Program, p: &()) -> Option<()> {
+        if self
+            .file
+            .attributes()
+            .iter()
+            .find(|attr| attr.name() == attrs::CODE)
+            .is_some()
+        {
+            panic!("A YKBFile cannot have multiple Code attributes")
+        }
+
+        self.code = Some(attrs::Code::new());
+
+        self.default_visit_program(program, p, true, false);
+        for stmt in &program.stmts {
+            self.visit_stmt(&stmt.0, p);
+        }
+
+        if self.code.as_ref().unwrap().instructions().len() > 0 {
+            self.file
+                .constant_pool_mut()
+                .push(ConstantEntry::Utf8(Utf8Info::from(attrs::CODE)));
+            self.file
+                .attributes_mut()
+                .push(attrs::Attr::Code(self.code.take().unwrap()));
+        }
+
+        self.code = None;
+        None
+    }
+
     fn visit_class_decl(&mut self, class_decl: &ast::ClassDecl, _p: &()) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         let name_index =
@@ -90,25 +122,43 @@ impl ASTVisitor<(), ()> for FirstPassVisitor<'_> {
 
     fn visit_print_stmt(&mut self, print_stmt: &PrintStmt, p: &()) -> Option<()> {
         self.visit_expr(&print_stmt.expr.0, p);
+        let code = self.code.as_mut().unwrap();
+        code.push_insns_0(OpCode::Print);
+        None
+    }
+
+    fn visit_binary_expr(&mut self, binary_expr: &BinaryExpr, p: &()) -> Option<()> {
+        self.visit_expr(&binary_expr.right.0, p);
+        self.visit_expr(&binary_expr.left.0, p);
+        let code = self.code.as_mut().unwrap();
+        let opcode = match binary_expr.op {
+            BinaryOp::Plus => OpCode::Add,
+            BinaryOp::Minus => OpCode::Sub,
+            BinaryOp::Mult => OpCode::Mult,
+            BinaryOp::Div => OpCode::Div,
+            _ => panic!("Unsupported binary operator: {}", binary_expr.op.sym()),
+        };
+
+        code.push_insns_0(opcode);
 
         None
     }
 
     fn visit_primary_expr(&mut self, _primary_expr: &PrimaryExpr, p: &()) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
-        match _primary_expr {
+        let code = self.code.as_mut().unwrap();
+        let _: () = match _primary_expr {
             PrimaryExpr::Number(num) => {
-                constant_pool.push(ConstantEntry::Number(NumberInfo::from(num)))
+                let idx = constant_pool.push(ConstantEntry::Number(NumberInfo::from(num)));
+                code.push_insns_1_16(OpCode::LoadConst, idx);
             }
             PrimaryExpr::String(str) => {
                 let str = &str[1..str.len() - 1]; // remove double quotes
-                let utf8info = constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(str)));
-                constant_pool.push(ConstantEntry::String(StringInfo {
-                    string_index: utf8info,
-                }))
+                let idx = constant_pool.push_str(str);
+                code.push_insns_1_16(OpCode::LoadConst, idx);
             }
             PrimaryExpr::Identifier(ident) => {
-                constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(ident)))
+                constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(ident)));
             }
             _ => return self.default_visit_primary_expr(_primary_expr, p),
         };

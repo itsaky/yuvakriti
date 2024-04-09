@@ -1,4 +1,3 @@
-pub use bytes::ByteInput;
 pub use cp::ConstantEntry;
 pub use cp::ConstantPool;
 pub use cp::CpSize;
@@ -14,7 +13,7 @@ mod tests;
 mod tests;
 
 pub mod attrs;
-mod bytes;
+pub mod bytes;
 mod cp;
 pub mod cp_info;
 mod decls;

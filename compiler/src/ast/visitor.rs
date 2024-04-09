@@ -38,21 +38,31 @@ use crate::ast::{AssignExpr, Visitable};
 /// is [Some], then the child nodes of the AST node will not be visited.
 pub trait ASTVisitor<P, R> {
     fn visit_program(&mut self, program: &Program, p: &P) -> Option<R> {
-        self.default_visit_program(program, p)
+        self.default_visit_program(program, p, true, true)
     }
-    fn default_visit_program(&mut self, program: &Program, p: &P) -> Option<R> {
+    fn default_visit_program(
+        &mut self,
+        program: &Program,
+        p: &P,
+        visit_decls: bool,
+        visit_stmts: bool,
+    ) -> Option<R> {
         let mut r: Option<R> = None;
-        for decl in &program.decls {
-            r = self.visit_decl(&decl.0, p);
-            if r.is_some() {
-                return r;
+        if visit_decls {
+            for decl in &program.decls {
+                r = self.visit_decl(&decl.0, p);
+                if r.is_some() {
+                    return r;
+                }
             }
         }
 
-        for stmt in &program.stmts {
-            r = self.visit_stmt(&stmt.0, p);
-            if r.is_some() {
-                return r;
+        if visit_stmts {
+            for stmt in &program.stmts {
+                r = self.visit_stmt(&stmt.0, p);
+                if r.is_some() {
+                    return r;
+                }
             }
         }
 

@@ -16,15 +16,17 @@
 use crate::bytes::ByteOutput;
 use crate::disassembler::YKBDisassembler;
 use crate::tests::util::parse;
-use crate::{ByteInput, YKBFileWriter};
+use crate::{bytes::ByteInput, YKBFileWriter};
 use std::fs::File;
 use std::path::Path;
 
 #[test]
 fn test_disassembler() {
-    let mut program = parse("fun main() { var str = \"str\"; var num = 123; }");
+    let mut program = parse("fun main() { print 1 + 2; }");
     let mut ykbwriter = YKBFileWriter::new();
-    let ykbfile = ykbwriter.write(&mut program);
+    ykbwriter.write(&mut program);
+
+    let ykbfile = ykbwriter.file_mut();
 
     let path = Path::new("test.ykb");
     let display = path.display();

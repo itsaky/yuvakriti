@@ -16,6 +16,7 @@
 use crate::cp_info::NumberInfo;
 use crate::cp_info::StringInfo;
 use crate::cp_info::Utf8Info;
+use std::fmt::{write, Debug, Display};
 
 /// The size of the constant pool entry indices.
 pub type CpSize = u16;
@@ -44,6 +45,42 @@ pub enum ConstantEntry {
 
     /// A special type of constant entry which is the first entry in the constant pool.
     None,
+}
+
+impl Display for ConstantEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
+            ConstantEntry::Utf8(utf8) => utf8.to_string(),
+            ConstantEntry::String(str) => str.to_string(),
+            ConstantEntry::Number(num) => num.to_string(),
+            ConstantEntry::None => String::from("None"),
+        };
+
+        write!(f, "{}", str)
+    }
+}
+
+impl ConstantEntry {
+    pub fn as_utf8(&self) -> Option<&Utf8Info> {
+        match self {
+            ConstantEntry::Utf8(ref info) => Some(info),
+            _ => None,
+        }
+    }
+
+    pub fn as_string(&self) -> Option<&StringInfo> {
+        match self {
+            ConstantEntry::String(ref info) => Some(info),
+            _ => None,
+        }
+    }
+
+    pub fn as_number(&self) -> Option<&NumberInfo> {
+        match self {
+            ConstantEntry::Number(ref info) => Some(info),
+            _ => None,
+        }
+    }
 }
 
 impl PartialEq for ConstantEntry {
@@ -106,5 +143,17 @@ impl ConstantPool {
     /// Returns the constant entry at the given index.
     pub fn get(&self, index: CpSize) -> Option<&ConstantEntry> {
         return self.entries.get(index as usize);
+    }
+
+    /// Push a string constant to the constant pool.
+    pub fn push_str(&mut self, string: &str) -> CpSize {
+        let utf8idx = self.push(ConstantEntry::Utf8(Utf8Info::from(string)));
+        return self.push(ConstantEntry::String(StringInfo::new(utf8idx)));
+    }
+
+    /// Push a string constant to the constant pool.
+    pub fn push_string(&mut self, string: &String) -> CpSize {
+        let utf8idx = self.push(ConstantEntry::Utf8(Utf8Info::from(string)));
+        return self.push(ConstantEntry::String(StringInfo::new(utf8idx)));
     }
 }
