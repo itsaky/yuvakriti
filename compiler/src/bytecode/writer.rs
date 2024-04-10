@@ -13,14 +13,17 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use util::matches_any;
+
 use crate::ast;
+use crate::ast::ASTVisitor;
+use crate::ast::BinaryExpr;
+use crate::ast::BinaryOp;
 use crate::ast::FuncDecl;
 use crate::ast::PrimaryExpr;
 use crate::ast::PrintStmt;
 use crate::ast::Program;
 use crate::ast::Visitable;
-use crate::ast::{ASTVisitor, BinaryExpr, BinaryOp};
-
 use crate::bytecode::attrs;
 use crate::bytecode::cp::ConstantEntry;
 use crate::bytecode::cp_info::NumberInfo;
@@ -28,18 +31,17 @@ use crate::bytecode::cp_info::Utf8Info;
 use crate::bytecode::decls;
 use crate::bytecode::file::YKBFile;
 use crate::bytecode::opcode::OpCode;
-use crate::bytecode::YKBVersion;
+use crate::features::CompilerFeatures;
 
 /// Converts a program into a YKB file.
-pub struct YKBFileWriter {
-    file: YKBFile,
+pub struct YKBFileWriter<'inst> {
+    file: &'inst mut YKBFile,
+    features: &'inst CompilerFeatures,
 }
 
-impl YKBFileWriter {
-    pub fn new() -> Self {
-        return YKBFileWriter {
-            file: YKBFile::new(YKBVersion::LATEST.clone()),
-        };
+impl YKBFileWriter<'_> {
+    pub fn new<'a>(file: &'a mut YKBFile, features: &'a CompilerFeatures) -> YKBFileWriter<'a> {
+        return YKBFileWriter { file, features };
     }
 
     pub fn file(&self) -> &YKBFile {
@@ -50,21 +52,25 @@ impl YKBFileWriter {
         return &mut self.file;
     }
 
-    pub fn write(&mut self, program: &mut Program) -> &mut YKBFile {
-        let mut fpv = CodeGen::new(&mut self.file);
+    pub fn write(&mut self, program: &mut Program) {
+        let mut fpv = CodeGen::new(&mut self.file, &self.features);
         program.accept(&mut fpv, &());
-        return self.file_mut();
     }
 }
 
 struct CodeGen<'a> {
     file: &'a mut YKBFile,
+    features: &'a CompilerFeatures,
     code: Option<attrs::Code>,
 }
 
 impl<'a> CodeGen<'a> {
-    fn new(file: &'a mut YKBFile) -> Self {
-        return CodeGen { file, code: None };
+    fn new(file: &'a mut YKBFile, features: &'a CompilerFeatures) -> Self {
+        return CodeGen {
+            file,
+            features,
+            code: None,
+        };
     }
 }
 
@@ -128,8 +134,26 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
     }
 
     fn visit_binary_expr(&mut self, binary_expr: &BinaryExpr, p: &()) -> Option<()> {
+        if self.features.const_folding
+            && matches_any!(
+                &binary_expr.op,
+                BinaryOp::Plus | BinaryOp::Minus | BinaryOp::Mult | BinaryOp::Div
+            )
+        {
+            if let Some((l, r)) = binary_expr.get_num_operands() {
+                let constant_pool = self.file.constant_pool_mut();
+                let index = constant_pool.push(ConstantEntry::Number(NumberInfo::from(
+                    &apply_binary_op(&binary_expr.op, l, r),
+                )));
+                let code = self.code.as_mut().unwrap();
+                code.push_insns_1_16(OpCode::Ldc, index);
+                return None;
+            }
+        }
+
         self.visit_expr(&binary_expr.left.0, p);
         self.visit_expr(&binary_expr.right.0, p);
+
         let code = self.code.as_mut().unwrap();
         let opcode = match binary_expr.op {
             BinaryOp::Plus => OpCode::Add,
@@ -164,5 +188,15 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
         };
 
         None
+    }
+}
+
+fn apply_binary_op(op: &BinaryOp, l: &f64, r: &f64) -> f64 {
+    match op {
+        BinaryOp::Plus => l + r,
+        BinaryOp::Minus => l - r,
+        BinaryOp::Mult => l * r,
+        BinaryOp::Div => l / r,
+        _ => panic!("Unsupported binary operator: {}", op.sym()),
     }
 }

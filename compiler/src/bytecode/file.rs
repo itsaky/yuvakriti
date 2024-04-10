@@ -87,12 +87,14 @@ impl YKBFile {
 }
 
 impl YKBFile {
-    
-    pub fn write_to<W:Write>(&mut self, w: W) -> Result<usize, Error> {
+    pub fn write_to<W: Write>(&mut self, w: W) -> Result<usize, Error> {
         self.write_to_output(&mut ByteOutput::new(w))
     }
-    
-    pub fn write_to_output<W: Write>(&mut self, writer: &mut ByteOutput<W>) -> Result<usize, Error> {
+
+    pub fn write_to_output<W: Write>(
+        &mut self,
+        writer: &mut ByteOutput<W>,
+    ) -> Result<usize, Error> {
         let mut size = writer.write_u32(MAGIC_NUMBER)?;
         size += writer.write_u16(self.version.major_version())?;
         size += writer.write_u16(self.version.minor_version())?;

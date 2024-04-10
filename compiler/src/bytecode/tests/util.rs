@@ -16,20 +16,21 @@
 use std::fs::File;
 use std::path::Path;
 
-use crate::bytecode::YKBFileWriter;
+use crate::bytecode::{YKBFile, YKBFileWriter, YKBVersion};
+use crate::features::CompilerFeatures;
 use crate::tests::util::parse;
 
-pub(crate) fn compile_to_bytecode<'a>(source: &str, bytecode_path: &Path) -> YKBFileWriter {
+pub(crate) fn compile_to_bytecode<'a>(source: &str, bytecode_path: &Path) -> YKBFile {
     std::fs::create_dir_all(bytecode_path.parent().unwrap()).unwrap();
     if bytecode_path.exists() {
         std::fs::remove_file(bytecode_path).unwrap();
     }
 
     let mut program = parse(source);
-    let mut ykbwriter = YKBFileWriter::new();
+    let features = CompilerFeatures::default();
+    let mut ykbfile = YKBFile::new(YKBVersion::LATEST.clone());
+    let mut ykbwriter = YKBFileWriter::new(&mut ykbfile, &features);
     ykbwriter.write(&mut program);
-
-    let ykbfile = ykbwriter.file_mut();
 
     let display = bytecode_path.display();
     let file = match File::create(&bytecode_path) {
@@ -49,5 +50,5 @@ pub(crate) fn compile_to_bytecode<'a>(source: &str, bytecode_path: &Path) -> YKB
 
     assert!(bytecode_path.exists());
 
-    ykbwriter
+    ykbfile
 }

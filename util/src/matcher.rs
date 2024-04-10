@@ -13,26 +13,12 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::path::PathBuf;
-
-use clap::Args;
-
-#[derive(Args, Debug)]
-#[command(visible_alias = "c")]
-pub struct CompileArgs {
-    #[arg(short, long, help = "Disable language features", value_delimiter = ',', num_args = 1..)]
-    pub disable_features: Vec<String>,
-
-    #[arg(short, long, help = "Output file", value_name = "FILE")]
-    pub output: Option<PathBuf>,
-
-    #[arg(help = "Input source file(s)")]
-    pub files: Vec<PathBuf>,
-}
-
-#[derive(Args, Debug)]
-#[command(visible_alias = "d")]
-pub struct DisassembleArgs {
-    #[arg(help = "Input bytecode file")]
-    pub file: PathBuf,
+#[macro_export]
+macro_rules! matches_any {
+    ($expression:expr, $($pattern:pat $(if $guard:expr)? $(,)?)+) => {
+        match $expression {
+            $($pattern $(if $guard)? => true,)+
+            _ => false
+        }
+    };
 }

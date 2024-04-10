@@ -116,6 +116,11 @@ impl ConstantPool {
         return ConstantPool { entries };
     }
 
+    /// Returns the entries in the constant pool.
+    pub fn entries(&self) -> &Vec<ConstantEntry> {
+        return &self.entries;
+    }
+
     pub fn len(&self) -> CpSize {
         return self.entries.len().as_cp_size();
     }

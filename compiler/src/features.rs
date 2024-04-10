@@ -23,14 +23,15 @@ pub struct CompilerFeatures {
     pub const_folding: bool,
 }
 
-impl CompilerFeatures {
-    /// Create a new set of features with default values.
-    pub fn new_default() -> Self {
+impl Default for CompilerFeatures {
+    fn default() -> Self {
         CompilerFeatures {
             const_folding: true,
         }
     }
+}
 
+impl CompilerFeatures {
     /// Set whether a feature is enabled or not.
     pub fn set(&mut self, feature: &str, enabled: bool) {
         match feature {

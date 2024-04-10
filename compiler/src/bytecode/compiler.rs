@@ -31,7 +31,7 @@ use crate::parser::YKParser;
 
 use crate::bytecode::file::EXT_YK;
 use crate::bytecode::file::EXT_YKB;
-use crate::bytecode::YKBFileWriter;
+use crate::bytecode::{YKBFile, YKBFileWriter, YKBVersion};
 
 // Compiles source files into bytecode.
 pub struct YKCompiler {
@@ -53,10 +53,7 @@ impl YKCompiler {
                 return Err(());
             }
 
-            if !path
-                .extension()
-                .is_some_and(|ext| ext == EXT_YK)
-            {
+            if !path.extension().is_some_and(|ext| ext == EXT_YK) {
                 error!("Invalid file type: {}", path.display());
                 return Err(());
             }
@@ -71,7 +68,7 @@ impl YKCompiler {
         &mut self,
         path: &PathBuf,
         _args: &CompileArgs,
-        _features: &CompilerFeatures,
+        features: &CompilerFeatures,
     ) -> Result<(), ()> {
         let display = path.file_name().unwrap();
         debug!("[{:?}] Compiling", display);
@@ -90,14 +87,15 @@ impl YKCompiler {
         }
 
         info!("[{:?}] Generating bytecode", display);
-        let mut ykbwriter = YKBFileWriter::new();
-        let ykbfile = ykbwriter.write(&mut program);
+        let mut ykbfile = YKBFile::new(YKBVersion::LATEST.clone());
+        let mut ykbwriter = YKBFileWriter::new(&mut ykbfile, features);
+        ykbwriter.write(&mut program);
 
         info!("[{:?}] Writing bytecode", display);
 
         let bytecode_path = path.with_extension(EXT_YKB);
         let outfile = File::create(&bytecode_path).unwrap();
-        
+
         ykbfile.write_to(&outfile).unwrap();
 
         info!("[{:?}] Compilation successful", display);

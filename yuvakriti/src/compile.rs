@@ -13,10 +13,10 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use log::{info, trace};
-use compiler::bytecode::compiler::YKCompiler;
 use compiler::args::CompileArgs;
+use compiler::bytecode::compiler::YKCompiler;
 use compiler::features::CompilerFeatures;
+use log::{info, trace};
 
 pub fn do_compile(args: &mut CompileArgs) -> Result<(), ()> {
     if args.files.is_empty() {
@@ -32,11 +32,11 @@ pub fn do_compile(args: &mut CompileArgs) -> Result<(), ()> {
 fn perform_compilation(args: &CompileArgs) -> Result<(), ()> {
     trace!("Compiler args: {:?}", args);
 
-    let mut features = CompilerFeatures::new_default();
+    let mut features = CompilerFeatures::default();
     for feature in &args.disable_features {
         features.set(&feature, false);
     }
-    
+
     let mut compiler = YKCompiler::new();
     compiler.compile(args, &features)
 }

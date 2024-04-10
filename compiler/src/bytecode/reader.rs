@@ -19,17 +19,17 @@ use std::io::Read;
 
 use util::result::map_err;
 
-use crate::bytecode::{attrs, bytes::ByteInput};
-use crate::bytecode::ConstantEntry;
-use crate::bytecode::ConstantPool;
 use crate::bytecode::cp_info::CpInfoTag;
 use crate::bytecode::cp_info::NumberInfo;
 use crate::bytecode::cp_info::StringInfo;
 use crate::bytecode::cp_info::Utf8Info;
-use crate::bytecode::CpSize;
 use crate::bytecode::file::MAGIC_NUMBER;
+use crate::bytecode::ConstantEntry;
+use crate::bytecode::ConstantPool;
+use crate::bytecode::CpSize;
 use crate::bytecode::YKBFile;
 use crate::bytecode::YKBVersion;
+use crate::bytecode::{attrs, bytes::ByteInput};
 
 pub struct YKBFileReader<R: Read> {
     buf: ByteInput<R>,

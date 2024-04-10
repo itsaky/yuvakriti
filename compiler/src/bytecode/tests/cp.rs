@@ -18,8 +18,10 @@ use crate::bytecode::cp::ConstantPool;
 use crate::bytecode::cp_info::NumberInfo;
 use crate::bytecode::cp_info::StringInfo;
 use crate::bytecode::cp_info::Utf8Info;
-use crate::tests::util::parse;
 use crate::bytecode::writer::YKBFileWriter;
+use crate::bytecode::{YKBFile, YKBVersion};
+use crate::features::CompilerFeatures;
+use crate::tests::util::parse;
 
 #[test]
 fn test_cp_push() {
@@ -66,8 +68,10 @@ fn test_cp_push_from_program() {
      var e = \"something else\";\
     ",
     );
-    let mut writer = YKBFileWriter::new();
-    let file = writer.write(&mut program);
+    let features = CompilerFeatures::default();
+    let mut file = YKBFile::new(YKBVersion::LATEST.clone());
+    let mut writer = YKBFileWriter::new(&mut file, &features);
+    writer.write(&mut program);
     let constant_pool = file.constant_pool();
 
     // 0 -> ConstantEntry::None

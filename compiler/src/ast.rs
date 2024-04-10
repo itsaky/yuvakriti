@@ -369,6 +369,32 @@ impl Display for UnaryOp {
     }
 }
 
+impl BinaryExpr {
+    /// Check if the binary expression has only primary expressions as operands.
+    pub fn has_primary_operands(&self) -> bool {
+        if matches!(&self.left.0, Expr::Primary(_)) && matches!(&self.right.0, Expr::Primary(_)) {
+            return true;
+        }
+        false
+    }
+
+    /// Check if the binary expression has only primary number expressions as operands.
+    pub fn has_num_operands(&self) -> bool {
+        self.get_num_operands().is_some()
+    }
+
+    /// Get the operands of the binary expression as numbers if the binary expression has [PrimaryExpr::Number] as its operands.
+    pub fn get_num_operands(&self) -> Option<(&f64, &f64)> {
+        match (&self.left.0, &self.right.0) {
+            (Expr::Primary(left), Expr::Primary(right)) => match (&left.0, &right.0) {
+                (PrimaryExpr::Number(l), PrimaryExpr::Number(r)) => Some((l, r)),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+}
+
 macro_rules! impl_node {
     ($node_type:ident) => {
         impl AstNode for $node_type {
