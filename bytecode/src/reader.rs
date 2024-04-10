@@ -54,6 +54,9 @@ impl<R: Read> YKBFileReader<R> {
         let mut file = YKBFile::new(version);
 
         self.read_constant_pool(file.constant_pool_mut())?;
+        let attrs = self.read_attrs(file.constant_pool())?;
+        file.attributes_mut().clear();
+        file.attributes_mut().extend(attrs);
 
         return Ok(file);
     }

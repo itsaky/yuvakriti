@@ -31,11 +31,11 @@ pub struct DisassembleArgs {
 pub fn do_disassemble(args: &DisassembleArgs) -> Result<(), ()> {
     if !args.file.exists() {
         println!("File not found: {}", args.file.display());
-        return Err(())
+        return Err(());
     }
-    
+
     perform_disassembly(args)?;
-    
+
     Ok(())
 }
 
@@ -45,8 +45,8 @@ fn perform_disassembly(args: &DisassembleArgs) -> Result<(), ()> {
     let mut out = String::new();
     let mut disassembler = YKBDisassembler::new(input, &mut out);
     disassembler.disassemble().unwrap();
-    
+
     println!("{}", out);
-    
+
     Ok(())
 }

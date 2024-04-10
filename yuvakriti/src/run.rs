@@ -13,15 +13,30 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use bytecode::bytes::ByteInput;
+use bytecode::YKBFileReader;
 use clap::Args;
+use log::error;
+use std::fs::File;
+use std::path::PathBuf;
+use vm::YKVM;
 
 #[derive(Args, Debug)]
 #[command(visible_alias = "r")]
 pub struct RunArgs {
     #[arg(help = "Input bytecode file(s)")]
-    pub files: Vec<String>,
+    pub path: PathBuf,
 }
 
 pub fn do_run(args: &RunArgs) -> Result<(), ()> {
-    Ok(())
+    if !args.path.exists() {
+        println!("File does not exist: {}", args.path.display());
+        return Err(());
+    }
+
+    let mut reader = YKBFileReader::new(ByteInput::new(File::open(&args.path).unwrap()));
+    let mut file = reader.read_file().unwrap();
+    let mut vm = YKVM::new();
+
+    vm.run(&mut file).map_err(|err| error!("{}", err))
 }

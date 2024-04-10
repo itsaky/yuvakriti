@@ -1,12 +1,12 @@
 use std::process::ExitCode;
 
-use clap::CommandFactory;
-use clap::FromArgMatches;
 use crate::args::SubCommand;
 use crate::args::YkArgs;
 use crate::compile::do_compile;
 use crate::disassemble::do_disassemble;
 use crate::run::do_run;
+use clap::CommandFactory;
+use clap::FromArgMatches;
 
 mod args;
 mod compile;
@@ -34,7 +34,7 @@ fn main() -> ExitCode {
             Err(_) => {
                 command.print_help().unwrap();
                 return ExitCode::FAILURE;
-            },
+            }
         }
     };
 

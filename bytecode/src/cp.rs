@@ -158,4 +158,15 @@ impl ConstantPool {
         let utf8idx = self.push(ConstantEntry::Utf8(Utf8Info::from(string)));
         return self.push(ConstantEntry::String(StringInfo::new(utf8idx)));
     }
+
+    /// Returns the string constant at the given index.
+    pub fn get_string(&self, index: CpSize) -> Option<String> {
+        if let Some(ConstantEntry::String(ref info)) = self.get(index) {
+            if let Some(ConstantEntry::Utf8(ref utf8)) = self.get(info.string_index) {
+                return Some(utf8.to_string());
+            }
+        }
+
+        None
+    }
 }

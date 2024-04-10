@@ -23,9 +23,9 @@ use crate::attrs::Code;
 use crate::bytes::AssertingByteConversions;
 use crate::bytes::ByteInput;
 use crate::cp_info::CpInfo;
+use crate::file::MAGIC_NUMBER;
 use crate::opcode::get_opcode;
 use crate::opcode::OpCode;
-use crate::file::MAGIC_NUMBER;
 use crate::ConstantEntry;
 use crate::ConstantPool;
 use crate::CpSize;
@@ -169,7 +169,7 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
     }
 
     fn write_code(&mut self, code: &Code, constant_pool: &ConstantPool, mut from_index: usize) {
-        if code.instructions.len() <= from_index {
+        if code.instructions().len() <= from_index {
             return;
         }
 

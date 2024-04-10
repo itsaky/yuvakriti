@@ -113,7 +113,7 @@ impl<R: Read> YKParser<'_, R> {
             kind: diagnostic_kind,
         }
     }
-    
+
     pub fn has_errors(&self) -> bool {
         return self.has_error;
     }

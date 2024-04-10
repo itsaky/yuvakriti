@@ -13,12 +13,5 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::io::Read;
-
-use bytecode::bytes::ByteInput;
-use bytecode::YKBFileReader;
-
-pub fn interpret<R: Read>(input: R) {
-    let mut reader = YKBFileReader::new(ByteInput::new(input));
-    let file = reader.read_file().unwrap();
-}
+mod arithemetic;
+mod util;

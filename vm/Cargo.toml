@@ -13,3 +13,4 @@ license.workspace = true
 [dependencies]
 bytecode.workspace = true
 logging.workspace = true
+log.workspace = true

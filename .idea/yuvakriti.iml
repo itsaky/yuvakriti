@@ -11,6 +11,7 @@
       <sourceFolder url="file://$MODULE_DIR$/test_util/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/vm/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/yuvakriti/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/bytecode/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

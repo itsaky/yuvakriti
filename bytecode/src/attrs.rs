@@ -47,7 +47,7 @@ impl Attr {
 /// in a program.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Code {
-    pub instructions: Vec<u8>,
+    instructions: Vec<u8>,
 }
 
 impl Code {
@@ -96,17 +96,20 @@ impl Code {
     pub fn push_insns_1_16(&mut self, opcode: OpCode, operand: u16) {
         self.ensure_size_incr(OP_SIZE + 2);
         self.instructions.push(opcode.as_op_size());
-        self.instructions.extend([(operand >> 8) as u8, operand as u8]);
+        self.instructions
+            .extend([(operand >> 8) as u8, operand as u8]);
     }
 
     pub fn push_insns_2(&mut self, opcode: OpCode, operand1: u8, operand2: u8) {
         self.ensure_size_incr(OP_SIZE + 2);
-        self.instructions.extend([opcode.as_op_size(), operand1, operand2]);
+        self.instructions
+            .extend([opcode.as_op_size(), operand1, operand2]);
     }
 
     pub fn push_insns_3(&mut self, opcode: OpCode, operand1: u8, operand2: u8, operand3: u8) {
         self.ensure_size_incr(OP_SIZE + 3);
-        self.instructions.extend([opcode.as_op_size(), operand1, operand2, operand3]);
+        self.instructions
+            .extend([opcode.as_op_size(), operand1, operand2, operand3]);
     }
 
     pub fn push_insns_n(&mut self, opcode: OpCode, operands: &[u8]) {

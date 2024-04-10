@@ -26,8 +26,8 @@ use crate::cp::ConstantEntry;
 use crate::cp_info::NumberInfo;
 use crate::cp_info::Utf8Info;
 use crate::decls;
-use crate::opcode::OpCode;
 use crate::file::YKBFile;
+use crate::opcode::OpCode;
 use crate::YKBVersion;
 
 /// Converts a program into a YKB file.
@@ -128,8 +128,8 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
     }
 
     fn visit_binary_expr(&mut self, binary_expr: &BinaryExpr, p: &()) -> Option<()> {
-        self.visit_expr(&binary_expr.right.0, p);
         self.visit_expr(&binary_expr.left.0, p);
+        self.visit_expr(&binary_expr.right.0, p);
         let code = self.code.as_mut().unwrap();
         let opcode = match binary_expr.op {
             BinaryOp::Plus => OpCode::Add,

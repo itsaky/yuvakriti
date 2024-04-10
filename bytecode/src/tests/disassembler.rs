@@ -30,7 +30,7 @@ fn test_disassembler() {
 
     let path = Path::new("target/test.ykb");
     std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-    
+
     let display = path.display();
     let file = match File::create(&path) {
         Err(why) => panic!("couldn't create {}: {}", display, why),
