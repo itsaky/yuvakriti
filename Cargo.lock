@@ -54,8 +54,10 @@ dependencies = [
 name = "bytecode"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "compiler",
  "proc_macros",
+ "util",
 ]
 
 [[package]]
@@ -118,7 +120,10 @@ dependencies = [
 name = "compiler"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "log",
+ "proc_macros",
+ "util",
 ]
 
 [[package]]
@@ -204,12 +209,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
 
 [[package]]
+name = "util"
+version = "0.1.0"
+
+[[package]]
 name = "vm"
 version = "0.1.0"
 dependencies = [
  "bytecode",
+ "clap",
  "log",
  "logging",
+ "proc_macros",
+ "util",
 ]
 
 [[package]]
@@ -353,5 +365,6 @@ dependencies = [
  "compiler",
  "log",
  "logging",
+ "util",
  "vm",
 ]

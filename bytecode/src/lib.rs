@@ -13,6 +13,7 @@ mod tests;
 #[cfg(test)]
 mod tests;
 
+pub mod args;
 pub mod attrs;
 pub mod bytes;
 mod cp;

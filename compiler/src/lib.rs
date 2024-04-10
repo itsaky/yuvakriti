@@ -1,5 +1,7 @@
+pub mod args;
 pub mod ast;
 pub mod diagnostics;
+pub mod features;
 pub mod lexer;
 pub mod location;
 pub mod messages;

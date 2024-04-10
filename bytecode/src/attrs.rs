@@ -16,10 +16,10 @@
 use std::mem::size_of;
 
 use crate::bytes::AssertingByteConversions;
+use crate::opcode::{OpCode, OpSize};
 #[allow(unused_imports)]
 use crate::ConstantEntry;
 use crate::CpSize;
-use crate::opcode::{OpCode, OpSize};
 
 pub type CodeSize = u32;
 pub const OP_SIZE: CodeSize = size_of::<OpSize>() as CodeSize;

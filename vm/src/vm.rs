@@ -24,11 +24,11 @@ use bytecode::attrs;
 use bytecode::attrs::Attr;
 use bytecode::attrs::Code;
 use bytecode::bytes::AssertingByteConversions;
+use bytecode::opcode::get_opcode;
+use bytecode::opcode::OpCode;
 use bytecode::ConstantEntry;
 use bytecode::ConstantPool;
 use bytecode::CpSize;
-use bytecode::opcode::get_opcode;
-use bytecode::opcode::OpCode;
 use bytecode::YKBFile;
 
 /// The YuvaKriti Virtual Machine

@@ -4,7 +4,7 @@ members = [
     "bytecode",
     "compiler",
     "logging",
-    "proc_macros",
+    "proc_macros", "util",
     "vm",
     "yuvakriti"
 ]
@@ -47,4 +47,5 @@ bytecode = { path = "bytecode" }
 compiler = { path = "compiler" }
 logging = { path = "logging" }
 proc_macros =  { path = "proc_macros" }
+util = { path = "util" }
 vm = { path = "vm" }

@@ -14,3 +14,6 @@ license.workspace = true
 bytecode.workspace = true
 logging.workspace = true
 log.workspace = true
+clap.workspace = true
+proc_macros.workspace = true
+util.workspace = true

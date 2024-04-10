@@ -7,19 +7,17 @@ use log::Metadata;
 use log::Record;
 use log::SetLoggerError;
 
-pub(crate) const LOG_LEVEL: Level = Level::Debug;
-const LOG_LEVEL_FILTER: LevelFilter = LevelFilter::Debug;
 static LOGGER: YKLogger = YKLogger;
 
-pub fn init_logger() -> Result<(), SetLoggerError> {
-    log::set_logger(&LOGGER).map(|()| log::set_max_level(LOG_LEVEL_FILTER))
+pub fn init_logger(level: LevelFilter) -> Result<(), SetLoggerError> {
+    log::set_logger(&LOGGER).map(|()| log::set_max_level(level))
 }
 
 pub struct YKLogger;
 
 impl Log for YKLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        return metadata.level() < LOG_LEVEL;
+    fn enabled(&self, _metadata: &Metadata) -> bool {
+        return true;
     }
 
     fn log(&self, record: &Record) {
@@ -34,7 +32,7 @@ impl Log for YKLogger {
                 Level::Trace => colored = message.truecolor(2, 136, 209),
             }
 
-            println!("{:?}", colored);
+            println!("{}", colored);
         }
     }
 

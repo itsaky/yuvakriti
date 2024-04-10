@@ -15,28 +15,20 @@
 
 use std::cell::RefCell;
 use std::fs::File;
-use std::path::PathBuf;
 use std::rc::Rc;
+
+use log::{debug, info, trace};
 
 use bytecode::bytes::ByteOutput;
 use bytecode::YKBFileWriter;
-use clap::Args;
+use compiler::args::CompileArgs;
 use compiler::diagnostics::collecting_handler;
 use compiler::lexer::YKLexer;
 use compiler::parser::YKParser;
-use log::debug;
 
-#[derive(Args, Debug)]
-#[command(visible_alias = "c")]
-pub struct CompileArgs {
-    #[arg(help = "Input source file(s)")]
-    pub files: Vec<PathBuf>,
-}
-
-pub fn do_compile(args: &CompileArgs) -> Result<(), ()> {
+pub fn do_compile(args: &mut CompileArgs) -> Result<(), ()> {
     if args.files.is_empty() {
-        println!("No files to compile...!");
-        println!();
+        info!("No files to compile...!");
         return Err(());
     }
 
@@ -46,6 +38,8 @@ pub fn do_compile(args: &CompileArgs) -> Result<(), ()> {
 }
 
 fn perform_compilation(args: &CompileArgs) -> Result<(), ()> {
+    trace!("Compiler args: {:?}", args);
+
     for path in &args.files {
         let path_display = path.display();
         debug!("Compiling: {}", path_display);
@@ -74,5 +68,6 @@ fn perform_compilation(args: &CompileArgs) -> Result<(), ()> {
             return Err(());
         }
     }
+
     Ok(())
 }

@@ -14,21 +14,12 @@
  */
 
 use std::fs::File;
-use std::path::PathBuf;
 
-use clap::Args;
-
+use bytecode::args::DisassembleArgs;
 use bytecode::bytes::ByteInput;
 use bytecode::YKBDisassembler;
 
-#[derive(Args, Debug)]
-#[command(visible_alias = "d")]
-pub struct DisassembleArgs {
-    #[arg(help = "Input bytecode file")]
-    pub file: PathBuf,
-}
-
-pub fn do_disassemble(args: &DisassembleArgs) -> Result<(), ()> {
+pub fn do_disassemble(args: &mut DisassembleArgs) -> Result<(), ()> {
     if !args.file.exists() {
         println!("File not found: {}", args.file.display());
         return Err(());

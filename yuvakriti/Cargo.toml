@@ -18,3 +18,4 @@ compiler.workspace = true
 logging.workspace = true
 vm.workspace = true
 log.workspace = true
+util.workspace = true

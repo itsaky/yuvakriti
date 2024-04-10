@@ -15,8 +15,8 @@
 
 use clap::Parser;
 use clap::Subcommand;
+use compiler::args::CompileArgs;
 
-use crate::compile::CompileArgs;
 use crate::disassemble::DisassembleArgs;
 use crate::run::RunArgs;
 
@@ -26,7 +26,13 @@ pub struct YkArgs {
     #[command(subcommand)]
     pub subcommand: Option<SubCommand>,
 
-    #[arg(short, long, help = "Enable verbose output", default_value_t = false)]
+    #[arg(
+        short,
+        long,
+        help = "Enable verbose output",
+        default_value_t = false,
+        global = true
+    )]
     pub verbose: bool,
 }
 
@@ -40,4 +46,14 @@ pub enum SubCommand {
 
     /// Disassemble the compiled bytecode.
     Disassemble(DisassembleArgs),
+}
+
+impl SubCommand {
+    pub fn name(&self) -> &str {
+        match self {
+            SubCommand::Compile(_) => "compile",
+            SubCommand::Run(_) => "run",
+            SubCommand::Disassemble(_) => "disassemble",
+        }
+    }
 }

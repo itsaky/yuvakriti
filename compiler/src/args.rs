@@ -13,24 +13,18 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::fs::File;
+use clap::Args;
+use std::path::PathBuf;
 
-use log::error;
+#[derive(Args, Debug)]
+#[command(visible_alias = "c")]
+pub struct CompileArgs {
+    #[arg(short, long, help = "Disable language features", value_delimiter = ',', num_args = 1..)]
+    pub disable_features: Vec<String>,
 
-use bytecode::bytes::ByteInput;
-use bytecode::YKBFileReader;
-use vm::args::RunArgs;
-use vm::YKVM;
+    #[arg(short, long, help = "Output file", value_name = "FILE")]
+    pub output: Option<PathBuf>,
 
-pub fn do_run(args: &mut RunArgs) -> Result<(), ()> {
-    if !args.path.exists() {
-        println!("File does not exist: {}", args.path.display());
-        return Err(());
-    }
-
-    let mut reader = YKBFileReader::new(ByteInput::new(File::open(&args.path).unwrap()));
-    let mut file = reader.read_file().unwrap();
-    let mut vm = YKVM::new();
-
-    vm.run(&mut file).map_err(|err| error!("{}", err))
+    #[arg(help = "Input source file(s)")]
+    pub files: Vec<PathBuf>,
 }

@@ -28,12 +28,11 @@ use crate::bytes::ByteOutput;
 use crate::YKBFileWriter;
 
 pub(crate) fn compile_to_bytecode<'a>(source: &str, bytecode_path: &Path) -> YKBFileWriter {
-
     std::fs::create_dir_all(bytecode_path.parent().unwrap()).unwrap();
     if bytecode_path.exists() {
         std::fs::remove_file(bytecode_path).unwrap();
     }
-    
+
     let mut program = parse(source);
     let mut ykbwriter = YKBFileWriter::new();
     ykbwriter.write(&mut program);
