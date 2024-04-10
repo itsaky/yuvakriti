@@ -17,8 +17,8 @@ use std::fs::File;
 
 use log::error;
 
-use bytecode::bytes::ByteInput;
-use bytecode::YKBFileReader;
+use compiler::bytecode::bytes::ByteInput;
+use compiler::bytecode::YKBFileReader;
 use vm::args::RunArgs;
 use vm::YKVM;
 

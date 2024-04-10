@@ -16,8 +16,8 @@
 use clap::Parser;
 use clap::Subcommand;
 
-use bytecode::args::DisassembleArgs;
 use compiler::args::CompileArgs;
+use compiler::args::DisassembleArgs;
 use vm::args::RunArgs;
 
 #[derive(Parser, Debug)]

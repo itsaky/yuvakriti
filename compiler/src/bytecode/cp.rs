@@ -15,10 +15,10 @@
 
 use std::fmt::{Debug, Display};
 
-use crate::bytes::AssertingByteConversions;
-use crate::cp_info::NumberInfo;
-use crate::cp_info::StringInfo;
-use crate::cp_info::Utf8Info;
+use crate::bytecode::bytes::AssertingByteConversions;
+use crate::bytecode::cp_info::NumberInfo;
+use crate::bytecode::cp_info::StringInfo;
+use crate::bytecode::cp_info::Utf8Info;
 
 /// The size of the constant pool entry indices.
 pub type CpSize = u16;

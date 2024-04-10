@@ -22,15 +22,16 @@ use log::debug;
 use log::error;
 use log::info;
 
-use compiler::args::CompileArgs;
-use compiler::diagnostics::collecting_handler;
-use compiler::diagnostics::CollectingDiagnosticHandler;
-use compiler::features::CompilerFeatures;
-use compiler::lexer::YKLexer;
-use compiler::parser::YKParser;
+use crate::args::CompileArgs;
+use crate::diagnostics::collecting_handler;
+use crate::diagnostics::CollectingDiagnosticHandler;
+use crate::features::CompilerFeatures;
+use crate::lexer::YKLexer;
+use crate::parser::YKParser;
 
-use crate::file::{EXT_YK, EXT_YKB};
-use crate::YKBFileWriter;
+use crate::bytecode::file::EXT_YK;
+use crate::bytecode::file::EXT_YKB;
+use crate::bytecode::YKBFileWriter;
 
 // Compiles source files into bytecode.
 pub struct YKCompiler {

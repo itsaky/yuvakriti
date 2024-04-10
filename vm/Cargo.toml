@@ -11,7 +11,7 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
-bytecode.workspace = true
+compiler.workspace = true
 logging.workspace = true
 log.workspace = true
 clap.workspace = true

@@ -15,9 +15,9 @@
 
 use std::fs::File;
 
-use bytecode::args::DisassembleArgs;
-use bytecode::bytes::ByteInput;
-use bytecode::YKBDisassembler;
+use compiler::args::DisassembleArgs;
+use compiler::bytecode::bytes::ByteInput;
+use compiler::bytecode::YKBDisassembler;
 
 pub fn do_disassemble(args: &mut DisassembleArgs) -> Result<(), ()> {
     if !args.file.exists() {

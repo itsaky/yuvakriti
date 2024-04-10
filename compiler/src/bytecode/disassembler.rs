@@ -17,19 +17,19 @@ use std::fmt::Display;
 use std::fmt::Write;
 use std::io::Read;
 
-use crate::attrs;
-use crate::attrs::Attr;
-use crate::attrs::Code;
-use crate::bytes::AssertingByteConversions;
-use crate::bytes::ByteInput;
-use crate::cp_info::CpInfo;
-use crate::file::MAGIC_NUMBER;
-use crate::opcode::get_opcode;
-use crate::opcode::OpCode;
-use crate::ConstantEntry;
-use crate::ConstantPool;
-use crate::CpSize;
-use crate::YKBFileReader;
+use crate::bytecode::attrs;
+use crate::bytecode::attrs::Attr;
+use crate::bytecode::attrs::Code;
+use crate::bytecode::bytes::AssertingByteConversions;
+use crate::bytecode::bytes::ByteInput;
+use crate::bytecode::cp_info::CpInfo;
+use crate::bytecode::file::MAGIC_NUMBER;
+use crate::bytecode::opcode::get_opcode;
+use crate::bytecode::opcode::OpCode;
+use crate::bytecode::ConstantEntry;
+use crate::bytecode::ConstantPool;
+use crate::bytecode::CpSize;
+use crate::bytecode::YKBFileReader;
 
 pub struct YKBDisassembler<'a, R: Read> {
     r: YKBFileReader<R>,

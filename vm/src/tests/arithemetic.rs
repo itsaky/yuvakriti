@@ -13,10 +13,10 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use bytecode::cp_info::NumberInfo;
-use bytecode::opcode::OpCode;
-use bytecode::opcode::OpSize;
-use bytecode::ConstantEntry;
+use compiler::bytecode::cp_info::NumberInfo;
+use compiler::bytecode::opcode::OpCode;
+use compiler::bytecode::opcode::OpSize;
+use compiler::bytecode::ConstantEntry;
 
 use crate::tests::util::create_constant_pool;
 use crate::tests::util::create_vm;

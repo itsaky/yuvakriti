@@ -15,4 +15,4 @@
 
 mod lexer;
 mod parser;
-mod util;
+pub mod util;

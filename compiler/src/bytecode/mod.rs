@@ -13,7 +13,6 @@ mod tests;
 #[cfg(test)]
 mod tests;
 
-pub mod args;
 pub mod attrs;
 pub mod bytes;
 pub mod compiler;
@@ -22,7 +21,6 @@ pub mod cp_info;
 mod decls;
 mod disassembler;
 mod file;
-mod insns;
 pub mod opcode;
 mod reader;
 mod version;

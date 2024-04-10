@@ -20,16 +20,16 @@ use log::debug;
 use log::error;
 use log::warn;
 
-use bytecode::attrs;
-use bytecode::attrs::Attr;
-use bytecode::attrs::Code;
-use bytecode::bytes::AssertingByteConversions;
-use bytecode::opcode::get_opcode;
-use bytecode::opcode::OpCode;
-use bytecode::ConstantEntry;
-use bytecode::ConstantPool;
-use bytecode::CpSize;
-use bytecode::YKBFile;
+use compiler::bytecode::attrs;
+use compiler::bytecode::attrs::Attr;
+use compiler::bytecode::attrs::Code;
+use compiler::bytecode::bytes::AssertingByteConversions;
+use compiler::bytecode::opcode::get_opcode;
+use compiler::bytecode::opcode::OpCode;
+use compiler::bytecode::ConstantEntry;
+use compiler::bytecode::ConstantPool;
+use compiler::bytecode::CpSize;
+use compiler::bytecode::YKBFile;
 
 /// The YuvaKriti Virtual Machine
 #[allow(unused)]

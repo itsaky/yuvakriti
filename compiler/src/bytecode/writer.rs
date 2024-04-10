@@ -13,22 +13,22 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use compiler::ast;
-use compiler::ast::FuncDecl;
-use compiler::ast::PrimaryExpr;
-use compiler::ast::PrintStmt;
-use compiler::ast::Program;
-use compiler::ast::Visitable;
-use compiler::ast::{ASTVisitor, BinaryExpr, BinaryOp};
+use crate::ast;
+use crate::ast::FuncDecl;
+use crate::ast::PrimaryExpr;
+use crate::ast::PrintStmt;
+use crate::ast::Program;
+use crate::ast::Visitable;
+use crate::ast::{ASTVisitor, BinaryExpr, BinaryOp};
 
-use crate::attrs;
-use crate::cp::ConstantEntry;
-use crate::cp_info::NumberInfo;
-use crate::cp_info::Utf8Info;
-use crate::decls;
-use crate::file::YKBFile;
-use crate::opcode::OpCode;
-use crate::YKBVersion;
+use crate::bytecode::attrs;
+use crate::bytecode::cp::ConstantEntry;
+use crate::bytecode::cp_info::NumberInfo;
+use crate::bytecode::cp_info::Utf8Info;
+use crate::bytecode::decls;
+use crate::bytecode::file::YKBFile;
+use crate::bytecode::opcode::OpCode;
+use crate::bytecode::YKBVersion;
 
 /// Converts a program into a YKB file.
 pub struct YKBFileWriter {

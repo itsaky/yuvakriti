@@ -16,7 +16,7 @@
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 
-use crate::bytes::AssertingByteConversions;
+use crate::bytecode::bytes::AssertingByteConversions;
 use proc_macros::CpInfo;
 
 pub trait CpInfo: Eq + Hash + ToString {

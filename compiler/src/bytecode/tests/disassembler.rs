@@ -13,28 +13,21 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::cp_info::NumberInfo;
-use crate::cp_info::Utf8Info;
+use std::fs::File;
+use std::path::Path;
+
+use crate::bytecode::bytes::ByteInput;
+use crate::bytecode::disassembler::YKBDisassembler;
+use crate::bytecode::tests::util::compile_to_bytecode;
 
 #[test]
-fn test_cp_info_num_eq() {
-    let f = NumberInfo::from(&123f64);
-    let s = NumberInfo::from(&123f64);
-    let t = NumberInfo::from(&-123.456);
-    assert_eq!(f, s);
-    assert_eq!(t, t);
-    assert_ne!(f, t);
-    assert_ne!(s, t);
+fn test_disassembler() {
+    let path = Path::new("target/disassemble.ykb");
+    compile_to_bytecode("fun main() { print 1 + 2; }", &path);
 
-    assert_eq!(f.to_f64(), 123f64);
-    assert_eq!(s.to_f64(), 123f64);
-    assert_eq!(t.to_f64(), -123.456);
-}
-
-#[test]
-fn test_cp_info_utf_eq() {
-    let f = Utf8Info::from("some");
-    let s = Utf8Info::from("some");
-    assert_eq!(f, s);
-    assert_ne!(f, Utf8Info::from("something else"));
+    let f = File::open(&path).unwrap();
+    let mut out_string = String::new();
+    let mut disassembler = YKBDisassembler::new(ByteInput::new(f), &mut out_string);
+    disassembler.disassemble().unwrap();
+    println!("{}", out_string);
 }

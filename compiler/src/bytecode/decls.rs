@@ -13,7 +13,7 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::CpSize;
+use crate::bytecode::CpSize;
 
 pub enum YKBDeclType {
     ClassDecl,

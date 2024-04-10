@@ -16,14 +16,14 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::io::{Error, Write};
 
-use crate::attrs::Attr;
-use crate::bytes::AssertingByteConversions;
-use crate::bytes::ByteOutput;
-use crate::cp::ConstantPool;
-use crate::cp_info::{CpInfoTag, Utf8Info};
-use crate::decls::YKBDecl;
-use crate::version::YKBVersion;
-use crate::ConstantEntry;
+use crate::bytecode::attrs::Attr;
+use crate::bytecode::bytes::AssertingByteConversions;
+use crate::bytecode::bytes::ByteOutput;
+use crate::bytecode::cp::ConstantPool;
+use crate::bytecode::cp_info::{CpInfoTag, Utf8Info};
+use crate::bytecode::decls::YKBDecl;
+use crate::bytecode::version::YKBVersion;
+use crate::bytecode::ConstantEntry;
 
 pub const MAGIC_NUMBER: u32 = 0x59754B72;
 pub const EXT_YK: &str = "yk";

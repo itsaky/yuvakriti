@@ -13,9 +13,9 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::attrs::CodeSize;
-use crate::opcode::OpSize;
-use crate::CpSize;
+use crate::bytecode::attrs::CodeSize;
+use crate::bytecode::opcode::OpSize;
+use crate::bytecode::CpSize;
 use std::io::BufReader;
 use std::io::BufWriter;
 use std::io::Error;

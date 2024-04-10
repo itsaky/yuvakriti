@@ -13,13 +13,13 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::cp::ConstantEntry;
-use crate::cp::ConstantPool;
-use crate::cp_info::NumberInfo;
-use crate::cp_info::StringInfo;
-use crate::cp_info::Utf8Info;
+use crate::bytecode::cp::ConstantEntry;
+use crate::bytecode::cp::ConstantPool;
+use crate::bytecode::cp_info::NumberInfo;
+use crate::bytecode::cp_info::StringInfo;
+use crate::bytecode::cp_info::Utf8Info;
 use crate::tests::util::parse;
-use crate::writer::YKBFileWriter;
+use crate::bytecode::writer::YKBFileWriter;
 
 #[test]
 fn test_cp_push() {

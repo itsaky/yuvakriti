@@ -16,8 +16,9 @@
 use std::fs::File;
 use std::path::Path;
 
-use crate::tests::util::compile_to_bytecode;
-use crate::{bytes::ByteInput, YKBFileReader};
+use crate::bytecode::bytes::ByteInput;
+use crate::bytecode::tests::util::compile_to_bytecode;
+use crate::bytecode::YKBFileReader;
 
 #[test]
 fn test_program_writer() {

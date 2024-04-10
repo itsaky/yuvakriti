@@ -13,10 +13,10 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use bytecode::attrs::Code;
-use bytecode::opcode::OpSize;
-use bytecode::ConstantEntry;
-use bytecode::ConstantPool;
+use compiler::bytecode::attrs::Code;
+use compiler::bytecode::opcode::OpSize;
+use compiler::bytecode::ConstantEntry;
+use compiler::bytecode::ConstantPool;
 
 use crate::YKVM;
 

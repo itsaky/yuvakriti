@@ -13,18 +13,11 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::cell::RefCell;
 use std::fs::File;
-use std::io::Cursor;
 use std::path::Path;
-use std::rc::Rc;
 
-use compiler::ast::Program;
-use compiler::diagnostics;
-use compiler::lexer::YKLexer;
-use compiler::parser::YKParser;
-
-use crate::YKBFileWriter;
+use crate::bytecode::YKBFileWriter;
+use crate::tests::util::parse;
 
 pub(crate) fn compile_to_bytecode<'a>(source: &str, bytecode_path: &Path) -> YKBFileWriter {
     std::fs::create_dir_all(bytecode_path.parent().unwrap()).unwrap();
@@ -57,12 +50,4 @@ pub(crate) fn compile_to_bytecode<'a>(source: &str, bytecode_path: &Path) -> YKB
     assert!(bytecode_path.exists());
 
     ykbwriter
-}
-
-//noinspection DuplicatedCode
-pub(crate) fn parse(source: &str) -> Program {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let lexer = YKLexer::new(Cursor::new(source), diag_handler.clone());
-    let mut parser = YKParser::new(lexer, diag_handler.clone());
-    parser.parse()
 }

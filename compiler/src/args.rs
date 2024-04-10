@@ -13,8 +13,9 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use clap::Args;
 use std::path::PathBuf;
+
+use clap::Args;
 
 #[derive(Args, Debug)]
 #[command(visible_alias = "c")]
@@ -27,4 +28,11 @@ pub struct CompileArgs {
 
     #[arg(help = "Input source file(s)")]
     pub files: Vec<PathBuf>,
+}
+
+#[derive(Args, Debug)]
+#[command(visible_alias = "d")]
+pub struct DisassembleArgs {
+    #[arg(help = "Input bytecode file")]
+    pub file: PathBuf,
 }

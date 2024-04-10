@@ -14,7 +14,7 @@
  */
 
 use log::{info, trace};
-use bytecode::compiler::YKCompiler;
+use compiler::bytecode::compiler::YKCompiler;
 use compiler::args::CompileArgs;
 use compiler::features::CompilerFeatures;
 

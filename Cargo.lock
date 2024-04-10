@@ -51,17 +51,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bytecode"
-version = "0.1.0"
-dependencies = [
- "clap",
- "compiler",
- "log",
- "proc_macros",
- "util",
-]
-
-[[package]]
 name = "clap"
 version = "4.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -217,8 +206,8 @@ version = "0.1.0"
 name = "vm"
 version = "0.1.0"
 dependencies = [
- "bytecode",
  "clap",
+ "compiler",
  "log",
  "logging",
  "proc_macros",
@@ -361,7 +350,6 @@ checksum = "32b752e52a2da0ddfbdbcc6fceadfeede4c939ed16d13e648833a61dfb611ed8"
 name = "yuvakriti"
 version = "0.1.0"
 dependencies = [
- "bytecode",
  "clap",
  "compiler",
  "log",
