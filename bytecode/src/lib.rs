@@ -16,6 +16,7 @@ mod tests;
 pub mod args;
 pub mod attrs;
 pub mod bytes;
+pub mod compiler;
 mod cp;
 pub mod cp_info;
 mod decls;

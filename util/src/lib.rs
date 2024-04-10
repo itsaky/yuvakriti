@@ -1,3 +1,5 @@
+pub mod result;
+
 #[macro_export]
 macro_rules! define_str_consts {
     (impl $name:ident {

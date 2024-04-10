@@ -17,6 +17,8 @@ use std::io::Error;
 use std::io::ErrorKind;
 use std::io::Read;
 
+use util::result::map_err;
+
 use crate::cp_info::CpInfoTag;
 use crate::cp_info::NumberInfo;
 use crate::cp_info::StringInfo;
@@ -40,10 +42,6 @@ impl<R: Read> YKBFileReader<R> {
 }
 
 impl<R: Read> YKBFileReader<R> {
-    fn map_err<T>(result: Result<T, Error>, err_msg: &str) -> Result<T, Error> {
-        return result.map_err(|e| Error::new(e.kind(), format!("{}: {}", err_msg, e)));
-    }
-
     pub fn read_file(&mut self) -> Result<YKBFile, Error> {
         let magic_number = self.read_magic_number()?;
         if magic_number != MAGIC_NUMBER {
@@ -62,12 +60,12 @@ impl<R: Read> YKBFileReader<R> {
     }
 
     pub fn read_magic_number(&mut self) -> Result<u32, Error> {
-        return Self::map_err(self.buf.read_u32(), "Unable to read magic number");
+        return map_err(self.buf.read_u32(), "Unable to read magic number");
     }
 
     pub fn read_version(&mut self) -> Result<YKBVersion, Error> {
-        let major = Self::map_err(self.buf.read_u16(), "Unable to read major version number")?;
-        let minor = Self::map_err(self.buf.read_u16(), "Unable to read minor version number")?;
+        let major = map_err(self.buf.read_u16(), "Unable to read major version number")?;
+        let minor = map_err(self.buf.read_u16(), "Unable to read minor version number")?;
         return Ok(YKBVersion::new(major, minor));
     }
 
@@ -75,10 +73,9 @@ impl<R: Read> YKBFileReader<R> {
         &mut self,
         constant_pool: &mut ConstantPool,
     ) -> Result<CpSize, Error> {
-        let count: CpSize =
-            Self::map_err(self.buf.read_u16(), "Unable to read constant pool count")?;
+        let count: CpSize = map_err(self.buf.read_u16(), "Unable to read constant pool count")?;
         for index in 1..count {
-            let entry = Self::map_err(
+            let entry = map_err(
                 self.read_constant_entry(),
                 format!("Unable to read constant entry at index {}", index).as_str(),
             )?;
@@ -105,8 +102,8 @@ impl<R: Read> YKBFileReader<R> {
     }
 
     pub fn read_utf8_contant_entry(&mut self) -> Result<ConstantEntry, Error> {
-        let byte_count = Self::map_err(self.buf.read_u16(), "Unable to read byte count")?;
-        let bytes = Self::map_err(
+        let byte_count = map_err(self.buf.read_u16(), "Unable to read byte count")?;
+        let bytes = map_err(
             self.buf.read_n_bytes(byte_count as usize),
             "Unable to read bytes",
         )?;
@@ -114,23 +111,23 @@ impl<R: Read> YKBFileReader<R> {
     }
 
     pub fn read_number_contant_entry(&mut self) -> Result<ConstantEntry, Error> {
-        let high_bytes = Self::map_err(self.buf.read_u32(), "Unable to read high bytes")?;
-        let low_bytes = Self::map_err(self.buf.read_u32(), "Unable to read low bytes")?;
+        let high_bytes = map_err(self.buf.read_u32(), "Unable to read high bytes")?;
+        let low_bytes = map_err(self.buf.read_u32(), "Unable to read low bytes")?;
         Ok(ConstantEntry::Number(NumberInfo::new(
             high_bytes, low_bytes,
         )))
     }
 
     pub fn read_string_constant_entry(&mut self) -> Result<ConstantEntry, Error> {
-        let string_index = Self::map_err(self.buf.read_u16(), "Unable to read string index")?;
+        let string_index = map_err(self.buf.read_u16(), "Unable to read string index")?;
         Ok(ConstantEntry::String(StringInfo::new(string_index)))
     }
 
     pub fn read_attrs(&mut self, constant_pool: &ConstantPool) -> Result<Vec<attrs::Attr>, Error> {
-        let count = Self::map_err(self.buf.read_u16(), "Unable to read attribute count")?;
+        let count = map_err(self.buf.read_u16(), "Unable to read attribute count")?;
         let mut attrs = Vec::with_capacity(count as usize);
         for _ in 0..count {
-            let attr = Self::map_err(self.read_attr(constant_pool), "Unable to read attribute")?;
+            let attr = map_err(self.read_attr(constant_pool), "Unable to read attribute")?;
             attrs.push(attr);
         }
 
@@ -139,7 +136,7 @@ impl<R: Read> YKBFileReader<R> {
 
     pub fn read_attr(&mut self, constant_pool: &ConstantPool) -> Result<attrs::Attr, Error> {
         let name_index: CpSize =
-            Self::map_err(self.buf.read_u16(), "Unable to read attribute name index")?;
+            map_err(self.buf.read_u16(), "Unable to read attribute name index")?;
         let info = constant_pool
             .get(name_index)
             .map(|entry| entry.as_utf8().unwrap())
@@ -152,14 +149,13 @@ impl<R: Read> YKBFileReader<R> {
 
         let attr = match name.as_str() {
             attrs::CODE => {
-                let insn_count =
-                    Self::map_err(self.buf.read_u32(), "Unable to read instruction count")?;
+                let insn_count = map_err(self.buf.read_u32(), "Unable to read instruction count")?;
                 let buf = self.buf.read_n_bytes(insn_count as usize)?;
                 attrs::Attr::Code(attrs::Code::with_insns(buf))
             }
             attrs::SOURCE_FILE => {
                 let name_index =
-                    Self::map_err(self.buf.read_u16(), "Unable to read source file name index")?;
+                    map_err(self.buf.read_u16(), "Unable to read source file name index")?;
                 attrs::Attr::SourceFile(attrs::SourceFile::new(name_index))
             }
             _ => {

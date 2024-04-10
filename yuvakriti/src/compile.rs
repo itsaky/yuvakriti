@@ -13,18 +13,10 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::cell::RefCell;
-use std::fs::File;
-use std::rc::Rc;
-
-use log::{debug, info, trace};
-
-use bytecode::bytes::ByteOutput;
-use bytecode::YKBFileWriter;
+use log::{info, trace};
+use bytecode::compiler::YKCompiler;
 use compiler::args::CompileArgs;
-use compiler::diagnostics::collecting_handler;
-use compiler::lexer::YKLexer;
-use compiler::parser::YKParser;
+use compiler::features::CompilerFeatures;
 
 pub fn do_compile(args: &mut CompileArgs) -> Result<(), ()> {
     if args.files.is_empty() {
@@ -40,34 +32,11 @@ pub fn do_compile(args: &mut CompileArgs) -> Result<(), ()> {
 fn perform_compilation(args: &CompileArgs) -> Result<(), ()> {
     trace!("Compiler args: {:?}", args);
 
-    for path in &args.files {
-        let path_display = path.display();
-        debug!("Compiling: {}", path_display);
-        let diagnostics_handler = Rc::new(RefCell::new(collecting_handler()));
-        let file = File::open(path).expect(&format!("Failed to open file: {}", path_display));
-        let lexer = YKLexer::new(file, diagnostics_handler.clone());
-        let mut parser = YKParser::new(lexer, diagnostics_handler.clone());
-        let mut program = parser.parse();
-
-        let mut ykbwriter = YKBFileWriter::new();
-        ykbwriter.write(&mut program);
-
-        let ykbfile = ykbwriter.file_mut();
-        let bytecode_path = path.with_extension("ykb");
-        ykbfile
-            .write_to(&mut ByteOutput::new(File::create(&bytecode_path).unwrap()))
-            .unwrap();
-
-        if !diagnostics_handler.borrow().diagnostics.is_empty() {
-            // TODO(itsaky): write a diagnostics printer
-            println!("Diagnostics found while compiling: {}", path_display);
-        }
-
-        if parser.has_errors() {
-            println!("Errors found while compiling: {}", path_display);
-            return Err(());
-        }
+    let mut features = CompilerFeatures::new_default();
+    for feature in &args.disable_features {
+        features.set(&feature, false);
     }
-
-    Ok(())
+    
+    let mut compiler = YKCompiler::new();
+    compiler.compile(args, &features)
 }

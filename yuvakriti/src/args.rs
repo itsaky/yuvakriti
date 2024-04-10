@@ -15,10 +15,10 @@
 
 use clap::Parser;
 use clap::Subcommand;
-use compiler::args::CompileArgs;
 
-use crate::disassemble::DisassembleArgs;
-use crate::run::RunArgs;
+use bytecode::args::DisassembleArgs;
+use compiler::args::CompileArgs;
+use vm::args::RunArgs;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

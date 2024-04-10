@@ -48,14 +48,14 @@ impl CompilerFeatures {
     }
 
     /// Enable all the features in the given list.
-    pub fn enable_all(&mut self, features: Vec<&str>) {
+    pub fn enable_all(&mut self, features: Vec<&String>) {
         for feature in features {
             self.set(feature, true)
         }
     }
 
     /// Disable all the features in the given list.
-    pub fn disable_all(&mut self, features: Vec<&str>) {
+    pub fn disable_all(&mut self, features: Vec<&String>) {
         for feature in features {
             self.set(feature, false);
         }

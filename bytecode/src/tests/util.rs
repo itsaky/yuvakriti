@@ -24,7 +24,6 @@ use compiler::diagnostics;
 use compiler::lexer::YKLexer;
 use compiler::parser::YKParser;
 
-use crate::bytes::ByteOutput;
 use crate::YKBFileWriter;
 
 pub(crate) fn compile_to_bytecode<'a>(source: &str, bytecode_path: &Path) -> YKBFileWriter {
@@ -45,7 +44,7 @@ pub(crate) fn compile_to_bytecode<'a>(source: &str, bytecode_path: &Path) -> YKB
         Ok(file) => file,
     };
 
-    match ykbfile.write_to(&mut ByteOutput::new(&file)) {
+    match ykbfile.write_to(&file) {
         Err(why) => panic!("couldn't write to {}: {}", display, why),
         Ok(size) => {
             println!("successfully wrote to {}", display);

@@ -50,10 +50,10 @@ impl YKBFileWriter {
         return &mut self.file;
     }
 
-    pub fn write(&mut self, program: &mut Program) -> &YKBFile {
+    pub fn write(&mut self, program: &mut Program) -> &mut YKBFile {
         let mut fpv = CodeGen::new(&mut self.file);
         program.accept(&mut fpv, &());
-        return self.file();
+        return self.file_mut();
     }
 }
 
