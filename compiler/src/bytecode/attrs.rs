@@ -51,7 +51,7 @@ pub struct Code {
 
 impl Code {
     /// The number of bytes of instructions that can be written to the [Attr::Code] attribute.
-    pub const MAX_INSN_SIZE: CodeSize = 0xFFFF;
+    pub const MAX_INSN_SIZE: CodeSize = 0xFFFFFFFF;
 
     pub fn new() -> Self {
         return Self::with_capacity(0);
