@@ -18,6 +18,6 @@ written to the bytecode, hence reducing the number of instructions that need to 
 
 ## Operand stack size computation
 
-For `Code` attributes (both top-level or method-level), the maximum number of operands on the operand stack at any point
+For `Code` attributes (both top-level or method-level), the maximum depth of the operand stack at any point
 during the instruction execution, is calculated at compile-time. This makes it possible to allocate the operand stack of
 exactly the required size.
