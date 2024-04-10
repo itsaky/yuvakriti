@@ -19,11 +19,16 @@ use std::path::Path;
 use crate::bytecode::bytes::ByteInput;
 use crate::bytecode::disassembler::YKBDisassembler;
 use crate::bytecode::tests::util::compile_to_bytecode;
+use crate::features::CompilerFeatures;
 
 #[test]
 fn test_disassembler() {
     let path = Path::new("target/disassemble.ykb");
-    compile_to_bytecode("fun main() { print 1 + 2; }", &path);
+    compile_to_bytecode(
+        &CompilerFeatures::default(),
+        "fun main() { print 1 + 2; }",
+        &path,
+    );
 
     let f = File::open(&path).unwrap();
     let mut out_string = String::new();

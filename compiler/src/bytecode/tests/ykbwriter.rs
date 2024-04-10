@@ -16,21 +16,26 @@
 use std::fs::File;
 use std::path::Path;
 
+use crate::bytecode::attrs;
 use crate::bytecode::bytes::ByteInput;
 use crate::bytecode::cp_info::NumberInfo;
 use crate::bytecode::cp_info::Utf8Info;
 use crate::bytecode::opcode::OpCode;
 use crate::bytecode::opcode::OpSize;
 use crate::bytecode::tests::util::compile_to_bytecode;
-use crate::bytecode::attrs;
 use crate::bytecode::ConstantEntry;
 use crate::bytecode::YKBFileReader;
+use crate::features::CompilerFeatures;
 
 #[test]
 fn test_program_writer() {
     let path = Path::new("target/reader.ykb");
     let display = path.display();
-    let ykbfile = compile_to_bytecode("fun main() { var str = \"str\"; var num = 123; }", &path);
+    let ykbfile = compile_to_bytecode(
+        &CompilerFeatures::default(),
+        "fun main() { var str = \"str\"; var num = 123; }",
+        &path,
+    );
 
     let f = File::open(&path).unwrap();
     let readykb = match YKBFileReader::new(ByteInput::new(f)).read_file() {
@@ -47,7 +52,11 @@ fn test_program_writer() {
 #[test]
 fn test_arithemetic_constant_folding() {
     let path = Path::new("target/const_folding.ykb");
-    let ykbfile = compile_to_bytecode("print 1 + 2; print 2 - 3; print 3 * 4; print 4 / 5;", &path);
+    let ykbfile = compile_to_bytecode(
+        &CompilerFeatures::default(),
+        "print 1 + 2; print 2 - 3; print 3 * 4; print 4 / 5;",
+        &path,
+    );
 
     #[rustfmt::skip]
     assert_eq!(
@@ -69,7 +78,7 @@ fn test_arithemetic_constant_folding() {
         .unwrap();
     if let attrs::Attr::Code(code) = &attr {
         let instructions = code.instructions();
-        
+
         #[rustfmt::skip]
         assert_eq!(
             &vec![
@@ -80,6 +89,64 @@ fn test_arithemetic_constant_folding() {
                 OpCode::Ldc as OpSize, 0x00, 0x03, // 12
                 OpCode::Print as OpSize,
                 OpCode::Ldc as OpSize, 0x00, 0x04, // 0.8
+                OpCode::Print as OpSize,
+            ],
+            instructions
+        );
+    }
+}
+
+#[test]
+fn test_disabled_arithemetic_constant_folding() {
+    let path = Path::new("target/const_folding.ykb");
+    let mut features = CompilerFeatures::default();
+    features.const_folding = false;
+    let ykbfile = compile_to_bytecode(
+        &features,
+        "print 1 + 2; print 2 - 3; print 3 * 4; print 4 / 5;",
+        &path,
+    );
+
+    #[rustfmt::skip]
+    assert_eq!(
+        &vec![
+            ConstantEntry::None, // constant at entry 0 is always None
+            ConstantEntry::Number(NumberInfo::from(&1f64)),
+            ConstantEntry::Number(NumberInfo::from(&2f64)),
+            ConstantEntry::Number(NumberInfo::from(&3f64)),
+            ConstantEntry::Number(NumberInfo::from(&4f64)),
+            ConstantEntry::Number(NumberInfo::from(&5f64)),
+            ConstantEntry::Utf8(Utf8Info::from("Code")),
+        ],
+        ykbfile.constant_pool().entries()
+    );
+
+    let attrs = ykbfile.attributes();
+    let attr = attrs
+        .iter()
+        .find(|attr| attr.name() == attrs::CODE)
+        .unwrap();
+    if let attrs::Attr::Code(code) = &attr {
+        let instructions = code.instructions();
+
+        #[rustfmt::skip]
+        assert_eq!(
+            &vec![
+                OpCode::Ldc as OpSize, 0x00, 0x01, // 1
+                OpCode::Ldc as OpSize, 0x00, 0x02, // 2
+                OpCode::Add as OpSize,
+                OpCode::Print as OpSize,
+                OpCode::Ldc as OpSize, 0x00, 0x02, // 2
+                OpCode::Ldc as OpSize, 0x00, 0x03, // 3
+                OpCode::Sub as OpSize,
+                OpCode::Print as OpSize,
+                OpCode::Ldc as OpSize, 0x00, 0x03, // 3
+                OpCode::Ldc as OpSize, 0x00, 0x04, // 4
+                OpCode::Mult as OpSize,
+                OpCode::Print as OpSize,
+                OpCode::Ldc as OpSize, 0x00, 0x04, // 4
+                OpCode::Ldc as OpSize, 0x00, 0x05, // 5
+                OpCode::Div as OpSize,
                 OpCode::Print as OpSize,
             ],
             instructions
