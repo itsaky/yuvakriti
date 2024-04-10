@@ -34,10 +34,12 @@ pub enum OpCode {
     IfGt = 0x0B,
     IfGe = 0x0C,
     Ldc = 0x0D,
+    BPush0 = 0x0E,
+    BPush1 = 0x0F,
 
     // when introducing new opcodes,
     // increment this
-    OpCount = 0x0E,
+    OpCount = 0x10,
 }
 
 impl OpCode {
@@ -68,6 +70,8 @@ pub fn get_opcode(code: OpSize) -> OpCode {
         0x0B => OpCode::IfGt,
         0x0C => OpCode::IfGe,
         0x0D => OpCode::Ldc,
+        0x0E => OpCode::BPush0,
+        0x0F => OpCode::BPush1,
         _ => panic!("Unknown/unsupported opcode: {}", code),
     };
 }
@@ -88,6 +92,8 @@ pub fn get_opcode_mnemonic(opcode: OpCode) -> &'static str {
         OpCode::IfGt => "ifgt",
         OpCode::IfGe => "ifge",
         OpCode::Ldc => "ldc",
+        OpCode::BPush0 => "bpush_0",
+        OpCode::BPush1 => "bpush_1",
         _ => panic!("Unknown/unsupported opcode: {:?}", opcode),
     };
 }

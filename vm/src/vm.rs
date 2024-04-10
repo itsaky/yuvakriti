@@ -78,6 +78,7 @@ impl<'inst> YKVM<'inst> {
 pub enum Value {
     String(String),
     Number(f64),
+    Bool(bool),
     Nil,
 }
 
@@ -105,6 +106,9 @@ impl Display for Value {
             }
             Value::Number(num) => {
                 write!(f, "{}", num)
+            }
+            Value::Bool(b) => {
+                write!(f, "{}", b)
             }
             Value::Nil => {
                 write!(f, "nil")
@@ -222,6 +226,8 @@ impl<'inst> CodeExecutor<'inst> {
 
                     self.load_constant(const_idx);
                 }
+                OpCode::BPush0 => self.push_operand(Value::Bool(false)),
+                OpCode::BPush1 => self.push_operand(Value::Bool(true)),
 
                 _ => return Err(format!("Unsupported opcode: {}", opcode)),
             }

@@ -52,14 +52,12 @@ fn test_program_writer() {
 #[test]
 fn test_arithemetic_constant_folding() {
     let path = Path::new("target/const_folding.ykb");
-    let ykbfile = compile_to_bytecode(
-        &CompilerFeatures::default(),
-        "print 1 + 2; print 2 - 3; print 3 * 4; print 4 / 5;",
-        &path,
-    );
 
     #[rustfmt::skip]
-    assert_eq!(
+    verify_top_level_insns(
+        "print 1 + 2; print 2 - 3; print 3 * 4; print 4 / 5;",
+        &path,
+        &CompilerFeatures::default(),
         &vec![
             ConstantEntry::None, // constant at entry 0 is always None
             ConstantEntry::Number(NumberInfo::from(&3f64)), // 1+2 folded to 3
@@ -68,47 +66,30 @@ fn test_arithemetic_constant_folding() {
             ConstantEntry::Number(NumberInfo::from(&0.8f64)), // 4/5 folded to 0.8
             ConstantEntry::Utf8(Utf8Info::from("Code")), // "Code" is the name of the "Code" attribute for the YKBFile's top-level statements
         ],
-        ykbfile.constant_pool().entries()
+        &vec![
+            OpCode::Ldc as OpSize, 0x00, 0x01, // 3
+            OpCode::Print as OpSize,
+            OpCode::Ldc as OpSize, 0x00, 0x02, // -1
+            OpCode::Print as OpSize,
+            OpCode::Ldc as OpSize, 0x00, 0x03, // 12
+            OpCode::Print as OpSize,
+            OpCode::Ldc as OpSize, 0x00, 0x04, // 0.8
+            OpCode::Print as OpSize,
+        ]
     );
-
-    let attrs = ykbfile.attributes();
-    let attr = attrs
-        .iter()
-        .find(|attr| attr.name() == attrs::CODE)
-        .unwrap();
-    if let attrs::Attr::Code(code) = &attr {
-        let instructions = code.instructions();
-
-        #[rustfmt::skip]
-        assert_eq!(
-            &vec![
-                OpCode::Ldc as OpSize, 0x00, 0x01, // 3
-                OpCode::Print as OpSize,
-                OpCode::Ldc as OpSize, 0x00, 0x02, // -1
-                OpCode::Print as OpSize,
-                OpCode::Ldc as OpSize, 0x00, 0x03, // 12
-                OpCode::Print as OpSize,
-                OpCode::Ldc as OpSize, 0x00, 0x04, // 0.8
-                OpCode::Print as OpSize,
-            ],
-            instructions
-        );
-    }
 }
 
 #[test]
 fn test_disabled_arithemetic_constant_folding() {
-    let path = Path::new("target/const_folding.ykb");
+    let path = Path::new("target/disabled_const_folding.ykb");
     let mut features = CompilerFeatures::default();
     features.const_folding = false;
-    let ykbfile = compile_to_bytecode(
-        &features,
-        "print 1 + 2; print 2 - 3; print 3 * 4; print 4 / 5;",
-        &path,
-    );
 
     #[rustfmt::skip]
-    assert_eq!(
+    verify_top_level_insns(
+        "print 1 + 2; print 2 - 3; print 3 * 4; print 4 / 5;",
+        &path,
+        &features,
         &vec![
             ConstantEntry::None, // constant at entry 0 is always None
             ConstantEntry::Number(NumberInfo::from(&1f64)),
@@ -118,38 +99,65 @@ fn test_disabled_arithemetic_constant_folding() {
             ConstantEntry::Number(NumberInfo::from(&5f64)),
             ConstantEntry::Utf8(Utf8Info::from("Code")),
         ],
-        ykbfile.constant_pool().entries()
+        &vec![
+            OpCode::Ldc as OpSize, 0x00, 0x01, // 1
+            OpCode::Ldc as OpSize, 0x00, 0x02, // 2
+            OpCode::Add as OpSize,
+            OpCode::Print as OpSize,
+            OpCode::Ldc as OpSize, 0x00, 0x02, // 2
+            OpCode::Ldc as OpSize, 0x00, 0x03, // 3
+            OpCode::Sub as OpSize,
+            OpCode::Print as OpSize,
+            OpCode::Ldc as OpSize, 0x00, 0x03, // 3
+            OpCode::Ldc as OpSize, 0x00, 0x04, // 4
+            OpCode::Mult as OpSize,
+            OpCode::Print as OpSize,
+            OpCode::Ldc as OpSize, 0x00, 0x04, // 4
+            OpCode::Ldc as OpSize, 0x00, 0x05, // 5
+            OpCode::Div as OpSize,
+            OpCode::Print as OpSize,
+        ]
     );
+}
+
+#[test]
+fn test_bpush_ops() {
+    let path = Path::new("target/bpush_ops.ykb");
+    verify_top_level_insns(
+        "print false; print true;",
+        &path,
+        &CompilerFeatures::default(),
+        &vec![],
+        &vec![
+            OpCode::BPush0 as OpSize,
+            OpCode::Print as OpSize,
+            OpCode::BPush1 as OpSize,
+            OpCode::Print as OpSize,
+        ],
+    );
+}
+
+fn verify_top_level_insns(
+    source: &str,
+    out_path: &Path,
+    features: &CompilerFeatures,
+    exp_cps: &Vec<ConstantEntry>,
+    exp_insns: &Vec<OpSize>,
+) {
+    let ykbfile = compile_to_bytecode(features, source, &out_path);
+
+    if !exp_cps.is_empty() {
+        assert_eq!(exp_cps, ykbfile.constant_pool().entries());
+    }
 
     let attrs = ykbfile.attributes();
     let attr = attrs
         .iter()
         .find(|attr| attr.name() == attrs::CODE)
-        .unwrap();
-    if let attrs::Attr::Code(code) = &attr {
-        let instructions = code.instructions();
+        .expect("Expected a Code attribute to be present");
 
-        #[rustfmt::skip]
-        assert_eq!(
-            &vec![
-                OpCode::Ldc as OpSize, 0x00, 0x01, // 1
-                OpCode::Ldc as OpSize, 0x00, 0x02, // 2
-                OpCode::Add as OpSize,
-                OpCode::Print as OpSize,
-                OpCode::Ldc as OpSize, 0x00, 0x02, // 2
-                OpCode::Ldc as OpSize, 0x00, 0x03, // 3
-                OpCode::Sub as OpSize,
-                OpCode::Print as OpSize,
-                OpCode::Ldc as OpSize, 0x00, 0x03, // 3
-                OpCode::Ldc as OpSize, 0x00, 0x04, // 4
-                OpCode::Mult as OpSize,
-                OpCode::Print as OpSize,
-                OpCode::Ldc as OpSize, 0x00, 0x04, // 4
-                OpCode::Ldc as OpSize, 0x00, 0x05, // 5
-                OpCode::Div as OpSize,
-                OpCode::Print as OpSize,
-            ],
-            instructions
-        );
+    if let attrs::Attr::Code(code) = &attr {
+        let insns = code.instructions();
+        assert_eq!(exp_insns, insns);
     }
 }

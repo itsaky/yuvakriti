@@ -205,6 +205,8 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
                 let constant = constant_pool.get(const_index).unwrap();
                 self.write(&format!("#{} // {}", const_index, constant))
             }
+            OpCode::BPush0 => {}
+            OpCode::BPush1 => {}
             _ => panic!("Unknown/unsupported opcode: {}", instructions[0]),
         }
 

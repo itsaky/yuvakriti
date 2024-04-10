@@ -181,6 +181,8 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
                 let idx = constant_pool.push_str(str);
                 code.push_insns_1_16(OpCode::Ldc, idx);
             }
+            PrimaryExpr::False => code.push_insns_0(OpCode::BPush0),
+            PrimaryExpr::True => code.push_insns_0(OpCode::BPush1),
             PrimaryExpr::Identifier(ident) => {
                 constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(ident)));
             }
