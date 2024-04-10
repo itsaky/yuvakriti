@@ -86,7 +86,7 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
             panic!("A YKBFile cannot have multiple Code attributes")
         }
 
-        self.code = Some(attrs::Code::new());
+        self.code = Some(attrs::Code::new(0, 0));
 
         self.default_visit_program(program, p, true, false);
         for stmt in &program.stmts {
@@ -97,6 +97,7 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
             self.file
                 .constant_pool_mut()
                 .push(ConstantEntry::Utf8(Utf8Info::from(attrs::CODE)));
+
             self.file
                 .attributes_mut()
                 .push(attrs::Attr::Code(self.code.take().unwrap()));

@@ -14,6 +14,7 @@
  */
 
 use std::any::Any;
+use std::cmp::max;
 use std::fmt::Display;
 
 use log::debug;
@@ -64,6 +65,8 @@ impl<'inst> YKVM<'inst> {
         self.run_code(code, file.constant_pool()).map(|_res| ())
     }
 
+    /// Execute the instructions in the [Code] and returns the value at the top of the stack
+    /// after execution.
     pub fn run_code(
         &mut self,
         code: &Code,
@@ -134,14 +137,16 @@ pub struct CodeExecutor<'inst> {
     constant_pool: Option<&'inst ConstantPool>,
     variables: Vec<Variable>,
     operands: Vec<Value>,
+    max_stack: u16,
 }
 
 impl<'inst> CodeExecutor<'inst> {
     pub fn new(constant_pool: Option<&ConstantPool>) -> CodeExecutor {
         CodeExecutor {
             constant_pool,
-            variables: vec![],
-            operands: vec![],
+            variables: Vec::with_capacity(0),
+            operands: Vec::with_capacity(0),
+            max_stack: 0,
         }
     }
 
@@ -167,6 +172,10 @@ impl<'inst> CodeExecutor<'inst> {
     }
 
     fn push_operand(&mut self, value: Value) {
+        if self.max_stack != 0 && self.operands.len() >= self.max_stack as usize {
+            // TODO(itsaky): Should this fail instead?
+            error!("Critical: Operand stack overflow! max_stack={}. Did the compiler compute invalid stack depth?", self.max_stack);
+        }
         self.operands.push(value);
     }
 
@@ -193,6 +202,11 @@ impl<'inst> CodeExecutor<'inst> {
     }
 
     pub fn execute(&mut self, code: &Code) -> Result<Option<Value>, String> {
+        self.max_stack = code.max_stack();
+        debug!("max_stack: {}", self.max_stack);
+        
+        self.operands = Vec::with_capacity(max(0, self.max_stack) as usize);
+
         let instructions = code.instructions();
         let mut index = 0;
         let mut is_halted = false;

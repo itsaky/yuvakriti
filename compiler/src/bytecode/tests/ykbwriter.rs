@@ -18,12 +18,12 @@ use std::path::Path;
 
 use crate::bytecode::attrs;
 use crate::bytecode::bytes::ByteInput;
+use crate::bytecode::ConstantEntry;
 use crate::bytecode::cp_info::NumberInfo;
 use crate::bytecode::cp_info::Utf8Info;
 use crate::bytecode::opcode::OpCode;
 use crate::bytecode::opcode::OpSize;
 use crate::bytecode::tests::util::compile_to_bytecode;
-use crate::bytecode::ConstantEntry;
 use crate::bytecode::YKBFileReader;
 use crate::features::CompilerFeatures;
 
@@ -135,6 +135,30 @@ fn test_bpush_ops() {
             OpCode::Print as OpSize,
         ],
     );
+}
+
+#[test]
+fn verify_max_stack_size_attr() {
+    let path = Path::new("target/max_stack_size.ykb");
+    let mut features = CompilerFeatures::default();
+    features.const_folding = false;
+    
+    for (source, stack_size) in [
+        ("print 1;", 1),
+        ("print 1 + 2;", 2),
+        ("print 1 + 2 + 3;", 3),
+    ] {
+        let ykbfile = compile_to_bytecode(&features, source, &path);
+        let attrs = ykbfile.attributes();
+        let attr = attrs
+            .iter()
+            .find(|attr| attr.name() == attrs::CODE)
+            .expect("Expected a Code attribute to be present");
+
+        if let attrs::Attr::Code(code) = &attr {
+            assert_eq!(stack_size, code.max_stack());
+        }
+    }
 }
 
 fn verify_top_level_insns(

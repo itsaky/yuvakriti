@@ -149,9 +149,10 @@ impl<R: Read> YKBFileReader<R> {
 
         let attr = match name.as_str() {
             attrs::CODE => {
+                let max_stack = map_err(self.buf.read_u16(), "Unable to read max stack")?;
                 let insn_count = map_err(self.buf.read_u32(), "Unable to read instruction count")?;
                 let buf = self.buf.read_n_bytes(insn_count as usize)?;
-                attrs::Attr::Code(attrs::Code::with_insns(buf))
+                attrs::Attr::Code(attrs::Code::with_insns(max_stack, buf))
             }
             attrs::SOURCE_FILE => {
                 let name_index =

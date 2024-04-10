@@ -17,6 +17,11 @@ use std::fmt::Display;
 
 pub type OpSize = u8;
 
+pub trait OpCodeExt {
+    fn stack_effect(&self) -> i8;
+    fn get_mnemonic(&self) -> &'static str;
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(u8)]
 pub enum OpCode {
@@ -48,9 +53,60 @@ impl OpCode {
     }
 }
 
+impl OpCodeExt for OpCode {
+    fn stack_effect(&self) -> i8 {
+        match self {
+            // these ops do not require operands and do not push anything
+            OpCode::Nop | OpCode::Halt => 0,
+
+            // these pop 2 operands, and push 1
+            OpCode::Add | OpCode::Sub | OpCode::Mult | OpCode::Div => -1,
+
+            // these pop 1 operand
+            OpCode::Print => -1,
+
+            // not yet decided
+            OpCode::IfEq
+            | OpCode::IfNe
+            | OpCode::IfLt
+            | OpCode::IfLe
+            | OpCode::IfGt
+            | OpCode::IfGe => 0,
+
+            // these push 1 operand
+            OpCode::Ldc | OpCode::BPush0 | OpCode::BPush1 => 1,
+
+            // unreachable
+            OpCode::OpCount => unreachable!("OpCode::OpCount should not be used"),
+        }
+    }
+
+    fn get_mnemonic(&self) -> &'static str {
+        match self {
+            OpCode::Nop => "nop",
+            OpCode::Halt => "halt",
+            OpCode::Add => "add",
+            OpCode::Sub => "sub",
+            OpCode::Mult => "mult",
+            OpCode::Div => "div",
+            OpCode::Print => "print",
+            OpCode::IfEq => "ifeq",
+            OpCode::IfNe => "ifne",
+            OpCode::IfLt => "iflt",
+            OpCode::IfLe => "ifle",
+            OpCode::IfGt => "ifgt",
+            OpCode::IfGe => "ifge",
+            OpCode::Ldc => "ldc",
+            OpCode::BPush0 => "bpush_0",
+            OpCode::BPush1 => "bpush_1",
+            _ => panic!("Unknown/unsupported opcode: {:?}", self),
+        }
+    }
+}
+
 impl Display for OpCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", get_opcode_mnemonic(*self))
+        write!(f, "{}", self.get_mnemonic())
     }
 }
 
@@ -73,27 +129,5 @@ pub fn get_opcode(code: OpSize) -> OpCode {
         0x0E => OpCode::BPush0,
         0x0F => OpCode::BPush1,
         _ => panic!("Unknown/unsupported opcode: {}", code),
-    };
-}
-
-pub fn get_opcode_mnemonic(opcode: OpCode) -> &'static str {
-    return match opcode {
-        OpCode::Nop => "nop",
-        OpCode::Halt => "halt",
-        OpCode::Add => "add",
-        OpCode::Sub => "sub",
-        OpCode::Mult => "mult",
-        OpCode::Div => "div",
-        OpCode::Print => "print",
-        OpCode::IfEq => "ifeq",
-        OpCode::IfNe => "ifne",
-        OpCode::IfLt => "iflt",
-        OpCode::IfLe => "ifle",
-        OpCode::IfGt => "ifgt",
-        OpCode::IfGe => "ifge",
-        OpCode::Ldc => "ldc",
-        OpCode::BPush0 => "bpush_0",
-        OpCode::BPush1 => "bpush_1",
-        _ => panic!("Unknown/unsupported opcode: {:?}", opcode),
     };
 }

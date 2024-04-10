@@ -150,8 +150,10 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
 
         match attr {
             Attr::Code(code) => {
+                self.write1(&format!("max_stack={}", code.max_stack()));
+
                 self.indent += 1;
-                self.write_code(code, constant_pool, 0);
+                self.write_code(code, constant_pool);
                 self.indent -= 1;
             }
             Attr::SourceFile(file) => {
@@ -168,48 +170,45 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
         }
     }
 
-    fn write_code(&mut self, code: &Code, constant_pool: &ConstantPool, mut from_index: usize) {
-        if code.instructions().len() <= from_index {
-            return;
-        }
+    fn write_code(&mut self, code: &Code, constant_pool: &ConstantPool) {
+        let mut index: usize = 0;
+        while index < code.instructions().len() {
+            let instructions = code.instructions();
+            let opcode = get_opcode(instructions[index]);
 
-        let instructions = code.instructions();
-        let opcode = get_opcode(instructions[from_index]);
+            self.linindent();
+            self.write1(&format!("{} ", opcode));
 
-        self.linindent();
-        self.write1(&format!("{} ", opcode));
+            index += 1;
 
-        from_index += 1;
+            match opcode {
+                OpCode::Nop => {}
+                OpCode::Halt => {}
+                OpCode::Add => {}
+                OpCode::Sub => {}
+                OpCode::Mult => {}
+                OpCode::Div => {}
+                OpCode::Print => {}
+                OpCode::IfEq => {}
+                OpCode::IfNe => {}
+                OpCode::IfLt => {}
+                OpCode::IfLe => {}
+                OpCode::IfGt => {}
+                OpCode::IfGe => {}
+                OpCode::Ldc => {
+                    let const_index_high = instructions[index];
+                    index += 1;
+                    let const_index_low = instructions[index];
+                    index += 1;
 
-        match opcode {
-            OpCode::Nop => {}
-            OpCode::Halt => {}
-            OpCode::Add => {}
-            OpCode::Sub => {}
-            OpCode::Mult => {}
-            OpCode::Div => {}
-            OpCode::Print => {}
-            OpCode::IfEq => {}
-            OpCode::IfNe => {}
-            OpCode::IfLt => {}
-            OpCode::IfLe => {}
-            OpCode::IfGt => {}
-            OpCode::IfGe => {}
-            OpCode::Ldc => {
-                let const_index_high = instructions[from_index];
-                from_index += 1;
-                let const_index_low = instructions[from_index];
-                from_index += 1;
-
-                let const_index = (const_index_high.as_u16()) << 8 | const_index_low as u16;
-                let constant = constant_pool.get(const_index).unwrap();
-                self.write(&format!("#{} // {}", const_index, constant))
+                    let const_index = (const_index_high.as_u16()) << 8 | const_index_low as u16;
+                    let constant = constant_pool.get(const_index).unwrap();
+                    self.write(&format!("#{} // {}", const_index, constant))
+                }
+                OpCode::BPush0 => {}
+                OpCode::BPush1 => {}
+                _ => panic!("Unknown/unsupported opcode: {}", instructions[0]),
             }
-            OpCode::BPush0 => {}
-            OpCode::BPush1 => {}
-            _ => panic!("Unknown/unsupported opcode: {}", instructions[0]),
         }
-
-        self.write_code(code, constant_pool, from_index)
     }
 }
