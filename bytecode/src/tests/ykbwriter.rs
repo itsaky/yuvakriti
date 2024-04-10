@@ -16,37 +16,15 @@
 use std::fs::File;
 use std::path::Path;
 
-use crate::bytes::ByteOutput;
-use crate::tests::util::parse;
-use crate::{bytes::ByteInput, YKBFileReader, YKBFileWriter};
+use crate::{bytes::ByteInput, YKBFileReader};
+use crate::tests::util::compile_to_bytecode;
 
 #[test]
 fn test_program_writer() {
-    let mut program = parse("fun main() { var str = \"str\"; var num = 123; }");
-    let mut ykbwriter = YKBFileWriter::new();
-    ykbwriter.write(&mut program);
-
-    let ykbfile = ykbwriter.file_mut();
-
-    let path = Path::new("test.ykb");
+    let path = Path::new("target/reader.ykb");
     let display = path.display();
-    let file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}: {}", display, why),
-        Ok(file) => file,
-    };
-
-    let size = match ykbfile.write_to(&mut ByteOutput::new(&file)) {
-        Err(why) => panic!("couldn't write to {}: {}", display, why),
-        Ok(size) => {
-            println!("successfully wrote to {}", display);
-            size
-        }
-    };
-
-    file.sync_all().unwrap();
-
-    assert!(path.exists());
-    assert_eq!(size, file.metadata().unwrap().len() as usize);
+    let ykbwriter = compile_to_bytecode("fun main() { var str = \"str\"; var num = 123; }", &path);
+    let ykbfile = ykbwriter.file();
 
     let f = File::open(&path).unwrap();
     let readykb = match YKBFileReader::new(ByteInput::new(f)).read_file() {

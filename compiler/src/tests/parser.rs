@@ -18,7 +18,6 @@ use std::io::Cursor;
 use std::rc::Rc;
 
 use crate::ast::ArithmeticASTPrinter;
-use crate::ast::Decl;
 use crate::ast::Expr;
 use crate::ast::PrimaryExpr;
 use crate::ast::Stmt;

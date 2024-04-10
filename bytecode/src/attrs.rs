@@ -13,14 +13,13 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::bytes::AssertingByteConversions;
-use std::cmp::max;
 use std::mem::size_of;
 
-use crate::opcode::{OpCode, OpSize};
+use crate::bytes::AssertingByteConversions;
 #[allow(unused_imports)]
 use crate::ConstantEntry;
 use crate::CpSize;
+use crate::opcode::{OpCode, OpSize};
 
 pub type CodeSize = u32;
 pub const OP_SIZE: CodeSize = size_of::<OpSize>() as CodeSize;

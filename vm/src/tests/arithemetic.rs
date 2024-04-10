@@ -13,10 +13,10 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use bytecode::ConstantEntry;
 use bytecode::cp_info::NumberInfo;
 use bytecode::opcode::OpCode;
 use bytecode::opcode::OpSize;
+use bytecode::ConstantEntry;
 
 use crate::tests::util::create_constant_pool;
 use crate::tests::util::create_vm;
@@ -25,15 +25,17 @@ use crate::tests::util::push_constants;
 
 #[test]
 fn test_simple_arithemetic_evaluation() {
-
     let mut vm = create_vm();
 
     let mut cp = create_constant_pool();
-    push_constants(&mut cp, vec![
-        ConstantEntry::Number(NumberInfo::from(&10f64)),
-        ConstantEntry::Number(NumberInfo::from(&20f64)),
-    ]);
-    
+    push_constants(
+        &mut cp,
+        vec![
+            ConstantEntry::Number(NumberInfo::from(&10f64)),
+            ConstantEntry::Number(NumberInfo::from(&20f64)),
+        ],
+    );
+
     #[rustfmt::skip]
     assert_eq!(30f64, eval_arithemetic(&mut vm, &cp, vec![
         OpCode::Ldc as OpSize, 0x00, 0x01, // single operand, but u16

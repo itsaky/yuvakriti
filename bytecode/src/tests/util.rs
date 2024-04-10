@@ -14,31 +14,57 @@
  */
 
 use std::cell::RefCell;
+use std::fs::File;
 use std::io::Cursor;
+use std::path::Path;
 use std::rc::Rc;
 
-use compiler::ast::ASTPrinter;
 use compiler::ast::Program;
-use compiler::ast::Visitable;
 use compiler::diagnostics;
 use compiler::lexer::YKLexer;
 use compiler::parser::YKParser;
 
-pub(crate) fn node_string(program: &mut Program, pretty: bool) -> String {
-    let mut out = String::new();
-    let mut printer = ASTPrinter::new(&mut out, pretty);
-    program.accept(&mut printer, &0);
-    out
+use crate::bytes::ByteOutput;
+use crate::YKBFileWriter;
+
+pub(crate) fn compile_to_bytecode<'a>(source: &str, bytecode_path: &Path) -> YKBFileWriter {
+
+    std::fs::create_dir_all(bytecode_path.parent().unwrap()).unwrap();
+    if bytecode_path.exists() {
+        std::fs::remove_file(bytecode_path).unwrap();
+    }
+    
+    let mut program = parse(source);
+    let mut ykbwriter = YKBFileWriter::new();
+    ykbwriter.write(&mut program);
+
+    let ykbfile = ykbwriter.file_mut();
+
+    let display = bytecode_path.display();
+    let file = match File::create(&bytecode_path) {
+        Err(why) => panic!("couldn't create {}: {}", display, why),
+        Ok(file) => file,
+    };
+
+    match ykbfile.write_to(&mut ByteOutput::new(&file)) {
+        Err(why) => panic!("couldn't write to {}: {}", display, why),
+        Ok(size) => {
+            println!("successfully wrote to {}", display);
+            size
+        }
+    };
+
+    file.sync_all().unwrap();
+
+    assert!(bytecode_path.exists());
+
+    ykbwriter
 }
 
+//noinspection DuplicatedCode
 pub(crate) fn parse(source: &str) -> Program {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
     let lexer = YKLexer::new(Cursor::new(source), diag_handler.clone());
     let mut parser = YKParser::new(lexer, diag_handler.clone());
     parser.parse()
-}
-
-pub(crate) fn parse_to_string(source: &str, pretty: bool) -> String {
-    let mut program = parse(source);
-    node_string(&mut program, pretty)
 }

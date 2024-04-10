@@ -13,41 +13,17 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::bytes::ByteOutput;
-use crate::disassembler::YKBDisassembler;
-use crate::tests::util::parse;
-use crate::{bytes::ByteInput, YKBFileWriter};
 use std::fs::File;
 use std::path::Path;
 
+use crate::bytes::ByteInput;
+use crate::disassembler::YKBDisassembler;
+use crate::tests::util::compile_to_bytecode;
+
 #[test]
 fn test_disassembler() {
-    let mut program = parse("fun main() { print 1 + 2; }");
-    let mut ykbwriter = YKBFileWriter::new();
-    ykbwriter.write(&mut program);
-
-    let ykbfile = ykbwriter.file_mut();
-
-    let path = Path::new("target/test.ykb");
-    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-
-    let display = path.display();
-    let file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}: {}", display, why),
-        Ok(file) => file,
-    };
-
-    match ykbfile.write_to(&mut ByteOutput::new(&file)) {
-        Err(why) => panic!("couldn't write to {}: {}", display, why),
-        Ok(size) => {
-            println!("successfully wrote to {}", display);
-            size
-        }
-    };
-
-    file.sync_all().unwrap();
-
-    assert!(path.exists());
+    let path = Path::new("target/disassemble.ykb");
+    compile_to_bytecode("fun main() { print 1 + 2; }", &path);
 
     let f = File::open(&path).unwrap();
     let mut out_string = String::new();

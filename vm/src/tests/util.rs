@@ -14,9 +14,9 @@
  */
 
 use bytecode::attrs::Code;
+use bytecode::opcode::OpSize;
 use bytecode::ConstantEntry;
 use bytecode::ConstantPool;
-use bytecode::opcode::OpSize;
 
 use crate::YKVM;
 

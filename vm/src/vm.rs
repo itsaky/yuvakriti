@@ -15,7 +15,6 @@
 
 use std::any::Any;
 use std::fmt::Display;
-use std::io::stdout;
 
 use log::debug;
 use log::error;
@@ -40,7 +39,7 @@ pub struct YKVM<'inst> {
 
 impl<'inst> YKVM<'inst> {
     pub fn new<'a>() -> YKVM<'a> {
-        return YKVM {_s: &"" };
+        return YKVM { _s: &"" };
     }
 }
 
@@ -65,10 +64,12 @@ impl<'inst> YKVM<'inst> {
         self.run_code(code, file.constant_pool()).map(|_res| ())
     }
 
-    pub fn run_code(&mut self, code: &Code, constant_pool: &ConstantPool) -> Result<Option<Value>, String> {
-        let mut executor = CodeExecutor::new(
-            Some(constant_pool),
-        );
+    pub fn run_code(
+        &mut self,
+        code: &Code,
+        constant_pool: &ConstantPool,
+    ) -> Result<Option<Value>, String> {
+        let mut executor = CodeExecutor::new(Some(constant_pool));
         executor.execute(code)
     }
 }
@@ -132,9 +133,7 @@ pub struct CodeExecutor<'inst> {
 }
 
 impl<'inst> CodeExecutor<'inst> {
-    pub fn new(
-        constant_pool: Option<&ConstantPool>,
-    ) -> CodeExecutor {
+    pub fn new(constant_pool: Option<&ConstantPool>) -> CodeExecutor {
         CodeExecutor {
             constant_pool,
             variables: vec![],
@@ -234,7 +233,7 @@ impl<'inst> CodeExecutor<'inst> {
                 instructions.len() - index
             );
         }
-        
+
         // Return the result at the top of the stack
         Ok(self.try_pop_operand())
     }
