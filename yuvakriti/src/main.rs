@@ -9,16 +9,12 @@ use crate::compile::do_compile;
 use crate::disassemble::do_disassemble;
 use crate::run::do_run;
 
-pub const YK_DEBUG: &str = "YK_DEBUG";
-
 mod args;
 mod compile;
 mod disassemble;
 mod run;
 
 fn main() -> ExitCode {
-    let debug_logging = std::env::var(YK_DEBUG).map(|val| val == "1").is_ok();
-
     let mut command = YkArgs::command();
     let matches = &command.get_matches_mut();
     let mut args = match YkArgs::from_arg_matches(&matches) {
@@ -29,16 +25,12 @@ fn main() -> ExitCode {
         }
     };
 
-    let level = if args.verbose {
-        log::LevelFilter::Trace
-    } else if debug_logging {
-        log::LevelFilter::Debug
-    } else {
-        log::LevelFilter::Warn
-    };
-
-    logging::init_logger(level).unwrap();
-
+    stderrlog::new()
+        .module(module_path!())
+        .verbosity(args.verbosity)
+        .quiet(args.quiet)
+        .init()
+        .unwrap();
     if let Some(subcommand) = &mut args.subcommand {
         match match subcommand {
             SubCommand::Compile(args) => do_compile(args),

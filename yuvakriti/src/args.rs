@@ -29,11 +29,27 @@ pub struct YkArgs {
     #[arg(
         short,
         long,
-        help = "Enable verbose output",
+        help =
+"Set output verbosity.
+    0: silent,
+    1: errors only,
+    2: normal,
+    3: information,
+    4: debug,
+    5: trace",
+        default_value_t = 2,
+        global = true
+    )]
+    pub verbosity: usize,
+
+    #[arg(
+        short,
+        long,
+        help = "Silence all output, no matter what the verbosity is set to. This is similar to '-v 0'.",
         default_value_t = false,
         global = true
     )]
-    pub verbose: bool,
+    pub quiet: bool,
 }
 
 #[derive(Subcommand, Debug)]

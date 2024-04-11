@@ -24,7 +24,7 @@ use vm::YKVM;
 
 pub fn do_run(args: &mut RunArgs) -> Result<(), ()> {
     if !args.path.exists() {
-        println!("File does not exist: {}", args.path.display());
+        error!("File does not exist: {}", args.path.display());
         return Err(());
     }
 

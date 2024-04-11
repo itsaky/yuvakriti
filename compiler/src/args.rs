@@ -20,7 +20,7 @@ use clap::Args;
 #[derive(Args, Debug)]
 #[command(visible_alias = "c")]
 pub struct CompileArgs {
-    #[arg(short, long, help = "Disable language features", value_delimiter = ',', num_args = 1..)]
+    #[arg(short, long, help = "Disable language features", value_delimiter = ',', num_args = 1.., value_name = "FEATURE")]
     pub disable_features: Vec<String>,
 
     #[arg(short, long, help = "Output file", value_name = "FILE")]

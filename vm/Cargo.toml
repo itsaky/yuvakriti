@@ -12,7 +12,6 @@ license.workspace = true
 
 [dependencies]
 compiler.workspace = true
-logging.workspace = true
 log.workspace = true
 clap.workspace = true
 proc_macros.workspace = true

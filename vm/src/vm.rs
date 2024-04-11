@@ -204,7 +204,7 @@ impl<'inst> CodeExecutor<'inst> {
     pub fn execute(&mut self, code: &Code) -> Result<Option<Value>, String> {
         self.max_stack = code.max_stack();
         debug!("max_stack: {}", self.max_stack);
-        
+
         self.operands = Vec::with_capacity(max(0, self.max_stack) as usize);
 
         let instructions = code.instructions();
