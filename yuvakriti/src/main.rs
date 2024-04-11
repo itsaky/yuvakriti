@@ -26,7 +26,6 @@ fn main() -> ExitCode {
     };
 
     stderrlog::new()
-        .module(module_path!())
         .verbosity(args.verbosity)
         .quiet(args.quiet)
         .init()
