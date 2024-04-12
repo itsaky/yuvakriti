@@ -161,6 +161,30 @@ fn verify_max_stack_size_attr() {
     }
 }
 
+#[test]
+fn test_max_stack_computation() {
+    let path = Path::new("target/max_stack.ykb");
+    let features = CompilerFeatures::default();
+    let file = compile_to_bytecode(&features, "\
+print 1 + 2;
+print 2 * 3;
+print \"hello\";
+print \"world\";
+print 2/3;
+print 3-2;
+print true;
+print false;", &path);
+    
+    let attrs = file.attributes();
+    let code = attrs
+        .iter()
+        .find(|attr| attr.name() == attrs::CODE)
+        .map(|attr| if let attrs::Attr::Code(code) = attr { code } else { panic!("Expected a Code attribute to be present") })
+        .expect("Expected a Code attribute to be present");
+
+    assert_eq!(1, code.max_stack());
+}
+
 fn verify_top_level_insns(
     source: &str,
     out_path: &Path,

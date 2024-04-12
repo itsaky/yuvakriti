@@ -13,7 +13,7 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::cmp::max;
+use std::cmp::{max, min};
 use std::mem::size_of;
 
 use crate::bytecode::bytes::AssertingByteConversions;
@@ -49,6 +49,7 @@ impl Attr {
 /// in a program.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Code {
+    stack_size: i16,
     max_stack: u16,
     instructions: Vec<u8>,
 }
@@ -73,6 +74,7 @@ impl Code {
     pub fn with_insns(max_stack: u16, insns: Vec<u8>) -> Self {
         return Code {
             max_stack,
+            stack_size: 0,
             instructions: insns,
         };
     }
@@ -84,12 +86,11 @@ impl Code {
 
     /// Update the maximum stack size for this code attribute, based on the given stack effect.
     pub fn update_max_stack(&mut self, stack_effect: i8) {
-        self.max_stack = max(
-            self.max_stack,
-            self.max_stack
-                .checked_add_signed(stack_effect as i16)
-                .unwrap_or(self.max_stack),
-        );
+        self.stack_size += stack_effect as i16;
+        
+        if self.stack_size > self.max_stack as i16 {
+            self.max_stack = self.stack_size as u16;
+        }
     }
 
     fn check_size(&self, additional: CodeSize) {
