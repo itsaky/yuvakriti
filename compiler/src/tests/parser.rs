@@ -220,7 +220,7 @@ fn test_arith_prec() {
     let mut program = parse("4 * 5 - (2 + 3) / 6 + 7;");
     let mut out = String::new();
     let mut printer = ArithmeticASTPrinter::new(&mut out);
-    program.accept(&mut printer, &());
+    program.accept(&mut printer, &mut ());
     assert_eq!("(((4 * 5) - ((2 + 3) / 6)) + 7)", out);
 }
 
@@ -251,7 +251,7 @@ fn test_arith_assoc() {
         let mut program = parse(source);
         let mut out = String::new();
         let mut printer = ArithmeticASTPrinter::new(&mut out);
-        program.accept(&mut printer, &());
+        program.accept(&mut printer, &mut ());
         ok = ok && out == expected;
         if ok {
             println!("    ...OK")
@@ -275,7 +275,7 @@ fn test_parser_diagnostic_at_end() {
     let mut program = parser.parse();
     let mut out = String::new();
     let mut printer = ArithmeticASTPrinter::new(&mut out);
-    program.accept(&mut printer, &());
+    program.accept(&mut printer, &mut ());
 
     assert!(program.decls.is_empty());
 

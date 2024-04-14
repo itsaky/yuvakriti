@@ -16,18 +16,15 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::io::{Error, Write};
 
+use crate::bytecode;
 use crate::bytecode::attrs::Attr;
 use crate::bytecode::bytes::AssertingByteConversions;
 use crate::bytecode::bytes::ByteOutput;
+use crate::bytecode::ConstantEntry;
 use crate::bytecode::cp::ConstantPool;
 use crate::bytecode::cp_info::{CpInfoTag, Utf8Info};
 use crate::bytecode::decls::YKBDecl;
 use crate::bytecode::version::YKBVersion;
-use crate::bytecode::ConstantEntry;
-
-pub const MAGIC_NUMBER: u32 = 0x59754B72;
-pub const EXT_YK: &str = "yk";
-pub const EXT_YKB: &str = "ykb";
 
 /// Represents a YKB file.
 pub struct YKBFile {
@@ -95,7 +92,7 @@ impl YKBFile {
         &mut self,
         writer: &mut ByteOutput<W>,
     ) -> Result<usize, Error> {
-        let mut size = writer.write_u32(MAGIC_NUMBER)?;
+        let mut size = writer.write_u32(bytecode::MAGIC_NUMBER)?;
         size += writer.write_u16(self.version.major_version())?;
         size += writer.write_u16(self.version.minor_version())?;
         size += self.write_constant_pool(writer)?;

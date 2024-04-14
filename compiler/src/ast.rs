@@ -74,7 +74,7 @@ pub trait AstNode {
 
 /// An [ASTNode] which can be visited
 pub trait Visitable {
-    fn accept<P, R>(self: &mut Self, visitor: &mut impl ASTVisitor<P, R>, p: &P) -> Option<R>;
+    fn accept<P, R>(self: &mut Self, visitor: &mut impl ASTVisitor<P, R>, p: &mut P) -> Option<R>;
 }
 
 /// Program : (Declaration)*

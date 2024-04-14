@@ -393,11 +393,7 @@ impl<R: Read> YKLexer<'_, R> {
         if self.position == Position::NO_POS {
             // we advanced to the first character
             // reset the position to the start of input
-            self.position = Position {
-                line: 0,
-                column: 0,
-                index: 0,
-            }
+            self.position = Position::new(0, 0, 0);
         } else {
             self.position.column += 1;
             self.position.index += 1;

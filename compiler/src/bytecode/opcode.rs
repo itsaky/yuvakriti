@@ -33,18 +33,29 @@ pub enum OpCode {
     Div = 0x05,
     Print = 0x06,
     IfEq = 0x07,
-    IfNe = 0x08,
-    IfLt = 0x09,
-    IfLe = 0x0A,
-    IfGt = 0x0B,
-    IfGe = 0x0C,
-    Ldc = 0x0D,
-    BPush0 = 0x0E,
-    BPush1 = 0x0F,
+    IfEqZ = 0x08,
+    IfNe = 0x09,
+    IfNeZ = 0x0A,
+    IfLt = 0x0B,
+    IfLtZ = 0x0C,
+    IfLe = 0x0D,
+    IfLeZ = 0x0E,
+    IfGt = 0x0F,
+    IfGtZ = 0x10,
+    IfGe = 0x11,
+    IfGeZ = 0x12,
+    Ldc = 0x13,
+    BPush0 = 0x14,
+    BPush1 = 0x15,
+    Store = 0x16,
+    Store0 = 0x17,
+    Store1 = 0x18,
+    Store2 = 0x19,
+    Store3 = 0x1A,
 
     // when introducing new opcodes,
     // increment this
-    OpCount = 0x10,
+    OpCount = 0x1B,
 }
 
 impl OpCode {
@@ -63,21 +74,26 @@ impl OpCodeExt for OpCode {
             OpCode::Add | OpCode::Sub | OpCode::Mult | OpCode::Div => -1,
 
             // these pop 1 operand
+            // --- comparison to zero ---
+            OpCode::IfEqZ |
+            OpCode::IfNeZ |
+            OpCode::IfLtZ |
+            OpCode::IfLeZ |
+            OpCode::IfGtZ |
+            OpCode::IfGeZ |
+            // --- store insn with implicit var index ---
+            OpCode::Store0 |
+            OpCode::Store1 |
+            OpCode::Store2 |
+            OpCode::Store3 |
+            // --- printing ---
             OpCode::Print => -1,
-
-            // not yet decided
-            OpCode::IfEq
-            | OpCode::IfNe
-            | OpCode::IfLt
-            | OpCode::IfLe
-            | OpCode::IfGt
-            | OpCode::IfGe => 0,
 
             // these push 1 operand
             OpCode::Ldc | OpCode::BPush0 | OpCode::BPush1 => 1,
 
             // unreachable
-            OpCode::OpCount => unreachable!("OpCode::OpCount should not be used"),
+            _ => unreachable!("OpCode {} is not yet supported!", self),
         }
     }
 
@@ -99,6 +115,11 @@ impl OpCodeExt for OpCode {
             OpCode::Ldc => "ldc",
             OpCode::BPush0 => "bpush_0",
             OpCode::BPush1 => "bpush_1",
+            OpCode::Store => "store",
+            OpCode::Store0 => "store_0",
+            OpCode::Store1 => "store_1",
+            OpCode::Store2 => "store_2",
+            OpCode::Store3 => "store_3",
             _ => panic!("Unknown/unsupported opcode: {:?}", self),
         }
     }
@@ -120,14 +141,25 @@ pub fn get_opcode(code: OpSize) -> OpCode {
         0x05 => OpCode::Div,
         0x06 => OpCode::Print,
         0x07 => OpCode::IfEq,
-        0x08 => OpCode::IfNe,
-        0x09 => OpCode::IfLt,
-        0x0A => OpCode::IfLe,
-        0x0B => OpCode::IfGt,
-        0x0C => OpCode::IfGe,
-        0x0D => OpCode::Ldc,
-        0x0E => OpCode::BPush0,
-        0x0F => OpCode::BPush1,
+        0x08 => OpCode::IfEqZ,
+        0x09 => OpCode::IfNe,
+        0x0A => OpCode::IfNeZ,
+        0x0B => OpCode::IfLt,
+        0x0C => OpCode::IfLtZ,
+        0x0D => OpCode::IfLe,
+        0x0E => OpCode::IfLeZ,
+        0x0F => OpCode::IfGt,
+        0x10 => OpCode::IfGtZ,
+        0x11 => OpCode::IfGe,
+        0x12 => OpCode::IfGeZ,
+        0x13 => OpCode::Ldc,
+        0x14 => OpCode::BPush0,
+        0x15 => OpCode::BPush1,
+        0x16 => OpCode::Store,
+        0x17 => OpCode::Store0,
+        0x18 => OpCode::Store1,
+        0x19 => OpCode::Store2,
+        0x1A => OpCode::Store3,
         _ => panic!("Unknown/unsupported opcode: {}", code),
     };
 }

@@ -29,8 +29,7 @@ pub struct YkArgs {
     #[arg(
         short,
         long,
-        help =
-"Set output verbosity.
+        help = "Set output verbosity.
     0: silent,
     1: errors only,
     2: normal,

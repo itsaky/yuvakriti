@@ -21,6 +21,7 @@ use std::rc::Rc;
 use log::debug;
 use log::error;
 use log::info;
+use crate::resolve::Resolve;
 
 use crate::args::CompileArgs;
 use crate::diagnostics::collecting_handler;
@@ -29,8 +30,8 @@ use crate::features::CompilerFeatures;
 use crate::lexer::YKLexer;
 use crate::parser::YKParser;
 
-use crate::bytecode::file::EXT_YK;
-use crate::bytecode::file::EXT_YKB;
+use crate::bytecode::EXT_YK;
+use crate::bytecode::EXT_YKB;
 use crate::bytecode::{YKBFile, YKBFileWriter, YKBVersion};
 
 // Compiles source files into bytecode.
@@ -80,8 +81,13 @@ impl YKCompiler {
         let lexer = YKLexer::new(file, self.diagnostics.clone());
         let mut parser = YKParser::new(lexer, self.diagnostics.clone());
         let mut program = parser.parse();
+        let mut has_errors = parser.has_errors();
 
-        if parser.has_errors() {
+        let mut analyzer = Resolve::new(self.diagnostics.clone());
+        analyzer.analyze(&mut program);
+        has_errors |= analyzer.has_errors();
+
+        if has_errors {
             info!("[{:?}] Compilation failed", display);
             return Err(());
         }

@@ -14,6 +14,7 @@
  */
 
 use std::fmt::Write;
+use std::ops::Add;
 
 use crate::ast::visitor::ASTVisitor;
 use crate::ast::BinaryExpr;
@@ -73,7 +74,7 @@ impl<'a> ASTPrinter<'a> {
         self.indent(indent_level);
     }
 
-    fn print_expr(&mut self, expr: &Expr, indent_level: &usize) {
+    fn print_expr(&mut self, expr: &Expr, indent_level: &mut usize) {
         self.f.write_str("(").unwrap();
         match expr {
             Expr::Binary(binary_expr) => {
@@ -100,7 +101,7 @@ impl<'a> ASTPrinter<'a> {
         self.f.write_str(")").unwrap();
     }
 
-    fn print_decl(&mut self, decl: &Decl, indent_level: &usize) {
+    fn print_decl(&mut self, decl: &Decl, indent_level: &mut usize) {
         self.f.write_str("(decl ").unwrap();
         match decl {
             Decl::Class(class_decl) => {
@@ -119,7 +120,7 @@ impl<'a> ASTPrinter<'a> {
         self.linefeed(indent_level);
     }
 
-    fn print_stmt(&mut self, stmt: &Stmt, indent_level: &usize) {
+    fn print_stmt(&mut self, stmt: &Stmt, indent_level: &mut usize) {
         self.f.write_str("(stmt ").unwrap();
         match stmt {
             Stmt::Expr(expr_stmt) => {
@@ -160,22 +161,22 @@ impl<'a> ASTPrinter<'a> {
 }
 
 impl<'a> ASTVisitor<usize, ()> for ASTPrinter<'a> {
-    fn visit_program(&mut self, program: &Program, indent_level: &usize) -> Option<()> {
+    fn visit_program(&mut self, program: &Program, indent_level: &mut usize) -> Option<()> {
         self.f.write_str("(program").unwrap();
-        self.linefeed(&(indent_level + 1));
+        self.linefeed(&mut indent_level.add(1));
         for decl in &program.decls {
-            self.print_decl(&decl.0, &(indent_level + 1));
+            self.print_decl(&decl.0, &mut indent_level.add(1));
         }
         for stmt in &program.stmts {
-            self.print_stmt(&stmt.0, &(indent_level + 1));
-            self.linefeed(&(indent_level + 1));
+            self.print_stmt(&stmt.0, &mut indent_level.add(1));
+            self.linefeed(&mut indent_level.add(1));
         }
         self.indent(indent_level);
         self.f.write_str(")").unwrap();
         None
     }
 
-    fn visit_class_decl(&mut self, class_decl: &ClassDecl, indent_level: &usize) -> Option<()> {
+    fn visit_class_decl(&mut self, class_decl: &ClassDecl, indent_level: &mut usize) -> Option<()> {
         self.f.write_str(&class_decl.name.0).unwrap();
         if let Some(supercls) = &class_decl.supercls {
             self.f.write_str(" : ").unwrap();
@@ -183,13 +184,13 @@ impl<'a> ASTVisitor<usize, ()> for ASTPrinter<'a> {
         }
         self.f.write_str(" {").unwrap();
         for (method, _) in &class_decl.methods {
-            self.visit_func_decl(method, &(indent_level + 1));
+            self.visit_func_decl(method, &mut indent_level.add(1));
         }
         self.f.write_str("}").unwrap();
         None
     }
 
-    fn visit_func_decl(&mut self, func_decl: &FuncDecl, indent_level: &usize) -> Option<()> {
+    fn visit_func_decl(&mut self, func_decl: &FuncDecl, indent_level: &mut usize) -> Option<()> {
         self.f.write_str(&func_decl.name.0).unwrap();
         self.f.write_str("(").unwrap();
         let mut first = true;
@@ -201,11 +202,11 @@ impl<'a> ASTVisitor<usize, ()> for ASTPrinter<'a> {
             self.f.write_str(&param.0).unwrap();
         }
         self.f.write_str(") ").unwrap();
-        self.visit_block_stmt(&func_decl.body.0, &(indent_level + 1));
+        self.visit_block_stmt(&func_decl.body.0, &mut indent_level.add(1));
         None
     }
 
-    fn visit_var_decl(&mut self, var_decl: &VarStmt, indent_level: &usize) -> Option<()> {
+    fn visit_var_decl(&mut self, var_decl: &VarStmt, indent_level: &mut usize) -> Option<()> {
         self.f.write_str(&var_decl.name.0).unwrap();
         if let Some((initializer, _)) = &var_decl.initializer {
             self.f.write_str(" = ").unwrap();
@@ -214,93 +215,109 @@ impl<'a> ASTVisitor<usize, ()> for ASTPrinter<'a> {
         None
     }
 
-    fn visit_block_stmt(&mut self, block_stmt: &BlockStmt, indent_level: &usize) -> Option<()> {
+    fn visit_block_stmt(&mut self, block_stmt: &BlockStmt, indent_level: &mut usize) -> Option<()> {
         self.f.write_str("{").unwrap();
-        self.linefeed(&(indent_level + 1));
+        self.linefeed(&mut indent_level.add(1));
         for decl in &block_stmt.decls {
-            self.visit_decl(&decl.0, &(indent_level + 1));
+            self.visit_decl(&decl.0, &mut indent_level.add(1));
         }
         self.f.write_str("}").unwrap();
         None
     }
 
-    fn visit_expr_stmt(&mut self, expr_stmt: &ExprStmt, indent_level: &usize) -> Option<()> {
+    fn visit_expr_stmt(&mut self, expr_stmt: &ExprStmt, indent_level: &mut usize) -> Option<()> {
         self.print_expr(&expr_stmt.expr.0, indent_level);
         None
     }
 
-    fn visit_for_stmt(&mut self, for_stmt: &ForStmt, indent_level: &usize) -> Option<()> {
+    fn visit_for_stmt(&mut self, for_stmt: &ForStmt, indent_level: &mut usize) -> Option<()> {
         self.f.write_str("(").unwrap();
         if let Some((init, _)) = &for_stmt.init {
-            self.visit_stmt(init, &(indent_level + 1));
+            self.visit_stmt(init, &mut indent_level.add(1));
         }
         self.f.write_str("; ").unwrap();
         if let Some((condition, _)) = &for_stmt.condition {
-            self.visit_expr(condition, &(indent_level + 1));
+            self.visit_expr(condition, &mut indent_level.add(1));
         }
         self.f.write_str("; ").unwrap();
         if let Some((step, _)) = &for_stmt.step {
-            self.visit_expr(step, &(indent_level + 1));
+            self.visit_expr(step, &mut indent_level.add(1));
         }
         self.f.write_str(") ").unwrap();
-        self.visit_block_stmt(&for_stmt.body.0, &(indent_level + 1));
+        self.visit_block_stmt(&for_stmt.body.0, &mut indent_level.add(1));
         None
     }
 
-    fn visit_if_stmt(&mut self, if_stmt: &IfStmt, indent_level: &usize) -> Option<()> {
+    fn visit_if_stmt(&mut self, if_stmt: &IfStmt, indent_level: &mut usize) -> Option<()> {
         self.print_expr(&if_stmt.condition.0, indent_level);
         self.f.write_str(" ").unwrap();
-        self.visit_block_stmt(&if_stmt.then_branch.0, &(indent_level + 1));
+        self.visit_block_stmt(&if_stmt.then_branch.0, &mut indent_level.add(1));
         if let Some(else_branch) = &if_stmt.else_branch {
             self.f.write_str(" else ").unwrap();
-            self.visit_block_stmt(&else_branch.0, &(indent_level + 1));
+            self.visit_block_stmt(&else_branch.0, &mut indent_level.add(1));
         }
         None
     }
 
-    fn visit_print_stmt(&mut self, print_stmt: &PrintStmt, _indent_level: &usize) -> Option<()> {
+    fn visit_print_stmt(
+        &mut self,
+        print_stmt: &PrintStmt,
+        _indent_level: &mut usize,
+    ) -> Option<()> {
         self.whitespace();
-        self.print_expr(&print_stmt.expr.0, &0);
+        self.print_expr(&print_stmt.expr.0, &mut 0);
         None
     }
 
-    fn visit_return_stmt(&mut self, return_stmt: &ReturnStmt, indent_level: &usize) -> Option<()> {
+    fn visit_return_stmt(
+        &mut self,
+        return_stmt: &ReturnStmt,
+        indent_level: &mut usize,
+    ) -> Option<()> {
         self.print_expr(&return_stmt.expr.0, indent_level);
         None
     }
 
-    fn visit_while_stmt(&mut self, while_stmt: &WhileStmt, indent_level: &usize) -> Option<()> {
+    fn visit_while_stmt(&mut self, while_stmt: &WhileStmt, indent_level: &mut usize) -> Option<()> {
         self.print_expr(&while_stmt.condition.0, indent_level);
         self.f.write_str(" ").unwrap();
-        self.visit_block_stmt(&while_stmt.body.0, &(indent_level + 1));
+        self.visit_block_stmt(&while_stmt.body.0, &mut indent_level.add(1));
         None
     }
 
-    fn visit_assign_expr(&mut self, assign_expr: &AssignExpr, indent_level: &usize) -> Option<()> {
-        self.print_expr(&assign_expr.target.0, &(indent_level + 1));
-        self.print_expr(&assign_expr.value.0, &(indent_level + 1));
+    fn visit_assign_expr(
+        &mut self,
+        assign_expr: &AssignExpr,
+        indent_level: &mut usize,
+    ) -> Option<()> {
+        self.print_expr(&assign_expr.target.0, &mut indent_level.add(1));
+        self.print_expr(&assign_expr.value.0, &mut indent_level.add(1));
         None
     }
 
-    fn visit_binary_expr(&mut self, binary_expr: &BinaryExpr, indent_level: &usize) -> Option<()> {
+    fn visit_binary_expr(
+        &mut self,
+        binary_expr: &BinaryExpr,
+        indent_level: &mut usize,
+    ) -> Option<()> {
         self.f.write_str(&format!("{:?} ", binary_expr.op)).unwrap();
-        self.print_expr(&binary_expr.left.0, &(indent_level + 1));
-        self.print_expr(&binary_expr.right.0, &(indent_level + 1));
+        self.print_expr(&binary_expr.left.0, &mut indent_level.add(1));
+        self.print_expr(&binary_expr.right.0, &mut indent_level.add(1));
         None
     }
 
-    fn visit_unary_expr(&mut self, unary_expr: &UnaryExpr, indent_level: &usize) -> Option<()> {
+    fn visit_unary_expr(&mut self, unary_expr: &UnaryExpr, indent_level: &mut usize) -> Option<()> {
         self.f.write_str(&format!("{:?} ", unary_expr.op)).unwrap();
-        self.print_expr(&unary_expr.expr.0, &(indent_level + 1));
+        self.print_expr(&unary_expr.expr.0, &mut indent_level.add(1));
         None
     }
 
     fn visit_func_call_expr(
         &mut self,
         func_call_expr: &FuncCallExpr,
-        indent_level: &usize,
+        indent_level: &mut usize,
     ) -> Option<()> {
-        self.visit_expr(&func_call_expr.callee.0, &(indent_level + 1));
+        self.visit_expr(&func_call_expr.callee.0, &mut indent_level.add(1));
         self.f.write_str("(").unwrap();
         let mut first = true;
         for (arg, _) in &func_call_expr.args {
@@ -317,7 +334,7 @@ impl<'a> ASTVisitor<usize, ()> for ASTPrinter<'a> {
     fn visit_member_access_expr(
         &mut self,
         member_access_expr: &MemberAccessExpr,
-        indent_level: &usize,
+        indent_level: &mut usize,
     ) -> Option<()> {
         self.print_expr(&member_access_expr.receiver.0, indent_level);
         self.f.write_str(".").unwrap();
@@ -328,13 +345,13 @@ impl<'a> ASTVisitor<usize, ()> for ASTPrinter<'a> {
     fn visit_primary_expr(
         &mut self,
         primary_expr: &PrimaryExpr,
-        _indent_level: &usize,
+        _indent_level: &mut usize,
     ) -> Option<()> {
         self.f.write_str(&format!("{:?}", primary_expr)).unwrap();
         None
     }
 
-    fn visit_stmt(&mut self, stmt: &Stmt, p: &usize) -> Option<()> {
+    fn visit_stmt(&mut self, stmt: &Stmt, p: &mut usize) -> Option<()> {
         self.print_stmt(stmt, p);
         None
     }

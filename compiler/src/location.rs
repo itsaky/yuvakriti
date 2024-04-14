@@ -74,6 +74,14 @@ impl Position {
         column: -1,
         index: -1,
     };
+
+    pub fn new(line: i32, column: i32, index: i64) -> Position {
+        Position {
+            line,
+            column,
+            index,
+        }
+    }
 }
 
 impl PartialEq<Self> for Position {

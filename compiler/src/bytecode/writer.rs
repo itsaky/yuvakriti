@@ -16,7 +16,6 @@
 use util::matches_any;
 
 use crate::ast;
-use crate::ast::ASTVisitor;
 use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
 use crate::ast::FuncDecl;
@@ -24,6 +23,7 @@ use crate::ast::PrimaryExpr;
 use crate::ast::PrintStmt;
 use crate::ast::Program;
 use crate::ast::Visitable;
+use crate::ast::{ASTVisitor, VarStmt};
 use crate::bytecode::attrs;
 use crate::bytecode::cp::ConstantEntry;
 use crate::bytecode::cp_info::NumberInfo;
@@ -54,7 +54,7 @@ impl YKBFileWriter<'_> {
 
     pub fn write(&mut self, program: &mut Program) {
         let mut fpv = CodeGen::new(&mut self.file, &self.features);
-        program.accept(&mut fpv, &());
+        program.accept(&mut fpv, &mut ());
     }
 }
 
@@ -75,7 +75,7 @@ impl<'a> CodeGen<'a> {
 }
 
 impl ASTVisitor<(), ()> for CodeGen<'_> {
-    fn visit_program(&mut self, program: &Program, p: &()) -> Option<()> {
+    fn visit_program(&mut self, program: &Program, p: &mut ()) -> Option<()> {
         if self
             .file
             .attributes()
@@ -86,7 +86,7 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
             panic!("A YKBFile cannot have multiple Code attributes")
         }
 
-        self.code = Some(attrs::Code::new(0, 0));
+        self.code = Some(attrs::Code::new(0, 0, 0));
 
         self.default_visit_program(program, p, true, false);
         for stmt in &program.stmts {
@@ -107,7 +107,7 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
         None
     }
 
-    fn visit_class_decl(&mut self, class_decl: &ast::ClassDecl, _p: &()) -> Option<()> {
+    fn visit_class_decl(&mut self, class_decl: &ast::ClassDecl, _p: &mut ()) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         let name_index =
             constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&class_decl.name.0)));
@@ -117,7 +117,7 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
         None
     }
 
-    fn visit_func_decl(&mut self, func_decl: &FuncDecl, p: &()) -> Option<()> {
+    fn visit_func_decl(&mut self, func_decl: &FuncDecl, p: &mut ()) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         let name_index = constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&func_decl.name.0)));
         self.file
@@ -127,14 +127,24 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
         self.default_visit_func_decl(func_decl, p)
     }
 
-    fn visit_print_stmt(&mut self, print_stmt: &PrintStmt, p: &()) -> Option<()> {
+    fn visit_var_decl(&mut self, var_decl: &VarStmt, p: &mut ()) -> Option<()> {
+        let mut has_initializer = false;
+        if let Some(expr) = &var_decl.initializer {
+            self.visit_expr(&expr.0, p);
+            has_initializer = true;
+        }
+
+        None
+    }
+
+    fn visit_print_stmt(&mut self, print_stmt: &PrintStmt, p: &mut ()) -> Option<()> {
         self.visit_expr(&print_stmt.expr.0, p);
         let code = self.code.as_mut().unwrap();
         code.push_insns_0(OpCode::Print);
         None
     }
 
-    fn visit_binary_expr(&mut self, binary_expr: &BinaryExpr, p: &()) -> Option<()> {
+    fn visit_binary_expr(&mut self, binary_expr: &BinaryExpr, p: &mut ()) -> Option<()> {
         if self.features.const_folding
             && matches_any!(
                 &binary_expr.op,
@@ -169,7 +179,7 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
         None
     }
 
-    fn visit_primary_expr(&mut self, _primary_expr: &PrimaryExpr, p: &()) -> Option<()> {
+    fn visit_primary_expr(&mut self, _primary_expr: &PrimaryExpr, p: &mut ()) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         let code = self.code.as_mut().unwrap();
         let _: () = match _primary_expr {

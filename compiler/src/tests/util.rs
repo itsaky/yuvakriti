@@ -21,21 +21,28 @@ use crate::ast::ASTPrinter;
 use crate::ast::Program;
 use crate::ast::Visitable;
 use crate::diagnostics;
+use crate::diagnostics::CollectingDiagnosticHandler;
 use crate::lexer::YKLexer;
 use crate::parser::YKParser;
 
+pub(crate) fn parse_1(
+    source: &str,
+    diagnostics: Rc<RefCell<CollectingDiagnosticHandler>>,
+) -> Program {
+    let lexer = YKLexer::new(Cursor::new(source), diagnostics.clone());
+    let mut parser = YKParser::new(lexer, diagnostics.clone());
+    parser.parse()
+}
+
 pub(crate) fn parse(source: &str) -> Program {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let lexer = YKLexer::new(Cursor::new(source), diag_handler.clone());
-
-    let mut parser = YKParser::new(lexer, diag_handler.clone());
-    parser.parse()
+    parse_1(source, diag_handler)
 }
 
 pub(crate) fn node_string(program: &mut Program, pretty: bool) -> String {
     let mut out = String::new();
     let mut printer = ASTPrinter::new(&mut out, pretty);
-    program.accept(&mut printer, &0);
+    program.accept(&mut printer, &mut 0);
     out
 }
 

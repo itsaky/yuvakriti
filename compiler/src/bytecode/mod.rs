@@ -7,6 +7,10 @@ pub use reader::YKBFileReader;
 pub use version::YKBVersion;
 pub use writer::YKBFileWriter;
 
+pub const MAGIC_NUMBER: u32 = 0x59754B72;
+pub const EXT_YK: &str = "yk";
+pub const EXT_YKB: &str = "ykb";
+
 #[cfg(doctest)]
 mod tests;
 
@@ -15,7 +19,6 @@ mod tests;
 
 pub mod attrs;
 pub mod bytes;
-pub mod compiler;
 mod cp;
 pub mod cp_info;
 mod decls;

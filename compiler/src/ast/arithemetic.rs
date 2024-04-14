@@ -32,26 +32,26 @@ impl<'a> ArithmeticASTPrinter<'a> {
 }
 
 impl<'a> ASTVisitor<(), ()> for ArithmeticASTPrinter<'a> {
-    fn visit_binary_expr(&mut self, binary_expr: &BinaryExpr, _p: &()) -> Option<()> {
+    fn visit_binary_expr(&mut self, binary_expr: &BinaryExpr, _p: &mut ()) -> Option<()> {
         self.f.write_str("(").unwrap();
-        self.visit_expr(&binary_expr.left.0, &());
+        self.visit_expr(&binary_expr.left.0, _p);
         self.f
             .write_str(&format!(" {} ", binary_expr.op.sym()))
             .unwrap();
-        self.visit_expr(&binary_expr.right.0, &());
+        self.visit_expr(&binary_expr.right.0, _p);
         self.f.write_str(")").unwrap();
         None
     }
 
-    fn visit_unary_expr(&mut self, unary_expr: &UnaryExpr, _p: &()) -> Option<()> {
+    fn visit_unary_expr(&mut self, unary_expr: &UnaryExpr, _p: &mut ()) -> Option<()> {
         self.f
             .write_str(&format!("{}", unary_expr.op.sym()))
             .unwrap();
-        self.visit_expr(&unary_expr.expr.0, &());
+        self.visit_expr(&unary_expr.expr.0, _p);
         None
     }
 
-    fn visit_primary_expr(&mut self, _primary_expr: &PrimaryExpr, _p: &()) -> Option<()> {
+    fn visit_primary_expr(&mut self, _primary_expr: &PrimaryExpr, _p: &mut ()) -> Option<()> {
         match _primary_expr {
             PrimaryExpr::Number(num) => {
                 let _ = self.f.write_str(&format!("{}", num)).unwrap();
@@ -68,11 +68,11 @@ impl<'a> ASTVisitor<(), ()> for ArithmeticASTPrinter<'a> {
         None
     }
 
-    fn visit_expr(&mut self, expr: &Expr, _p: &()) -> Option<()> {
+    fn visit_expr(&mut self, expr: &Expr, _p: &mut ()) -> Option<()> {
         match expr {
-            Expr::Binary(binary_expr) => self.visit_binary_expr(binary_expr, &()),
-            Expr::Unary(unary_expr) => self.visit_unary_expr(unary_expr, &()),
-            Expr::Primary(primary_expr) => self.visit_primary_expr(&primary_expr.0, &()),
+            Expr::Binary(binary_expr) => self.visit_binary_expr(binary_expr, _p),
+            Expr::Unary(unary_expr) => self.visit_unary_expr(unary_expr, _p),
+            Expr::Primary(primary_expr) => self.visit_primary_expr(&primary_expr.0, _p),
             _ => panic!("Not an arithemetic expression"),
         };
 

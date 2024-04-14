@@ -40,3 +40,8 @@ pub fn err_exp_kywrd(keyword: &str) -> String {
 pub fn err_exp_sym(sym: &str) -> String {
     return format!("expected a '{}'", sym);
 }
+
+// ------------------------ analyzer --------------------------
+pub fn err_dup_var(sym: &str) -> String {
+    return format!("Variable '{}' is already declared", sym);
+}
