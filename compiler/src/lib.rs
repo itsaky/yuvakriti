@@ -17,3 +17,4 @@ mod symtab;
 mod tests;
 #[cfg(doctest)]
 mod tests;
+mod attr;

@@ -16,10 +16,10 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::ast::{ASTVisitor, Visitable};
 use crate::ast::BlockStmt;
 use crate::ast::Program;
 use crate::ast::VarStmt;
-use crate::ast::{ASTVisitor, Visitable};
 use crate::diagnostics::Diagnostic;
 use crate::diagnostics::DiagnosticHandler;
 use crate::diagnostics::DiagnosticKind;
@@ -39,12 +39,28 @@ pub struct Resolve<'inst> {
 impl Resolve<'_> {
     
     /// Create a new instance of the name resolution helper.
-    pub fn new(diagnostics: Rc<RefCell<dyn DiagnosticHandler>>) -> Self {
+    pub fn new<'a>(diagnostics: Rc<RefCell<dyn DiagnosticHandler + 'a>>) -> Resolve<'a> {
         return Resolve {
             diagnostics,
             scope: None,
             has_errors: false,
         };
+    }
+    
+    /// Reset the state of the name resolver.
+    pub fn reset(&mut self) {
+        self.scope = None;
+        self.has_errors = false;
+    }
+
+    /// Returns whether there were any errors during name resolution.
+    pub fn has_errors(&self) -> bool {
+        return self.has_errors;
+    }
+
+    pub fn analyze(&mut self, program: &mut Program) {
+        let mut scope = Scope::new();
+        program.accept(self, &mut scope);
     }
 
     fn report_err(&mut self, range: &Range, msg: &str) {
@@ -54,15 +70,6 @@ impl Resolve<'_> {
             range: range.clone(),
             message: msg.to_string(),
         });
-    }
-
-    pub fn has_errors(&self) -> bool {
-        return self.has_errors;
-    }
-
-    pub fn analyze(&mut self, program: &mut Program) {
-        let mut scope = Scope::new();
-        program.accept(self, &mut scope);
     }
 }
 

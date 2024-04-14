@@ -21,18 +21,17 @@ use std::rc::Rc;
 use log::debug;
 use log::error;
 use log::info;
-use crate::resolve::Resolve;
 
 use crate::args::CompileArgs;
+use crate::attr::Attr;
+use crate::bytecode::{YKBFile, YKBFileWriter, YKBVersion};
+use crate::bytecode::EXT_YK;
+use crate::bytecode::EXT_YKB;
 use crate::diagnostics::collecting_handler;
 use crate::diagnostics::CollectingDiagnosticHandler;
 use crate::features::CompilerFeatures;
 use crate::lexer::YKLexer;
 use crate::parser::YKParser;
-
-use crate::bytecode::EXT_YK;
-use crate::bytecode::EXT_YKB;
-use crate::bytecode::{YKBFile, YKBFileWriter, YKBVersion};
 
 // Compiles source files into bytecode.
 pub struct YKCompiler {
@@ -83,9 +82,9 @@ impl YKCompiler {
         let mut program = parser.parse();
         let mut has_errors = parser.has_errors();
 
-        let mut analyzer = Resolve::new(self.diagnostics.clone());
-        analyzer.analyze(&mut program);
-        has_errors |= analyzer.has_errors();
+        let mut attr = Attr::new(self.diagnostics.clone());
+        attr.analyze(&mut program);
+        has_errors |= attr.has_errors();
 
         if has_errors {
             info!("[{:?}] Compilation failed", display);
