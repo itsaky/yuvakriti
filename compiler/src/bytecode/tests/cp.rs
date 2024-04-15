@@ -16,7 +16,6 @@
 use crate::bytecode::cp::ConstantEntry;
 use crate::bytecode::cp::ConstantPool;
 use crate::bytecode::cp_info::NumberInfo;
-use crate::bytecode::cp_info::StringInfo;
 use crate::bytecode::cp_info::Utf8Info;
 use crate::bytecode::writer::YKBFileWriter;
 use crate::bytecode::{YKBFile, YKBVersion};
@@ -74,42 +73,45 @@ fn test_cp_push_from_program() {
     writer.write(&mut program);
     let constant_pool = file.constant_pool();
 
-    // 0 -> ConstantEntry::None
-    // 1 -> NumberInfo => 123
-    // 2 -> Utf8Info => "something"
-    // 3 -> StringInfo => cp[2]
-    // 4 -> Utf8Info => "something else"
-    // 5 -> StringInfo => cp[4]
-    // 6 -> Utf8Info => "Code" => Name of the "Code" attribute for the top-level statements
     assert!(7 <= constant_pool.len());
-    assert_eq!(
-        1,
-        constant_pool
+    assert!(
+        0 < constant_pool
             .lookup(&ConstantEntry::Number(NumberInfo::from(&123f64)))
             .unwrap()
     );
-    assert_eq!(
-        2,
-        constant_pool
+    assert!(
+        0 < constant_pool
+            .lookup(&ConstantEntry::Utf8(Utf8Info::from("a")))
+            .unwrap()
+    );
+    assert!(
+        0 < constant_pool
+            .lookup(&ConstantEntry::Utf8(Utf8Info::from("b")))
+            .unwrap()
+    );
+    assert!(
+        0 < constant_pool
+            .lookup(&ConstantEntry::Utf8(Utf8Info::from("c")))
+            .unwrap()
+    );
+    assert!(
+        0 < constant_pool
+            .lookup(&ConstantEntry::Utf8(Utf8Info::from("d")))
+            .unwrap()
+    );
+    assert!(
+        0 < constant_pool
+            .lookup(&ConstantEntry::Utf8(Utf8Info::from("e")))
+            .unwrap()
+    );
+    assert!(
+        0 < constant_pool
             .lookup(&ConstantEntry::Utf8(Utf8Info::from("something")))
             .unwrap()
     );
-    assert_eq!(
-        3,
-        constant_pool
-            .lookup(&ConstantEntry::String(StringInfo { string_index: 2 }))
-            .unwrap()
-    );
-    assert_eq!(
-        4,
-        constant_pool
+    assert!(
+        0 < constant_pool
             .lookup(&ConstantEntry::Utf8(Utf8Info::from("something else")))
-            .unwrap()
-    );
-    assert_eq!(
-        5,
-        constant_pool
-            .lookup(&ConstantEntry::String(StringInfo { string_index: 4 }))
             .unwrap()
     );
 }

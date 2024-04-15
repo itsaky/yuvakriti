@@ -17,28 +17,23 @@ use std::cell::RefCell;
 use std::io::Read;
 use std::rc::Rc;
 
-use crate::ast::BinaryOp;
-use crate::ast::BlockStmt;
-use crate::ast::Decl;
-use crate::ast::DeclS;
-use crate::ast::Expr;
-use crate::ast::ExprS;
 use crate::ast::ExprStmt;
 use crate::ast::ForStmt;
 use crate::ast::FuncDecl;
-use crate::ast::Identifier;
 use crate::ast::IfStmt;
-use crate::ast::PrimaryExpr;
 use crate::ast::PrintStmt;
 use crate::ast::Program;
 use crate::ast::ReturnStmt;
-use crate::ast::Spanned;
 use crate::ast::Stmt;
 use crate::ast::UnaryExpr;
 use crate::ast::UnaryOp;
 use crate::ast::VarStmt;
 use crate::ast::WhileStmt;
-use crate::ast::{BinaryExpr, StmtS};
+use crate::ast::{AssignExpr, Expr};
+use crate::ast::{BinaryExpr, IdentifierExpr};
+use crate::ast::{BinaryOp, Spanned};
+use crate::ast::{BlockStmt, SpannedMut};
+use crate::ast::{Decl, LiteralExpr};
 use crate::diagnostics::Diagnostic;
 use crate::diagnostics::DiagnosticHandler;
 use crate::diagnostics::DiagnosticKind;
@@ -122,8 +117,8 @@ impl<R: Read> YKParser<'_, R> {
 impl<R: Read> YKParser<'_, R> {
     /// Parses the input source and returns the resulting [Program].
     pub fn parse(&mut self) -> Program {
-        let mut decls: Vec<DeclS> = Vec::new();
-        let mut stmts: Vec<StmtS> = Vec::new();
+        let mut decls: Vec<Decl> = Vec::new();
+        let mut stmts: Vec<Stmt> = Vec::new();
         loop {
             if self.peek().is_none() {
                 // reached EOF
@@ -131,8 +126,8 @@ impl<R: Read> YKParser<'_, R> {
             }
 
             if let Some(node) = self.decl() {
-                if let Decl::Stmt(stmt) = node.0 {
-                    stmts.push((stmt, node.1));
+                if let Decl::Stmt(stmt) = node {
+                    stmts.push(stmt);
                 } else {
                     decls.push(node)
                 }
@@ -142,11 +137,11 @@ impl<R: Read> YKParser<'_, R> {
             break;
         }
 
-        return Program { decls, stmts };
+        return Program::new(decls, stmts, Range::NO_RANGE);
     }
 
     /// Returns the next declaration in the input source.
-    fn decl(&mut self) -> Option<DeclS> {
+    fn decl(&mut self) -> Option<Decl> {
         let token = self.peek();
         return match token {
             Some(token) => match token.token_type {
@@ -166,52 +161,44 @@ impl<R: Read> YKParser<'_, R> {
         };
     }
 
-    fn var_stmt(&mut self) -> Option<VarStmt> {
-        return self.var_stmts().map(|stmts| stmts.0);
-    }
-
     /// Returns the next variable declaration in the input source.
-    fn var_stmts(&mut self) -> Option<Spanned<VarStmt>> {
+    fn var_stmt(&mut self) -> Option<VarStmt> {
         let var = self.accept(TokenType::Var, &err_exp_kywrd("var"))?;
         let mut range = var.range;
         let var_name = self.accept(TokenType::Identifier, messages::PARS_EXPECTED_VAR_NAME)?;
         range.set_end(&var_name.range);
 
-        let mut init: Option<ExprS> = None;
+        let mut init: Option<Expr> = None;
         if self.tmatch(&TokenType::Eq) != None {
             init = self.expr();
             if let Some(expr) = &init {
-                range.set_end(&expr.1);
+                range.set_end(&expr.range());
             }
         }
 
-        Some((
-            VarStmt {
-                name: (var_name.text, var_name.range),
-                initializer: init,
-            },
+        Some(VarStmt::new(
+            IdentifierExpr::new(var_name.text, var_name.range),
+            init,
             range,
         ))
     }
 
-    fn fun_decl(&mut self) -> Option<DeclS> {
+    fn fun_decl(&mut self) -> Option<Decl> {
         let mut fun = self.accept(TokenType::Fun, &err_exp_kywrd("fun"))?;
         let fun_name = self.accept(TokenType::Identifier, messages::PARS_EXPECTED_FUN_NAME)?;
         let params = self.fun_params()?;
         let body = self.block()?;
-        let end = body.1.end;
+        let end = body.range().end;
 
-        Some((
-            Decl::Func(FuncDecl {
-                name: (fun_name.text, fun_name.range),
-                params,
-                body,
-            }),
+        Some(Decl::Func(FuncDecl::new(
+            IdentifierExpr::new(fun_name.text, fun_name.range),
+            params,
+            body,
             fun.range.set_end_pos(&end),
-        ))
+        )))
     }
 
-    fn fun_params(&mut self) -> Option<Vec<Identifier>> {
+    fn fun_params(&mut self) -> Option<Vec<IdentifierExpr>> {
         self.accept(TokenType::LParen, &err_exp_sym("("))?;
         let mut params = Vec::new();
         if self.peek()?.token_type == TokenType::RParen {
@@ -224,7 +211,7 @@ impl<R: Read> YKParser<'_, R> {
             let param = self
                 .accept(TokenType::Identifier, messages::PARS_EXPECTED_PARAM_NAME)
                 .unwrap();
-            params.push((param.text, param.range));
+            params.push(IdentifierExpr::new(param.text, param.range));
             if self.tmatch(&TokenType::Comma).is_none() {
                 break;
             }
@@ -235,7 +222,7 @@ impl<R: Read> YKParser<'_, R> {
         return Some(params);
     }
 
-    fn block(&mut self) -> Option<Spanned<BlockStmt>> {
+    fn block(&mut self) -> Option<BlockStmt> {
         let mut start = self.accept(TokenType::LBrace, &err_exp_sym("{"))?.range;
 
         let mut decls = Vec::with_capacity(0);
@@ -253,13 +240,12 @@ impl<R: Read> YKParser<'_, R> {
 
         let rbrace = self.accept(TokenType::RBrace, &err_exp_sym("}"))?;
 
-        Some((BlockStmt { decls }, start.set_end(&rbrace.range)))
+        Some(BlockStmt::new(decls, start.set_end(&rbrace.range)))
     }
 
-    fn try_parse_stmt_decl(&mut self) -> Option<DeclS> {
+    fn try_parse_stmt_decl(&mut self) -> Option<Decl> {
         let token = self.peek()?;
         let token_type = &token.token_type;
-        let mut range = token.range;
 
         let mut req_semi = false;
 
@@ -275,37 +261,20 @@ impl<R: Read> YKParser<'_, R> {
                     TokenType::Print => self.print_stmt().map(|stmt| Stmt::Print(stmt)),
                     TokenType::Return => self.return_stmt().map(|stmt| Stmt::Return(stmt)),
                     TokenType::Var => self.var_stmt().map(|stmt| Stmt::Var(stmt)),
-                    _ => self.expr().map(|expr| Stmt::Expr(ExprStmt { expr })),
+                    _ => self.expr().map(|expr| Stmt::Expr(ExprStmt::from(expr))),
                 }
             }
         }?;
-
-        let end = &match stmt {
-            Stmt::Print(ref print) => print.expr.1,
-            Stmt::For(ref for_stmt) => for_stmt.body.1,
-            Stmt::Expr(ref expr) => expr.expr.1,
-            Stmt::If(ref fi) => fi.else_branch.as_ref().unwrap_or(&fi.then_branch).1,
-            Stmt::Return(ref ret) => ret.expr.1,
-            Stmt::While(ref whil) => whil.body.1,
-            Stmt::Var(ref var) => {
-                if let Some(init) = &var.initializer {
-                    init.1
-                } else {
-                    var.name.1
-                }
-            }
-            Stmt::Block(ref blk) => blk.1,
-        };
 
         if req_semi {
             self.accept(TokenType::Semicolon, &err_exp_sym(";"))?;
         }
 
-        return Some((Decl::Stmt(stmt), range.set_end(end)));
+        return Some(Decl::Stmt(stmt));
     }
 
     fn print_stmt(&mut self) -> Option<PrintStmt> {
-        self.accept(TokenType::Print, &err_exp_kywrd("print"))?;
+        let token = self.accept(TokenType::Print, &err_exp_kywrd("print"))?;
         let expro = self.expr();
         if expro.is_none() {
             self.report(DiagnosticKind::Error, messages::PARS_EXPECTED_EXPR);
@@ -313,22 +282,23 @@ impl<R: Read> YKParser<'_, R> {
         }
 
         let expr = expro.unwrap();
+        let range = token.range.clone().set_end(expr.range());
 
-        Some(PrintStmt { expr })
+        Some(PrintStmt::new(expr, range))
     }
 
     fn for_stmt(&mut self) -> Option<ForStmt> {
-        self.accept(TokenType::For, &err_exp_kywrd("for"))?;
+        let start = self.accept(TokenType::For, &err_exp_kywrd("for"))?;
         self.accept(TokenType::LParen, &err_exp_sym("("))?;
 
         let token = self.peek()?;
 
         let init = if token.token_type == TokenType::Var {
-            self.var_stmts().map(|var| (Stmt::Var(var.0), var.1))
+            self.var_stmt().map(|var| Stmt::Var(var))
         } else {
-            self.expr().map(|expr| {
-                let range = expr.1;
-                (Stmt::Expr(ExprStmt { expr }), range)
+            self.expr().map(|mut expr| {
+                let range = expr.range_mut().to_owned();
+                Stmt::Expr(ExprStmt::new(expr, range))
             })
         };
 
@@ -346,16 +316,14 @@ impl<R: Read> YKParser<'_, R> {
             return None;
         }
 
-        return Some(ForStmt {
-            init,
-            condition,
-            step,
-            body: body.unwrap(),
-        });
+        let body = body.unwrap();
+        let range = start.range.clone().set_end(body.range());
+
+        return Some(ForStmt::new(init, condition, step, body, range));
     }
 
     fn if_stmt(&mut self) -> Option<IfStmt> {
-        self.accept(TokenType::If, &err_exp_kywrd("if"))?;
+        let token = self.accept(TokenType::If, &err_exp_kywrd("if"))?;
         self.tmatch(&TokenType::LParen);
         let condition = self.expr();
         self.tmatch(&TokenType::RParen);
@@ -375,15 +343,21 @@ impl<R: Read> YKParser<'_, R> {
             }
         }
 
-        return Some(IfStmt {
-            condition: condition.unwrap(),
-            then_branch: body.unwrap(),
-            else_branch: else_body,
-        });
+        let body = body.unwrap();
+        let mut range = Range::new();
+        range.update_range(body.range());
+
+        if else_body.is_some() {
+            range.update_range(else_body.as_ref().unwrap().range());
+        }
+
+        range.set_start(&token.range);
+
+        return Some(IfStmt::new(condition.unwrap(), body, else_body, range));
     }
 
     fn while_stmt(&mut self) -> Option<WhileStmt> {
-        self.accept(TokenType::While, &err_exp_kywrd("while"))?;
+        let token = self.accept(TokenType::While, &err_exp_kywrd("while"))?;
         self.tmatch(&TokenType::LParen);
         let condition = self.expr();
         self.tmatch(&TokenType::RParen);
@@ -394,38 +368,41 @@ impl<R: Read> YKParser<'_, R> {
             return None;
         }
 
-        return Some(WhileStmt {
-            condition: condition.unwrap(),
-            body: body.unwrap(),
-        });
+        let body = body.unwrap();
+        let mut range = Range::from(body.range());
+        range.set_start(&token.range);
+
+        return Some(WhileStmt::new(condition.unwrap(), body, range));
     }
 
     fn return_stmt(&mut self) -> Option<ReturnStmt> {
-        self.accept(TokenType::Return, &err_exp_kywrd("return"))?;
+        let token = self.accept(TokenType::Return, &err_exp_kywrd("return"))?;
         let expr = self.expr();
         if expr.is_none() {
             self.report(DiagnosticKind::Error, messages::PARS_EXPECTED_EXPR);
             return None;
         }
 
-        Some(ReturnStmt {
-            expr: expr.unwrap(),
-        })
+        let expr = expr.unwrap();
+        let mut range = Range::from(expr.range());
+        range.set_start(&token.range);
+
+        Some(ReturnStmt::new(expr, range))
     }
 
-    fn expr(&mut self) -> Option<ExprS> {
+    fn expr(&mut self) -> Option<Expr> {
         self.assign()
     }
 
-    fn assign(&mut self) -> Option<ExprS> {
+    fn assign(&mut self) -> Option<Expr> {
         self.gen_binary_expr(&Self::or, &TokenType::Eq, &BinaryOp::Eq, &Self::assign)
     }
 
-    fn or(&mut self) -> Option<ExprS> {
+    fn or(&mut self) -> Option<Expr> {
         self.gen_binary_expr(&Self::and, &TokenType::Or, &BinaryOp::Or, &Self::and)
     }
 
-    fn and(&mut self) -> Option<ExprS> {
+    fn and(&mut self) -> Option<Expr> {
         self.gen_binary_expr(
             &Self::equality,
             &TokenType::And,
@@ -434,7 +411,7 @@ impl<R: Read> YKParser<'_, R> {
         )
     }
 
-    fn equality(&mut self) -> Option<ExprS> {
+    fn equality(&mut self) -> Option<Expr> {
         self.gen_binary_expr_multi_op(
             &Self::comparison,
             &[TokenType::EqEq, TokenType::BangEq],
@@ -443,7 +420,7 @@ impl<R: Read> YKParser<'_, R> {
         )
     }
 
-    fn comparison(&mut self) -> Option<ExprS> {
+    fn comparison(&mut self) -> Option<Expr> {
         self.gen_binary_expr_multi_op(
             &Self::term,
             &[
@@ -457,7 +434,7 @@ impl<R: Read> YKParser<'_, R> {
         )
     }
 
-    fn term(&mut self) -> Option<ExprS> {
+    fn term(&mut self) -> Option<Expr> {
         self.gen_binary_expr_multi_op(
             &Self::factor,
             &[TokenType::Plus, TokenType::Minus],
@@ -466,7 +443,7 @@ impl<R: Read> YKParser<'_, R> {
         )
     }
 
-    fn factor(&mut self) -> Option<ExprS> {
+    fn factor(&mut self) -> Option<Expr> {
         self.gen_binary_expr_multi_op(
             &Self::unary,
             &[TokenType::Asterisk, TokenType::Slash],
@@ -475,7 +452,7 @@ impl<R: Read> YKParser<'_, R> {
         )
     }
 
-    fn unary(&mut self) -> Option<ExprS> {
+    fn unary(&mut self) -> Option<Expr> {
         if let Some(op) = self.tmatch_any(&[TokenType::Bang, TokenType::Minus]) {
             return self.unary_op(&op);
         }
@@ -483,40 +460,28 @@ impl<R: Read> YKParser<'_, R> {
         self.primary()
     }
 
-    fn primary(&mut self) -> Option<ExprS> {
+    fn primary(&mut self) -> Option<Expr> {
         if let Some(token) = self.advance() {
             match token.token_type {
-                TokenType::True => Some((
-                    Expr::Primary(Box::new((PrimaryExpr::True, token.range))),
+                TokenType::True => Some(Expr::Literal(LiteralExpr::Bool((true, token.range)))),
+                TokenType::False => Some(Expr::Literal(LiteralExpr::Bool((false, token.range)))),
+                TokenType::Nil => Some(Expr::Literal(LiteralExpr::Nil(((), token.range)))),
+                TokenType::Number => Some(Expr::Literal(LiteralExpr::Number((
+                    token.text.parse().unwrap(),
                     token.range,
-                )),
-                TokenType::False => Some((
-                    Expr::Primary(Box::new((PrimaryExpr::False, token.range))),
+                )))),
+                TokenType::String => Some(Expr::Literal(LiteralExpr::String((
+                    token.text,
                     token.range,
-                )),
-                TokenType::Nil => Some((
-                    Expr::Primary(Box::new((PrimaryExpr::Nil, token.range))),
+                )))),
+                TokenType::This => Some(Expr::Identifier(IdentifierExpr::new(
+                    String::from("this"),
                     token.range,
-                )),
-                TokenType::This => Some((
-                    Expr::Primary(Box::new((PrimaryExpr::This, token.range))),
+                ))),
+                TokenType::Identifier => Some(Expr::Identifier(IdentifierExpr::new(
+                    token.text,
                     token.range,
-                )),
-                TokenType::Number => Some((
-                    Expr::Primary(Box::new((
-                        PrimaryExpr::Number(token.text.parse().unwrap()),
-                        token.range,
-                    ))),
-                    token.range,
-                )),
-                TokenType::String => Some((
-                    Expr::Primary(Box::new((PrimaryExpr::String(token.text), token.range))),
-                    token.range,
-                )),
-                TokenType::Identifier => Some((
-                    Expr::Primary(Box::new((PrimaryExpr::Identifier(token.text), token.range))),
-                    token.range,
-                )),
+                ))),
                 TokenType::LParen => self.grouping(),
                 _ => {
                     self.report(DiagnosticKind::Error, messages::PARS_EXPECTED_EXPR);
@@ -531,11 +496,11 @@ impl<R: Read> YKParser<'_, R> {
 
     fn gen_binary_expr(
         &mut self,
-        left_expr: &dyn Fn(&mut Self) -> Option<ExprS>,
+        left_expr: &dyn Fn(&mut Self) -> Option<Expr>,
         token_op: &TokenType,
         binary_op: &BinaryOp,
-        right_expr: &dyn Fn(&mut Self) -> Option<ExprS>,
-    ) -> Option<ExprS> {
+        right_expr: &dyn Fn(&mut Self) -> Option<Expr>,
+    ) -> Option<Expr> {
         let mut expr = left_expr(self)?;
 
         while let Some(eq) = self.tmatch(token_op) {
@@ -547,11 +512,11 @@ impl<R: Read> YKParser<'_, R> {
 
     fn gen_binary_expr_multi_op(
         &mut self,
-        left_expr: &dyn Fn(&mut Self) -> Option<ExprS>,
+        left_expr: &dyn Fn(&mut Self) -> Option<Expr>,
         token_op: &[TokenType],
         binary_op: &[BinaryOp],
-        right_expr: &dyn Fn(&mut Self) -> Option<ExprS>,
-    ) -> Option<ExprS> {
+        right_expr: &dyn Fn(&mut Self) -> Option<Expr>,
+    ) -> Option<Expr> {
         if token_op.len() != binary_op.len() {
             panic!("token_op and binary_op must have same length");
         }
@@ -571,44 +536,46 @@ impl<R: Read> YKParser<'_, R> {
 
     fn binary_expr(
         &mut self,
-        left: ExprS,
+        left: Expr,
         _op: Token,
         op_type: &BinaryOp,
-        next_expr_fn: &dyn Fn(&mut Self) -> Option<ExprS>,
-    ) -> Option<ExprS> {
-        let (right, right_range) = next_expr_fn(self)?;
+        next_expr_fn: &dyn Fn(&mut Self) -> Option<Expr>,
+    ) -> Option<Expr> {
+        let right = next_expr_fn(self)?;
         let mut range = Range::new();
-        range.set_start(&left.1);
-        range.set_end(&right_range);
+        range.set_start(&left.range());
+        range.set_end(&right.range());
 
-        let binary = BinaryExpr {
-            left,
-            op: op_type.clone(),
-            right: (right, right_range),
+        let expr: Expr = if op_type == &BinaryOp::Eq {
+            Expr::Assign(Box::from(AssignExpr::new(left, right, range)))
+        } else {
+            Expr::Binary(Box::from(BinaryExpr::new(
+                left,
+                op_type.clone(),
+                right,
+                range,
+            )))
         };
 
-        Some((Expr::Binary(Box::new(binary)), range))
+        Some(expr)
     }
 
-    fn unary_op(&mut self, op: &Token) -> Option<ExprS> {
+    fn unary_op(&mut self, op: &Token) -> Option<Expr> {
         if let Some(expr) = self.expr() {
             let mut range = Range::new();
             range.set_start(&op.range);
-            range.set_end(&expr.1);
+            range.set_end(&expr.range());
 
-            let unary = UnaryExpr {
-                op: UnaryOp::from_token(&op).unwrap(),
-                expr,
-            };
+            let unary = UnaryExpr::new(UnaryOp::from_token(&op).unwrap(), expr, range);
 
-            return Some((Expr::Unary(Box::new(unary)), range));
+            return Some(Expr::Unary(Box::from(unary)));
         }
 
         self.report(DiagnosticKind::Error, messages::PARS_EXPECTED_EXPR);
         return None;
     }
 
-    fn grouping(&mut self) -> Option<ExprS> {
+    fn grouping(&mut self) -> Option<Expr> {
         if let Some(expr) = self.expr() {
             if self.tmatch(&TokenType::RParen).is_some() {
                 return Some(expr);

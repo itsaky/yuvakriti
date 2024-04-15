@@ -28,11 +28,101 @@ mod arithemetic;
 mod pretty;
 mod visitor;
 
-pub type Spanned<T> = (T, Range);
-pub type StmtS = Spanned<Stmt>;
-pub type ExprS = Spanned<Expr>;
-pub type DeclS = Spanned<Decl>;
-pub type Identifier = Spanned<String>;
+macro_rules! def_node {
+    ($name:ident {
+        $($prop:ident: $ty:ty $(,)?)*
+    }) => {
+        #[derive(Clone, Debug, PartialEq)]
+        pub struct $name {
+            $(pub $prop: $ty,)*
+            range: Range
+        }
+
+        impl $name {
+            pub fn new($($prop: $ty,)* range: Range) -> Self {
+                Self { $($prop,)* range }
+            }
+        }
+    };
+}
+
+macro_rules! def_enum {
+    ($name:ident {
+        $($prop:ident $(: $ty:ty)?,)+
+    }) => {
+        #[derive(Clone, Debug, PartialEq)]
+        pub enum $name {
+            $( $prop $(($ty))? ),+
+        }
+
+        #[allow(non_snake_case)]
+        impl $name {
+            $( pub fn $prop (&self) -> Option<&$($ty)?> {
+                if let $name::$prop(node) = self {
+                    return Some(node);
+                }
+
+                None
+            })+
+        }
+
+        impl AstNode for $name {
+            fn typ(&self) -> NodeType {
+                match self {
+                    $($name::$prop(node) => node.typ(),)*
+                }
+            }
+        }
+
+        impl Spanned for $name {
+            fn range(&self) -> &Range {
+                match self {
+                    $($name::$prop(node) => node.range(),)*
+                }
+            }
+        }
+
+        impl SpannedMut for $name {
+            fn range_mut(&mut self) -> &mut Range {
+                match self {
+                    $($name::$prop(node) => node.range_mut(),)*
+                }
+            }
+        }
+
+        impl Visitable for $name {
+            fn accept<P, R>(&self, visitor: &mut (impl ASTVisitor<P, R> + ?Sized), p: &mut P) -> Option<R> {
+                match self {
+                    $($name::$prop(node) => node.accept(visitor, p),)*
+                }
+            }
+        }
+    };
+}
+
+macro_rules! impl_node {
+    ($node_type:ident) => {
+        impl AstNode for $node_type {
+            fn typ(&self) -> NodeType {
+                NodeType::$node_type
+            }
+        }
+
+        impl Spanned for $node_type {
+            fn range(&self) -> &Range {
+                &self.range
+            }
+        }
+
+        impl SpannedMut for $node_type {
+            fn range_mut(&mut self) -> &mut Range {
+                &mut self.range
+            }
+        }
+    };
+}
+
+pub type SpannedNode<T> = (T, Range);
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum NodeType {
@@ -52,7 +142,9 @@ pub enum NodeType {
     UnaryExpr,
     FuncCallExpr,
     MemberAccessExpr,
-    PrimaryExpr,
+    IdentifierExpr,
+    LiteralExpr,
+    GroupingExpr,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -67,206 +159,215 @@ pub enum DeclType {
     MethodLevel,
 }
 
+pub trait Spanned {
+    fn range(self: &Self) -> &Range;
+}
+
+pub trait SpannedMut {
+    fn range_mut(self: &mut Self) -> &mut Range;
+}
+
 /// An AST node.
-pub trait AstNode {
+pub trait AstNode: Spanned {
     fn typ(self: &Self) -> NodeType;
 }
 
 /// An [ASTNode] which can be visited
 pub trait Visitable {
-    fn accept<P, R>(self: &mut Self, visitor: &mut impl ASTVisitor<P, R>, p: &mut P) -> Option<R>;
+    fn accept<P, R>(
+        self: &Self,
+        visitor: &mut (impl ASTVisitor<P, R> + ?Sized),
+        p: &mut P,
+    ) -> Option<R>;
 }
 
-/// Program : (Declaration)*
-#[derive(Clone, Debug, PartialEq)]
-pub struct Program {
-    pub decls: Vec<DeclS>,
-    pub stmts: Vec<StmtS>,
+def_node!(Program {
+    decls: Vec<Decl>,
+    stmts: Vec<Stmt>,
+});
+
+def_enum!(Decl {
+    Class: ClassDecl,
+    Func: FuncDecl,
+    Stmt: Stmt,
+});
+
+def_node!(ClassDecl {
+    name: IdentifierExpr,
+    supercls: Option<IdentifierExpr>,
+    methods: Vec<FuncDecl>,
+    decl_type: DeclType,
+});
+
+def_node!(FuncDecl {
+    name: IdentifierExpr,
+    params: Vec<IdentifierExpr>,
+    body: BlockStmt,
+});
+
+def_node!(DeclStmt {
+    decl: Decl,
+    typ: DeclType,
+});
+
+def_enum!(Stmt {
+    Expr: ExprStmt,
+    For: Box<ForStmt>,
+    If: IfStmt,
+    Print: PrintStmt,
+    Return: ReturnStmt,
+    While: WhileStmt,
+    Var: VarStmt,
+    Block: BlockStmt,
+});
+
+def_node!(VarStmt {
+    name: IdentifierExpr,
+    initializer: Option<Expr>,
+});
+
+def_node!(BlockStmt {
+    decls: Vec<Decl>,
+});
+
+def_node!(ExprStmt { expr: Expr });
+
+impl From<Expr> for ExprStmt {
+    fn from(value: Expr) -> Self {
+        let range = value.range().clone();
+        return Self::new(value, range);
+    }
 }
 
-/// Decl : ClassDecl
-///        | FuncDecl
-///        | VarDecl
-///        | Stmt
-#[derive(Clone, Debug, PartialEq)]
-pub enum Decl {
-    Class(ClassDecl),
-    Func(FuncDecl),
-    Stmt(Stmt),
+def_node!(ForStmt {
+    init: Option<Stmt>,
+    condition: Option<Expr>,
+    step: Option<Expr>,
+    body: BlockStmt,
+});
+
+def_node!(IfStmt {
+    condition: Expr,
+    then_branch: BlockStmt,
+    else_branch: Option<BlockStmt>,
+});
+
+def_node!(PrintStmt { expr: Expr });
+
+def_node!(ReturnStmt { expr: Expr });
+
+def_node!(WhileStmt {
+    condition: Expr,
+    body: BlockStmt,
+});
+
+def_enum!(Expr {
+    Assign: Box<AssignExpr>,
+    Binary: Box<BinaryExpr>,
+    Unary: Box<UnaryExpr>,
+    FuncCall: Box<FuncCallExpr>,
+    MemberAccess: Box<MemberAccessExpr>,
+    Identifier: IdentifierExpr,
+    Literal: LiteralExpr,
+    Grouping: GroupingExpr,
+});
+
+def_node!(AssignExpr {
+    target: Expr,
+    value: Expr,
+});
+
+def_node!(BinaryExpr {
+    left: Expr,
+    op: BinaryOp,
+    right: Expr,
+});
+
+def_node!(UnaryExpr {
+    op: UnaryOp,
+    expr: Expr,
+});
+
+def_node!(FuncCallExpr {
+    callee: Expr,
+    args: Vec<Expr>,
+});
+
+def_node!(MemberAccessExpr {
+    receiver: Expr,
+    member: IdentifierExpr,
+});
+
+def_node!(IdentifierExpr { name: String });
+
+def_node!(GroupingExpr { expr: Box<Expr> });
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum LiteralExpr {
+    Nil(SpannedNode<()>),
+    Bool(SpannedNode<bool>),
+    Number(SpannedNode<f64>),
+    String(SpannedNode<String>),
 }
 
-/// ClassDecl : "class" IDENTIFIER ( ":" IDENTIFIER )? "{" ( FuncDecl )* "}"
-#[derive(Clone, Debug, PartialEq)]
-pub struct ClassDecl {
-    pub name: Identifier,
-    pub supercls: Option<Identifier>,
-    pub methods: Vec<Spanned<FuncDecl>>,
-    pub decl_type: DeclType,
+#[allow(non_snake_case)]
+impl LiteralExpr {
+    pub fn Bool(&self) -> Option<&SpannedNode<bool>> {
+        if let LiteralExpr::Bool(s) = self {
+            return Some(s);
+        }
+        None
+    }
+
+    pub fn Number(&self) -> Option<&SpannedNode<f64>> {
+        if let LiteralExpr::Number(s) = self {
+            return Some(s);
+        }
+        None
+    }
+
+    pub fn String(&self) -> Option<&SpannedNode<String>> {
+        if let LiteralExpr::String(s) = self {
+            return Some(s);
+        }
+        None
+    }
 }
 
-/// FuncDecl : "fun" IDENTIFIER "(" ( IDENTIFIER )? ")" BlockStmt
-#[derive(Clone, Debug, PartialEq)]
-pub struct FuncDecl {
-    pub name: Identifier,
-    pub params: Vec<Identifier>,
-    pub body: Spanned<BlockStmt>,
+impl AstNode for LiteralExpr {
+    fn typ(&self) -> NodeType {
+        NodeType::LiteralExpr
+    }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct DeclStmt {
-    pub decl: DeclS,
-    pub typ: DeclType,
+impl Spanned for LiteralExpr {
+    fn range(self: &Self) -> &Range {
+        match self {
+            LiteralExpr::Nil(s) => &s.1,
+            LiteralExpr::Bool(s) => &s.1,
+            LiteralExpr::Number(s) => &s.1,
+            LiteralExpr::String(s) => &s.1,
+        }
+    }
 }
 
-/// Stmt : ExprStmt
-///       | ForStmt
-///       | IfStmt
-///       | PrintStmt
-///       | ReturnStmt
-///       | WhileStmt
-///       | Block
-#[derive(Clone, Debug, PartialEq)]
-pub enum Stmt {
-    Expr(ExprStmt),
-    For(Box<ForStmt>),
-    If(IfStmt),
-    Print(PrintStmt),
-    Return(ReturnStmt),
-    While(WhileStmt),
-    Var(VarStmt),
-    Block(Spanned<BlockStmt>),
+impl SpannedMut for LiteralExpr {
+    fn range_mut(self: &mut Self) -> &mut Range {
+        match self {
+            LiteralExpr::Nil(s) => &mut s.1,
+            LiteralExpr::Bool(s) => &mut s.1,
+            LiteralExpr::Number(s) => &mut s.1,
+            LiteralExpr::String(s) => &mut s.1,
+        }
+    }
 }
 
-/// VarDecl : "var" IDENTIFIER ("=" Expr)?
-#[derive(Clone, Debug, PartialEq)]
-pub struct VarStmt {
-    pub name: Identifier,
-    pub initializer: Option<ExprS>,
-}
-
-/// BlockStmt : "{" ( Decl )* "}"
-#[derive(Clone, Debug, PartialEq)]
-pub struct BlockStmt {
-    pub decls: Vec<DeclS>,
-}
-
-/// ExprStmt : Expr
-#[derive(Clone, Debug, PartialEq)]
-pub struct ExprStmt {
-    pub expr: ExprS,
-}
-
-/// ForStmt : "for" "(" ( Expr | VarDecl )? ";" ( Expr )? ";" ( Expr )? ")" Stmt
-#[derive(Clone, Debug, PartialEq)]
-pub struct ForStmt {
-    pub init: Option<StmtS>,
-    pub condition: Option<ExprS>,
-    pub step: Option<ExprS>,
-    pub body: Spanned<BlockStmt>,
-}
-
-/// IfStmt : "if" Expr Stmt ( "else" Stmt )?
-#[derive(Clone, Debug, PartialEq)]
-pub struct IfStmt {
-    pub condition: ExprS,
-    pub then_branch: Spanned<BlockStmt>,
-    pub else_branch: Option<Spanned<BlockStmt>>,
-}
-
-/// PrintStmt : "print" Expr
-#[derive(Clone, Debug, PartialEq)]
-pub struct PrintStmt {
-    pub expr: ExprS,
-}
-
-/// ReturnStmt : "return" Expr
-#[derive(Clone, Debug, PartialEq)]
-pub struct ReturnStmt {
-    pub expr: ExprS,
-}
-
-/// WhileStmt : "while" Expr BlockStmt
-#[derive(Clone, Debug, PartialEq)]
-pub struct WhileStmt {
-    pub condition: ExprS,
-    pub body: Spanned<BlockStmt>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Expr {
-    Binary(Box<BinaryExpr>),
-    Unary(Box<UnaryExpr>),
-    FuncCall(Box<FuncCallExpr>),
-    MemberAccess(Box<MemberAccessExpr>),
-    Primary(Box<Spanned<PrimaryExpr>>),
-}
-
-/// AssignExpr : IDENTIFIER "=" Expr
-#[derive(Clone, Debug, PartialEq)]
-pub struct AssignExpr {
-    pub target: ExprS,
-    pub value: ExprS,
-}
-
-/// BinaryExpr : Expr BinaryOp Expr
-#[derive(Clone, Debug, PartialEq)]
-pub struct BinaryExpr {
-    pub left: ExprS,
-    pub op: BinaryOp,
-    pub right: ExprS,
-}
-
-/// UnaryExpr : ( "!" | "-" ) Expr
-#[derive(Clone, Debug, PartialEq)]
-pub struct UnaryExpr {
-    pub op: UnaryOp,
-    pub expr: ExprS,
-}
-
-/// FuncCallExpr : IDENTIFIER ( "(" Expr? ")" )*
-#[derive(Clone, Debug, PartialEq)]
-pub struct FuncCallExpr {
-    pub callee: ExprS,
-    pub args: Vec<ExprS>,
-}
-
-/// MemberAccessExpr : Expr "." IDENTIFIER
-#[derive(Clone, Debug, PartialEq)]
-pub struct MemberAccessExpr {
-    pub receiver: ExprS,
-    pub member: Identifier,
-}
-
-/// PrimaryExpr : "true"
-///              | "false"
-///              | "nil"
-///              | "this"
-///              | NUMBER
-///              | STRING
-///              | IDENTIFIER
-///              | "(" Expr ")"
-#[derive(Clone, Debug, PartialEq)]
-pub enum PrimaryExpr {
-    True,
-    False,
-    Nil,
-    This,
-    Number(f64),
-    String(String),
-    Identifier(String),
-    Grouping(ExprS),
-}
-
-/// UnaryOp : "-" | "!"
 #[derive(Clone, Debug, PartialEq)]
 pub enum UnaryOp {
     Negate,
     Not,
 }
 
-/// BinaryOp : "+" | "-" | "*" | "/"
-///          | "==" | "!=" | ">" | ">=" | "<" | "<="
-///          | "and" | "or"
 #[derive(Clone, Debug, PartialEq)]
 pub enum BinaryOp {
     Or,
@@ -370,39 +471,16 @@ impl Display for UnaryOp {
 }
 
 impl BinaryExpr {
-    /// Check if the binary expression has only primary expressions as operands.
-    pub fn has_primary_operands(&self) -> bool {
-        if matches!(&self.left.0, Expr::Primary(_)) && matches!(&self.right.0, Expr::Primary(_)) {
-            return true;
-        }
-        false
-    }
-
-    /// Check if the binary expression has only primary number expressions as operands.
-    pub fn has_num_operands(&self) -> bool {
-        self.get_num_operands().is_some()
-    }
-
     /// Get the operands of the binary expression as numbers if the binary expression has [PrimaryExpr::Number] as its operands.
     pub fn get_num_operands(&self) -> Option<(&f64, &f64)> {
-        match (&self.left.0, &self.right.0) {
-            (Expr::Primary(left), Expr::Primary(right)) => match (&left.0, &right.0) {
-                (PrimaryExpr::Number(l), PrimaryExpr::Number(r)) => Some((l, r)),
+        match (&self.left, &self.right) {
+            (Expr::Literal(left), Expr::Literal(right)) => match (&left, &right) {
+                (LiteralExpr::Number((l, _)), LiteralExpr::Number((r, _))) => Some((l, r)),
                 _ => None,
             },
             _ => None,
         }
     }
-}
-
-macro_rules! impl_node {
-    ($node_type:ident) => {
-        impl AstNode for $node_type {
-            fn typ(&self) -> NodeType {
-                NodeType::$node_type
-            }
-        }
-    };
 }
 
 impl_node!(Program);
@@ -421,4 +499,5 @@ impl_node!(BinaryExpr);
 impl_node!(UnaryExpr);
 impl_node!(FuncCallExpr);
 impl_node!(MemberAccessExpr);
-impl_node!(PrimaryExpr);
+impl_node!(IdentifierExpr);
+impl_node!(GroupingExpr);

@@ -17,18 +17,39 @@ use std::cell::RefCell;
 use std::io::Cursor;
 use std::rc::Rc;
 
-use crate::ast::ArithmeticASTPrinter;
-use crate::ast::Expr;
-use crate::ast::PrimaryExpr;
-use crate::ast::Stmt;
+use crate::ast::Spanned;
 use crate::ast::UnaryOp;
 use crate::ast::Visitable;
+use crate::ast::{ASTVisitor, ArithmeticASTPrinter, BinaryOp};
+use crate::ast::{NodeType, Stmt};
 use crate::diagnostics;
 use crate::lexer::YKLexer;
 use crate::messages;
 use crate::parser::YKParser;
+use crate::tests::matcher::Binary;
+use crate::tests::matcher::Bool;
+use crate::tests::matcher::Identifier;
+use crate::tests::matcher::Nil;
+use crate::tests::matcher::Node;
+use crate::tests::matcher::Number;
+use crate::tests::matcher::Program;
+use crate::tests::matcher::String;
+use crate::tests::matcher::Unary;
 use crate::tests::util::parse;
-use crate::tests::util::parse_to_string;
+
+macro_rules! boxed_vec {
+    ($($x:expr),+ $(,)?) => {
+        vec![$(Box::new($x)),+]
+    };
+}
+
+fn assert_ast(node: &mut impl Visitable, visitor: &mut dyn ASTVisitor<(), bool>) {
+    assert!(node.accept(visitor, &mut ()).unwrap());
+}
+
+fn match_ast(source: &str, matcher: &mut dyn ASTVisitor<(), bool>) {
+    assert_ast(&mut parse(source), matcher);
+}
 
 #[test]
 fn test_simple_var_decl() {
@@ -44,180 +65,231 @@ fn test_simple_var_decl() {
     assert_eq!(1, stmts.len());
 
     let stmt = stmts.get(0).expect("Statement expected");
-    assert_eq!(0, stmt.1.start.line);
-    assert_eq!(0, stmt.1.start.column);
-    assert_eq!(0, stmt.1.start.index);
-    assert_eq!(0, stmt.1.end.line);
-    assert_eq!(20, stmt.1.end.column as usize);
-    assert_eq!(20, stmt.1.end.index as usize);
+    assert_eq!(0, stmt.range().start.line);
+    assert_eq!(0, stmt.range().start.column);
+    assert_eq!(0, stmt.range().start.index);
+    assert_eq!(0, stmt.range().end.line);
+    assert_eq!(20, stmt.range().end.column as usize);
+    assert_eq!(20, stmt.range().end.index as usize);
 
-    let var = if let Stmt::Var(var) = &stmt.0 {
+    let var = if let Stmt::Var(var) = &stmt {
         var
     } else {
         panic!("Expected a variable statement")
     };
-    let primary = if let Expr::Primary(primary) = &var.initializer.as_ref().unwrap().0 {
-        primary
-    } else {
-        panic!("Expected a primary expression")
-    };
-    let num = if let PrimaryExpr::Number(num) = &primary.0 {
-        num
-    } else {
-        panic!("Expected a number primary expression")
-    };
 
-    assert_eq!("something", var.name.0);
-    assert_eq!(0, var.name.1.start.line);
-    assert_eq!(4, var.name.1.start.column);
-    assert_eq!(4, var.name.1.start.index);
-    assert_eq!(0, var.name.1.end.line);
-    assert_eq!(13, var.name.1.end.column as usize);
-    assert_eq!(13, var.name.1.end.index as usize);
+    let (num, _) = &var
+        .initializer
+        .as_ref()
+        .and_then(|expr| expr.Literal())
+        .and_then(|lit| lit.Number())
+        .expect("Expected a number literal");
+
+    assert_eq!("something", var.name.name);
+    assert_eq!(0, var.name.range().start.line);
+    assert_eq!(4, var.name.range().start.column);
+    assert_eq!(4, var.name.range().start.index);
+    assert_eq!(0, var.name.range().end.line);
+    assert_eq!(13, var.name.range().end.column as usize);
+    assert_eq!(13, var.name.range().end.index as usize);
 
     let init = var.initializer.as_ref().expect("Initializer expected");
-    assert_eq!(0, init.1.start.line);
-    assert_eq!(16, init.1.start.column);
-    assert_eq!(16, init.1.start.index);
-    assert_eq!(0, init.1.end.line);
-    assert_eq!(20, init.1.end.column as usize);
-    assert_eq!(20, init.1.end.index as usize);
+    assert_eq!(0, init.range().start.line);
+    assert_eq!(16, init.range().start.column);
+    assert_eq!(16, init.range().start.index);
+    assert_eq!(0, init.range().end.line);
+    assert_eq!(20, init.range().end.column as usize);
+    assert_eq!(20, init.range().end.index as usize);
 
     assert_eq!(1234f64, *num);
 }
 
 #[test]
-fn test_simple_ast_printer() {
-    let out = parse_to_string(
-        "for (var i = 0; i < 10; i = i + 1) {\n    print i;\n}",
-        true,
+fn test_simple_for_statement() {
+    let out = parse("for (var i = 0; i < 10; i = i + 1) {\n    print i;\n}");
+
+    let stmts = &out.stmts;
+    assert_eq!(1, stmts.len());
+
+    let mut matcher = Program(
+        vec![],
+        boxed_vec![Node(
+            NodeType::ForStmt,
+            boxed_vec![
+                Node(
+                    NodeType::VarStmt,
+                    boxed_vec![Identifier("i"), Number(0f64),]
+                ),
+                Binary(BinaryOp::Lt, boxed_vec![Identifier("i"), Number(10f64),]),
+                Node(
+                    NodeType::AssignExpr,
+                    boxed_vec![
+                        Identifier("i"),
+                        Binary(BinaryOp::Plus, boxed_vec![Identifier("i"), Number(1f64),])
+                    ]
+                )
+            ]
+        )],
     );
 
-    assert_eq!(
-"(program
-  (stmt for ((stmt var i = (primary Number(0.0))); Lt (primary Identifier(\"i\"))(primary Number(10.0)); Eq (primary Identifier(\"i\"))(binary Plus (primary Identifier(\"i\"))(primary Number(1.0)))) {
-      (stmt print  (primary Identifier(\"i\")))})
-  )", out);
+    assert!(out
+        .accept(&mut matcher, &mut ())
+        .expect("Failed to match program"));
 }
 
 #[test]
 fn test_simple_unary_negation_expr() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let lexer = YKLexer::new(Cursor::new("  !true  ;"), diag_handler.clone());
-
-    let mut parser = YKParser::new(lexer, diag_handler.clone());
-    let program = parser.parse();
-    let stmts = program.stmts;
-    assert_eq!(1, stmts.len());
-    assert_eq!(&0, &program.decls.len());
-
-    let stmt = &stmts.get(0).expect("Declaration expected").0;
-    let expr = if let Stmt::Expr(expr) = stmt {
-        expr
-    } else {
-        panic!("Expected an expression statement")
-    };
-    let unary = if let Expr::Unary(unary) = &expr.expr.0 {
-        unary
-    } else {
-        panic!("Expected an unary expression")
-    };
-
-    assert!(matches!(unary.op, UnaryOp::Not));
-    assert!(matches!(unary.expr.0, Expr::Primary(_)));
-
-    let tr = if let Expr::Primary(prim) = &unary.expr.0 {
-        &prim.0
-    } else {
-        panic!("Expected a primary expression")
-    };
-    assert!(matches!(tr, PrimaryExpr::True));
+    match_ast(
+        " !true; ",
+        &mut Program(
+            vec![],
+            boxed_vec![Unary(UnaryOp::Not, Box::from(Bool(true)),)],
+        ),
+    );
 }
 
 #[test]
 fn test_simple_unary_num_negation_expr() {
-    assert_eq!(
-        "(program(stmt expr (unary Negate (primary Number(123.0)))))",
-        parse_to_string("-123;", false)
+    match_ast(
+        " -123; ",
+        &mut Program(
+            vec![],
+            boxed_vec![Unary(UnaryOp::Negate, Box::from(Number(123f64)),)],
+        ),
     );
 }
 
 #[test]
 fn test_primary_exprs() {
-    let out = parse_to_string(
+    match_ast(
         "true; false; nil; this; 123; \"something\"; identifier; (\"grouping\");",
-        true,
-    );
-
-    // String expressions also include the quotes
-    // the actual representaion of the above string is "\"something\""
-    // so we need to escape them here
-    assert_eq!(
-        "(program
-  (stmt expr (primary True))
-  (stmt expr (primary False))
-  (stmt expr (primary Nil))
-  (stmt expr (primary This))
-  (stmt expr (primary Number(123.0)))
-  (stmt expr (primary String(\"\\\"something\\\"\")))
-  (stmt expr (primary Identifier(\"identifier\")))
-  (stmt expr (primary String(\"\\\"grouping\\\"\")))
-  )",
-        out
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Bool(true),
+                Bool(false),
+                Nil(),
+                Identifier("this"),
+                Number(123f64),
+                String("\"something\""),
+                Identifier("identifier"),
+                String("\"grouping\""),
+            ],
+        ),
     );
 }
 
 #[test]
 fn test_terms() {
-    let out = parse_to_string("2 + 3; 2 - 3;", true);
-    assert_eq!(
-        "(program
-  (stmt expr (binary Plus (primary Number(2.0))(primary Number(3.0))))
-  (stmt expr (binary Minus (primary Number(2.0))(primary Number(3.0))))
-  )",
-        out
+    match_ast(
+        "2 + 3; 2 - 3;",
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Binary(BinaryOp::Plus, boxed_vec![Number(2f64), Number(3f64)]),
+                Binary(BinaryOp::Minus, boxed_vec![Number(2f64), Number(3f64)])
+            ],
+        ),
     );
 }
 
 #[test]
 fn test_terms_assoc() {
-    let out = parse_to_string("2 + 3 + 4; 2 - 3 + 4; 2 + 3 - 4; 2 - 3 - 4;", true);
-    assert_eq!(
-"(program
-  (stmt expr (binary Plus (binary Plus (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0))))
-  (stmt expr (binary Plus (binary Minus (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0))))
-  (stmt expr (binary Minus (binary Plus (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0))))
-  (stmt expr (binary Minus (binary Minus (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0))))
-  )", out);
+    match_ast(
+        "2 + 3 + 4; 2 - 3 + 4; 2 + 3 - 4; 2 - 3 - 4;",
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Binary(
+                    BinaryOp::Plus,
+                    boxed_vec![
+                        Binary(BinaryOp::Plus, boxed_vec![Number(2f64), Number(3f64)]),
+                        Number(4f64)
+                    ]
+                ),
+                Binary(
+                    BinaryOp::Plus,
+                    boxed_vec![
+                        Binary(BinaryOp::Minus, boxed_vec![Number(2f64), Number(3f64)]),
+                        Number(4f64)
+                    ]
+                ),
+                Binary(
+                    BinaryOp::Minus,
+                    boxed_vec![
+                        Binary(BinaryOp::Plus, boxed_vec![Number(2f64), Number(3f64)]),
+                        Number(4f64)
+                    ]
+                ),
+                Binary(
+                    BinaryOp::Minus,
+                    boxed_vec![
+                        Binary(BinaryOp::Minus, boxed_vec![Number(2f64), Number(3f64)]),
+                        Number(4f64)
+                    ]
+                )
+            ],
+        ),
+    );
 }
 
 #[test]
 fn test_factors() {
-    let out = parse_to_string("2 * 3; 2 / 3;", true);
-    assert_eq!(
-        "(program
-  (stmt expr (binary Mult (primary Number(2.0))(primary Number(3.0))))
-  (stmt expr (binary Div (primary Number(2.0))(primary Number(3.0))))
-  )",
-        out
+    match_ast(
+        "2 * 3; 2 / 3;",
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Binary(BinaryOp::Mult, boxed_vec![Number(2f64), Number(3f64)]),
+                Binary(BinaryOp::Div, boxed_vec![Number(2f64), Number(3f64)])
+            ],
+        ),
     );
 }
 
 #[test]
 fn test_factors_assoc() {
-    let out = parse_to_string("2 * 3 * 4; 2 / 3 * 4; 2 * 3 / 4; 2 / 3 / 4;", true);
-    assert_eq!(
-"(program
-  (stmt expr (binary Mult (binary Mult (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0))))
-  (stmt expr (binary Mult (binary Div (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0))))
-  (stmt expr (binary Div (binary Mult (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0))))
-  (stmt expr (binary Div (binary Div (primary Number(2.0))(primary Number(3.0)))(primary Number(4.0))))
-  )", out);
+    match_ast(
+        "2 * 3 * 4; 2 / 3 * 4; 2 * 3 / 4; 2 / 3 / 4;",
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Binary(
+                    BinaryOp::Mult,
+                    boxed_vec![
+                        Binary(BinaryOp::Mult, boxed_vec![Number(2f64), Number(3f64)]),
+                        Number(4f64)
+                    ]
+                ),
+                Binary(
+                    BinaryOp::Mult,
+                    boxed_vec![
+                        Binary(BinaryOp::Div, boxed_vec![Number(2f64), Number(3f64)]),
+                        Number(4f64)
+                    ]
+                ),
+                Binary(
+                    BinaryOp::Div,
+                    boxed_vec![
+                        Binary(BinaryOp::Mult, boxed_vec![Number(2f64), Number(3f64)]),
+                        Number(4f64)
+                    ]
+                ),
+                Binary(
+                    BinaryOp::Div,
+                    boxed_vec![
+                        Binary(BinaryOp::Div, boxed_vec![Number(2f64), Number(3f64)]),
+                        Number(4f64)
+                    ]
+                )
+            ],
+        ),
+    );
 }
 
 #[test]
 fn test_arith_prec() {
-    let mut program = parse("4 * 5 - (2 + 3) / 6 + 7;");
+    let program = parse("4 * 5 - (2 + 3) / 6 + 7;");
     let mut out = String::new();
     let mut printer = ArithmeticASTPrinter::new(&mut out);
     program.accept(&mut printer, &mut ());
@@ -248,7 +320,7 @@ fn test_arith_assoc() {
     let mut ok = true;
     for (source, expected) in cases {
         print!("Checking:: source: {}, expected: {}", source, expected);
-        let mut program = parse(source);
+        let program = parse(source);
         let mut out = String::new();
         let mut printer = ArithmeticASTPrinter::new(&mut out);
         program.accept(&mut printer, &mut ());
@@ -272,7 +344,7 @@ fn test_parser_diagnostic_at_end() {
     );
 
     let mut parser = YKParser::new(lexer, diag_handler.clone());
-    let mut program = parser.parse();
+    let program = parser.parse();
     let mut out = String::new();
     let mut printer = ArithmeticASTPrinter::new(&mut out);
     program.accept(&mut printer, &mut ());
@@ -292,13 +364,20 @@ fn test_parser_diagnostic_at_end() {
 
 #[test]
 fn test_simple_fun_decl() {
-    let out = parse_to_string("fun main() {    print 1234; }", true);
-
-    assert_eq!(
-        "(program
-  (decl fun main() {
-      (stmt print  (primary Number(1234.0)))})
-  )",
-        out
+    match_ast(
+        "fun main() {    print 1234; }",
+        &mut Program(
+            vec![],
+            boxed_vec![Node(
+                NodeType::FuncDecl,
+                boxed_vec![
+                    Identifier("main"),
+                    Node(
+                        NodeType::BlockStmt,
+                        boxed_vec![Node(NodeType::PrintStmt, boxed_vec![Number(1234f64)])]
+                    )
+                ]
+            )],
+        ),
     );
 }

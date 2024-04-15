@@ -20,11 +20,11 @@ use crate::bytecode;
 use crate::bytecode::attrs::Attr;
 use crate::bytecode::bytes::AssertingByteConversions;
 use crate::bytecode::bytes::ByteOutput;
-use crate::bytecode::ConstantEntry;
 use crate::bytecode::cp::ConstantPool;
 use crate::bytecode::cp_info::{CpInfoTag, Utf8Info};
 use crate::bytecode::decls::YKBDecl;
 use crate::bytecode::version::YKBVersion;
+use crate::bytecode::ConstantEntry;
 
 /// Represents a YKB file.
 pub struct YKBFile {

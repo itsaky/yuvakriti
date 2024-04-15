@@ -35,7 +35,7 @@ pub fn push_constants(constant_pool: &mut ConstantPool, constants: Vec<ConstantE
 }
 
 pub fn eval_arithemetic(vm: &mut YKVM, cp: &ConstantPool, insns: Vec<OpSize>) -> f64 {
-    let code = Code::with_insns(0, insns);
+    let code = Code::with_insns(0, 0, insns);
     let result = vm.run_code(&code, cp).unwrap().expect("Expected result");
     result.as_number().unwrap().clone()
 }

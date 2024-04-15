@@ -30,6 +30,17 @@ impl Range {
         return Self::NO_RANGE.clone();
     }
 
+    /// Set the start and end of this range.
+    pub fn update_range(&mut self, range: &Range) {
+        self.update(&range.start, &range.end);
+    }
+
+    /// Set the start and end of this range.
+    pub fn update(&mut self, start: &Position, end: &Position) {
+        self.start = start.clone();
+        self.end = end.clone();
+    }
+
     /// Set the end of this range to the end of the given range.
     pub fn set_end(&mut self, end: &Range) -> Self {
         self.end = end.end.clone();
@@ -52,6 +63,12 @@ impl Range {
     pub fn set_start_pos(&mut self, start: &Position) -> Self {
         self.start = start.clone();
         *self
+    }
+}
+
+impl From<&Range> for Range {
+    fn from(range: &Range) -> Self {
+        return range.clone();
     }
 }
 

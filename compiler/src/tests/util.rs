@@ -39,6 +39,7 @@ pub(crate) fn parse(source: &str) -> Program {
     parse_1(source, diag_handler)
 }
 
+#[allow(unused)]
 pub(crate) fn node_string(program: &mut Program, pretty: bool) -> String {
     let mut out = String::new();
     let mut printer = ASTPrinter::new(&mut out, pretty);
@@ -46,6 +47,7 @@ pub(crate) fn node_string(program: &mut Program, pretty: bool) -> String {
     out
 }
 
+#[allow(unused)]
 pub(crate) fn parse_to_string(source: &str, pretty: bool) -> String {
     let mut program = parse(source);
     node_string(&mut program, pretty)

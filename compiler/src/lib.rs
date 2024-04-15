@@ -8,13 +8,13 @@ pub mod lexer;
 pub mod location;
 pub mod messages;
 pub mod parser;
-pub mod tokens;
-mod scope;
 mod resolve;
+mod scope;
 mod symtab;
+pub mod tokens;
 
+mod attr;
 #[cfg(test)]
 mod tests;
 #[cfg(doctest)]
 mod tests;
-mod attr;

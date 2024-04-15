@@ -39,7 +39,6 @@ pub struct VarSym {
 }
 
 impl VarSym {
-    
     /// Create a new [VarSym] with the given name.
     pub fn new(name: String) -> Self {
         VarSym { name }
@@ -52,7 +51,6 @@ pub struct Symtab {
 }
 
 impl Symtab {
-    
     /// Creates a new instance of [Symtab].
     pub fn new() -> Self {
         Symtab {

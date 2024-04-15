@@ -13,10 +13,11 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use compiler::args::CompileArgs;
-use compiler::bytecode::compiler::YKCompiler;
-use compiler::features::CompilerFeatures;
 use log::{info, trace};
+
+use compiler::args::CompileArgs;
+use compiler::compiler::YKCompiler;
+use compiler::features::CompilerFeatures;
 
 pub fn do_compile(args: &mut CompileArgs) -> Result<(), ()> {
     if args.files.is_empty() {

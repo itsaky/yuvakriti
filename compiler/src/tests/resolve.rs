@@ -13,9 +13,10 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::resolve::Resolve;
 use crate::diagnostics::{collecting_handler, DiagnosticKind};
 use crate::location::Position;
+use crate::messages;
+use crate::resolve::Resolve;
 use crate::tests::util::parse_1;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -37,10 +38,27 @@ fn test_duplicate_var_decl() {
     assert_eq!(diagnostic.kind, DiagnosticKind::Error);
     assert_eq!(diagnostic.range.start, Position::new(0, 18, 18));
     assert_eq!(diagnostic.range.end, Position::new(0, 22, 22));
-    assert_eq!(
-        diagnostic.message,
-        "Variable 'decl' is already declared".to_string()
-    );
+    assert_eq!(diagnostic.message, messages::err_dup_var("decl"));
+}
+
+#[test]
+fn test_undeclared_var() {
+    let diags = Rc::new(RefCell::new(collecting_handler()));
+    let mut program = parse_1("var decl = 1 + a;", diags.clone());
+    let mut analyzer = Resolve::new(diags.clone());
+    analyzer.analyze(&mut program);
+
+    let diags = diags.borrow();
+    let diagnostics = &diags.diagnostics;
+
+    assert!(!diagnostics.is_empty());
+    assert_eq!(1, diagnostics.len());
+
+    let diagnostic = &diagnostics[0];
+    assert_eq!(diagnostic.kind, DiagnosticKind::Error);
+    assert_eq!(diagnostic.range.start, Position::new(0, 15, 15));
+    assert_eq!(diagnostic.range.end, Position::new(0, 16, 16));
+    assert_eq!(diagnostic.message, messages::err_undecl_var("a"));
 }
 
 #[test]

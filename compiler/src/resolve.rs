@@ -16,10 +16,10 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::ast::{ASTVisitor, Visitable};
-use crate::ast::BlockStmt;
 use crate::ast::Program;
 use crate::ast::VarStmt;
+use crate::ast::{ASTVisitor, Visitable};
+use crate::ast::{BlockStmt, IdentifierExpr, Spanned};
 use crate::diagnostics::Diagnostic;
 use crate::diagnostics::DiagnosticHandler;
 use crate::diagnostics::DiagnosticKind;
@@ -37,7 +37,6 @@ pub struct Resolve<'inst> {
 }
 
 impl Resolve<'_> {
-    
     /// Create a new instance of the name resolution helper.
     pub fn new<'a>(diagnostics: Rc<RefCell<dyn DiagnosticHandler + 'a>>) -> Resolve<'a> {
         return Resolve {
@@ -46,7 +45,7 @@ impl Resolve<'_> {
             has_errors: false,
         };
     }
-    
+
     /// Reset the state of the name resolver.
     pub fn reset(&mut self) {
         self.scope = None;
@@ -82,15 +81,17 @@ impl<'inst> ASTVisitor<Scope<'inst>, ()> for Resolve<'_> {
         None
     }
 
-    fn visit_var_decl(&mut self, var_decl: &VarStmt, scope: &mut Scope) -> Option<()> {
-        self.default_visit_var_decl(var_decl, scope);
-
-        let var_name = &var_decl.name.0;
+    fn visit_var_stmt(&mut self, var_decl: &VarStmt, scope: &mut Scope) -> Option<()> {
+        let var_name = &var_decl.name.name.clone();
         match scope.push_sym(Symbol::Variable(VarSym::new(var_name.clone()))) {
-            Err(_) => self.report_err(&var_decl.name.1, &messages::err_dup_var(&var_name)),
+            Err(_) => self.report_err(&var_decl.name.range(), &messages::err_dup_var(&var_name)),
             Ok(_) => {}
         };
-        
+
+        if let Some(expr) = &var_decl.initializer {
+            self.visit_expr(expr, scope);
+        }
+
         None
     }
 
@@ -98,6 +99,19 @@ impl<'inst> ASTVisitor<Scope<'inst>, ()> for Resolve<'_> {
         let mut new = Scope::new();
         new.parent = Some(&p);
         self.default_visit_block_stmt(block_stmt, &mut new);
+
+        None
+    }
+
+    fn visit_identifier_expr(
+        &mut self,
+        identifier: &IdentifierExpr,
+        _p: &mut Scope<'inst>,
+    ) -> Option<()> {
+        let name = &identifier.name;
+        if _p.find_sym(name).is_none() {
+            self.report_err(identifier.range(), &messages::err_undecl_var(name));
+        }
 
         None
     }

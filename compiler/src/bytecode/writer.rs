@@ -16,14 +16,13 @@
 use util::matches_any;
 
 use crate::ast;
-use crate::ast::BinaryExpr;
+use crate::ast::ASTVisitor;
 use crate::ast::BinaryOp;
 use crate::ast::FuncDecl;
-use crate::ast::PrimaryExpr;
 use crate::ast::PrintStmt;
 use crate::ast::Program;
 use crate::ast::Visitable;
-use crate::ast::{ASTVisitor, VarStmt};
+use crate::ast::{BinaryExpr, IdentifierExpr, LiteralExpr};
 use crate::bytecode::attrs;
 use crate::bytecode::cp::ConstantEntry;
 use crate::bytecode::cp_info::NumberInfo;
@@ -90,7 +89,7 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
 
         self.default_visit_program(program, p, true, false);
         for stmt in &program.stmts {
-            self.visit_stmt(&stmt.0, p);
+            self.visit_stmt(&stmt, p);
         }
 
         if self.code.as_ref().unwrap().instructions().len() > 0 {
@@ -110,7 +109,7 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
     fn visit_class_decl(&mut self, class_decl: &ast::ClassDecl, _p: &mut ()) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         let name_index =
-            constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&class_decl.name.0)));
+            constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&class_decl.name.name)));
         self.file
             .declarations_mut()
             .push(Box::new(decls::ClassDecl::new(name_index)));
@@ -119,7 +118,8 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
 
     fn visit_func_decl(&mut self, func_decl: &FuncDecl, p: &mut ()) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
-        let name_index = constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&func_decl.name.0)));
+        let name_index =
+            constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&func_decl.name.name)));
         self.file
             .declarations_mut()
             .push(Box::new(decls::FuncDecl::new(name_index)));
@@ -127,18 +127,8 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
         self.default_visit_func_decl(func_decl, p)
     }
 
-    fn visit_var_decl(&mut self, var_decl: &VarStmt, p: &mut ()) -> Option<()> {
-        let mut has_initializer = false;
-        if let Some(expr) = &var_decl.initializer {
-            self.visit_expr(&expr.0, p);
-            has_initializer = true;
-        }
-
-        None
-    }
-
     fn visit_print_stmt(&mut self, print_stmt: &PrintStmt, p: &mut ()) -> Option<()> {
-        self.visit_expr(&print_stmt.expr.0, p);
+        self.visit_expr(&print_stmt.expr, p);
         let code = self.code.as_mut().unwrap();
         code.push_insns_0(OpCode::Print);
         None
@@ -162,8 +152,8 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
             }
         }
 
-        self.visit_expr(&binary_expr.left.0, p);
-        self.visit_expr(&binary_expr.right.0, p);
+        self.visit_expr(&binary_expr.left, p);
+        self.visit_expr(&binary_expr.right, p);
 
         let code = self.code.as_mut().unwrap();
         let opcode = match binary_expr.op {
@@ -179,26 +169,30 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
         None
     }
 
-    fn visit_primary_expr(&mut self, _primary_expr: &PrimaryExpr, p: &mut ()) -> Option<()> {
+    fn visit_identifier_expr(&mut self, identifier: &IdentifierExpr, _p: &mut ()) -> Option<()> {
+        let constant_pool = self.file.constant_pool_mut();
+        constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&identifier.name)));
+        None
+    }
+
+    fn visit_literal_expr(&mut self, literal: &LiteralExpr, _p: &mut ()) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         let code = self.code.as_mut().unwrap();
-        let _: () = match _primary_expr {
-            PrimaryExpr::Number(num) => {
+        match literal {
+            LiteralExpr::Nil(_) => {}
+            LiteralExpr::Bool((boo, _)) => {
+                code.push_insns_0(if *boo { OpCode::BPush1 } else { OpCode::BPush0 });
+            }
+            LiteralExpr::Number((num, _)) => {
                 let idx = constant_pool.push(ConstantEntry::Number(NumberInfo::from(num)));
                 code.push_insns_1_16(OpCode::Ldc, idx);
             }
-            PrimaryExpr::String(str) => {
+            LiteralExpr::String((str, _)) => {
                 let str = &str[1..str.len() - 1]; // remove double quotes
                 let idx = constant_pool.push_str(str);
                 code.push_insns_1_16(OpCode::Ldc, idx);
             }
-            PrimaryExpr::False => code.push_insns_0(OpCode::BPush0),
-            PrimaryExpr::True => code.push_insns_0(OpCode::BPush1),
-            PrimaryExpr::Identifier(ident) => {
-                constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(ident)));
-            }
-            _ => return self.default_visit_primary_expr(_primary_expr, p),
-        };
+        }
 
         None
     }

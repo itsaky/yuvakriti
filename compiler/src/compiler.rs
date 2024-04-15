@@ -24,9 +24,9 @@ use log::info;
 
 use crate::args::CompileArgs;
 use crate::attr::Attr;
-use crate::bytecode::{YKBFile, YKBFileWriter, YKBVersion};
 use crate::bytecode::EXT_YK;
 use crate::bytecode::EXT_YKB;
+use crate::bytecode::{YKBFile, YKBFileWriter, YKBVersion};
 use crate::diagnostics::collecting_handler;
 use crate::diagnostics::CollectingDiagnosticHandler;
 use crate::features::CompilerFeatures;

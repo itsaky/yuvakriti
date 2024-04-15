@@ -23,13 +23,13 @@ use crate::bytecode::attrs::Code;
 use crate::bytecode::bytes::AssertingByteConversions;
 use crate::bytecode::bytes::ByteInput;
 use crate::bytecode::cp_info::CpInfo;
-use crate::bytecode::MAGIC_NUMBER;
 use crate::bytecode::opcode::get_opcode;
 use crate::bytecode::opcode::OpCode;
 use crate::bytecode::ConstantEntry;
 use crate::bytecode::ConstantPool;
 use crate::bytecode::CpSize;
 use crate::bytecode::YKBFileReader;
+use crate::bytecode::MAGIC_NUMBER;
 
 pub struct YKBDisassembler<'a, R: Read> {
     r: YKBFileReader<R>,

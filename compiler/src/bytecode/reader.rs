@@ -23,12 +23,12 @@ use crate::bytecode::cp_info::CpInfoTag;
 use crate::bytecode::cp_info::NumberInfo;
 use crate::bytecode::cp_info::StringInfo;
 use crate::bytecode::cp_info::Utf8Info;
-use crate::bytecode::MAGIC_NUMBER;
 use crate::bytecode::ConstantEntry;
 use crate::bytecode::ConstantPool;
 use crate::bytecode::CpSize;
 use crate::bytecode::YKBFile;
 use crate::bytecode::YKBVersion;
+use crate::bytecode::MAGIC_NUMBER;
 use crate::bytecode::{attrs, bytes::ByteInput};
 
 pub struct YKBFileReader<R: Read> {

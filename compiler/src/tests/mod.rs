@@ -13,7 +13,8 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-mod resolve;
 mod lexer;
+mod matcher;
 mod parser;
+mod resolve;
 pub mod util;

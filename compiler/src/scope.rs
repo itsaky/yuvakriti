@@ -22,7 +22,6 @@ pub struct Scope<'inst> {
 }
 
 impl Scope<'_> {
-    
     /// Create a new instance of [Scope] with the given parent scope.
     pub fn new<'a>() -> Scope<'a> {
         return Scope {

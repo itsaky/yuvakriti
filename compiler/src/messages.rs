@@ -45,3 +45,6 @@ pub fn err_exp_sym(sym: &str) -> String {
 pub fn err_dup_var(sym: &str) -> String {
     return format!("Variable '{}' is already declared", sym);
 }
+pub fn err_undecl_var(sym: &str) -> String {
+    return format!("Variable '{}' is not declared", sym);
+}
