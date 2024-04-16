@@ -13,17 +13,9 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-mod attr;
-mod constfold;
-mod resolve;
-
-pub use crate::comp::attr::Attr;
-pub use crate::comp::constfold::ConstFold;
-pub use crate::comp::resolve::Resolve;
-
 use std::cell::RefCell;
 use std::fs::File;
-use std::io::{Error, Read, Write};
+use std::io::Read;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -33,16 +25,23 @@ use log::info;
 
 use crate::args::CompileArgs;
 use crate::ast::Program;
+use crate::bytecode::EXT_YK;
+use crate::bytecode::EXT_YKB;
 use crate::bytecode::YKBFile;
 use crate::bytecode::YKBFileWriter;
 use crate::bytecode::YKBVersion;
-use crate::bytecode::EXT_YK;
-use crate::bytecode::EXT_YKB;
+pub use crate::comp::attr::Attr;
+pub use crate::comp::constfold::ConstFold;
+pub use crate::comp::resolve::Resolve;
 use crate::diagnostics::collecting_handler;
 use crate::diagnostics::CollectingDiagnosticHandler;
 use crate::features::CompilerFeatures;
 use crate::lexer::YKLexer;
 use crate::parser::YKParser;
+
+mod attr;
+mod constfold;
+mod resolve;
 
 // Compiles source files into bytecode.
 pub struct YKCompiler {

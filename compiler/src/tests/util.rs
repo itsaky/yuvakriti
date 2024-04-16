@@ -21,7 +21,6 @@ use crate::ast::ASTPrinter;
 use crate::ast::Program;
 use crate::ast::Visitable;
 use crate::comp::YKCompiler;
-use crate::diagnostics;
 use crate::diagnostics::CollectingDiagnosticHandler;
 use crate::lexer::YKLexer;
 use crate::parser::YKParser;

@@ -60,6 +60,7 @@ impl YKBFileWriter<'_> {
 
 struct CodeGen<'a> {
     file: &'a mut YKBFile,
+    #[allow(unused)]
     features: &'a CompilerFeatures,
     code: Option<attrs::Code>,
 }
