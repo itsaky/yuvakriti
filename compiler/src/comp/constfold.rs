@@ -105,7 +105,29 @@ impl ConstFold {
                 | BinaryOp::Lt
                 | BinaryOp::LtEq => {
                     return Some(Expr::Literal(LiteralExpr::Bool((
-                        self.apply_logic(&binary.op, l, r),
+                        self.apply_arithmetical_logic(&binary.op, l, r),
+                        binary.range().clone(),
+                    ))))
+                }
+                _ => {}
+            }
+        }
+
+        if let (Some((l, _)), Some((r, _))) = (
+            left.Literal().and_then(|l| l.Bool()),
+            right.Literal().and_then(|r| r.Bool()),
+        ) {
+            match &binary.op {
+                BinaryOp::And
+                | BinaryOp::Or
+                | BinaryOp::EqEq
+                | BinaryOp::NotEq
+                | BinaryOp::Gt
+                | BinaryOp::GtEq
+                | BinaryOp::Lt
+                | BinaryOp::LtEq => {
+                    return Some(Expr::Literal(LiteralExpr::Bool((
+                        self.apply_boolean_logic(&binary.op, l, r),
                         binary.range().clone(),
                     ))))
                 }
@@ -126,7 +148,7 @@ impl ConstFold {
         }
     }
 
-    fn apply_logic(&self, op: &BinaryOp, l: &f64, r: &f64) -> bool {
+    fn apply_arithmetical_logic(&self, op: &BinaryOp, l: &f64, r: &f64) -> bool {
         match op {
             BinaryOp::EqEq => l == r,
             BinaryOp::NotEq => l != r,
@@ -134,6 +156,20 @@ impl ConstFold {
             BinaryOp::GtEq => l >= r,
             BinaryOp::Lt => l < r,
             BinaryOp::LtEq => l <= r,
+            _ => panic!("Unsupported logical operator: {}", op.sym()),
+        }
+    }
+
+    fn apply_boolean_logic(&self, op: &BinaryOp, l: &bool, r: &bool) -> bool {
+        match op {
+            BinaryOp::EqEq => l == r,
+            BinaryOp::NotEq => l != r,
+            BinaryOp::Gt => l > r,
+            BinaryOp::GtEq => l >= r,
+            BinaryOp::Lt => l < r,
+            BinaryOp::LtEq => l <= r,
+            BinaryOp::And => *l && *r,
+            BinaryOp::Or => *l || *r,
             _ => panic!("Unsupported logical operator: {}", op.sym()),
         }
     }
