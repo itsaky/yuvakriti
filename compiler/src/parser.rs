@@ -460,6 +460,21 @@ impl<R: Read> YKParser<'_, R> {
         self.primary()
     }
 
+    fn unary_op(&mut self, op: &Token) -> Option<Expr> {
+        if let Some(expr) = self.unary() {
+            let mut range = Range::new();
+            range.set_start(&op.range);
+            range.set_end(&expr.range());
+
+            let unary = UnaryExpr::new(UnaryOp::from_token(&op).unwrap(), expr, range);
+
+            return Some(Expr::Unary(Box::from(unary)));
+        }
+
+        self.report(DiagnosticKind::Error, messages::PARS_EXPECTED_EXPR);
+        return None;
+    }
+
     fn primary(&mut self) -> Option<Expr> {
         if let Some(token) = self.advance() {
             match token.token_type {
@@ -558,21 +573,6 @@ impl<R: Read> YKParser<'_, R> {
         };
 
         Some(expr)
-    }
-
-    fn unary_op(&mut self, op: &Token) -> Option<Expr> {
-        if let Some(expr) = self.expr() {
-            let mut range = Range::new();
-            range.set_start(&op.range);
-            range.set_end(&expr.range());
-
-            let unary = UnaryExpr::new(UnaryOp::from_token(&op).unwrap(), expr, range);
-
-            return Some(Expr::Unary(Box::from(unary)));
-        }
-
-        self.report(DiagnosticKind::Error, messages::PARS_EXPECTED_EXPR);
-        return None;
     }
 
     fn grouping(&mut self) -> Option<Expr> {
