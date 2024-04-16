@@ -20,6 +20,7 @@ use std::rc::Rc;
 use crate::ast::ASTPrinter;
 use crate::ast::Program;
 use crate::ast::Visitable;
+use crate::comp::YKCompiler;
 use crate::diagnostics;
 use crate::diagnostics::CollectingDiagnosticHandler;
 use crate::lexer::YKLexer;
@@ -31,12 +32,17 @@ pub(crate) fn parse_1(
 ) -> Program {
     let lexer = YKLexer::new(Cursor::new(source), diagnostics.clone());
     let mut parser = YKParser::new(lexer, diagnostics.clone());
+    assert!(!parser.has_errors());
     parser.parse()
 }
 
 pub(crate) fn parse(source: &str) -> Program {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    parse_1(source, diag_handler)
+    let mut compiler = YKCompiler::new();
+    let (program, has_errors) = compiler
+        .parse(Cursor::new(source))
+        .expect("Failed to parse source");
+    assert!(!has_errors);
+    program
 }
 
 #[allow(unused)]

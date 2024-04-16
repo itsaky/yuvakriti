@@ -13,16 +13,17 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use util::matches_any;
+use std::ops::Deref;
 
-use crate::ast;
 use crate::ast::ASTVisitor;
 use crate::ast::BinaryOp;
 use crate::ast::FuncDecl;
+use crate::ast::IdentifierExpr;
+use crate::ast::LiteralExpr;
 use crate::ast::PrintStmt;
 use crate::ast::Program;
 use crate::ast::Visitable;
-use crate::ast::{BinaryExpr, IdentifierExpr, LiteralExpr};
+use crate::ast::{BinaryExpr, ClassDecl};
 use crate::bytecode::attrs;
 use crate::bytecode::cp::ConstantEntry;
 use crate::bytecode::cp_info::NumberInfo;
@@ -74,7 +75,7 @@ impl<'a> CodeGen<'a> {
 }
 
 impl ASTVisitor<(), ()> for CodeGen<'_> {
-    fn visit_program(&mut self, program: &Program, p: &mut ()) -> Option<()> {
+    fn visit_program(&mut self, program: &mut Program, p: &mut ()) -> Option<()> {
         if self
             .file
             .attributes()
@@ -88,8 +89,9 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
         self.code = Some(attrs::Code::new(0, 0, 0));
 
         self.default_visit_program(program, p, true, false);
-        for stmt in &program.stmts {
-            self.visit_stmt(&stmt, p);
+        for i in 0..program.stmts.len() {
+            let stmt = program.stmts.get_mut(i).unwrap();
+            self.visit_stmt(stmt, p);
         }
 
         if self.code.as_ref().unwrap().instructions().len() > 0 {
@@ -106,7 +108,7 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
         None
     }
 
-    fn visit_class_decl(&mut self, class_decl: &ast::ClassDecl, _p: &mut ()) -> Option<()> {
+    fn visit_class_decl(&mut self, class_decl: &mut ClassDecl, _p: &mut ()) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         let name_index =
             constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&class_decl.name.name)));
@@ -116,7 +118,7 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
         None
     }
 
-    fn visit_func_decl(&mut self, func_decl: &FuncDecl, p: &mut ()) -> Option<()> {
+    fn visit_func_decl(&mut self, func_decl: &mut FuncDecl, p: &mut ()) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         let name_index =
             constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&func_decl.name.name)));
@@ -127,33 +129,16 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
         self.default_visit_func_decl(func_decl, p)
     }
 
-    fn visit_print_stmt(&mut self, print_stmt: &PrintStmt, p: &mut ()) -> Option<()> {
-        self.visit_expr(&print_stmt.expr, p);
+    fn visit_print_stmt(&mut self, print_stmt: &mut PrintStmt, p: &mut ()) -> Option<()> {
+        self.visit_expr(&mut print_stmt.expr, p);
         let code = self.code.as_mut().unwrap();
         code.push_insns_0(OpCode::Print);
         None
     }
 
-    fn visit_binary_expr(&mut self, binary_expr: &BinaryExpr, p: &mut ()) -> Option<()> {
-        if self.features.const_folding
-            && matches_any!(
-                &binary_expr.op,
-                BinaryOp::Plus | BinaryOp::Minus | BinaryOp::Mult | BinaryOp::Div
-            )
-        {
-            if let Some((l, r)) = binary_expr.get_num_operands() {
-                let constant_pool = self.file.constant_pool_mut();
-                let index = constant_pool.push(ConstantEntry::Number(NumberInfo::from(
-                    &apply_binary_op(&binary_expr.op, l, r),
-                )));
-                let code = self.code.as_mut().unwrap();
-                code.push_insns_1_16(OpCode::Ldc, index);
-                return None;
-            }
-        }
-
-        self.visit_expr(&binary_expr.left, p);
-        self.visit_expr(&binary_expr.right, p);
+    fn visit_binary_expr(&mut self, binary_expr: &mut BinaryExpr, p: &mut ()) -> Option<()> {
+        self.visit_expr(&mut binary_expr.left, p);
+        self.visit_expr(&mut binary_expr.right, p);
 
         let code = self.code.as_mut().unwrap();
         let opcode = match binary_expr.op {
@@ -169,13 +154,17 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
         None
     }
 
-    fn visit_identifier_expr(&mut self, identifier: &IdentifierExpr, _p: &mut ()) -> Option<()> {
+    fn visit_identifier_expr(
+        &mut self,
+        identifier: &mut IdentifierExpr,
+        _p: &mut (),
+    ) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&identifier.name)));
         None
     }
 
-    fn visit_literal_expr(&mut self, literal: &LiteralExpr, _p: &mut ()) -> Option<()> {
+    fn visit_literal_expr(&mut self, literal: &mut LiteralExpr, _p: &mut ()) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         let code = self.code.as_mut().unwrap();
         match literal {
@@ -184,7 +173,7 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
                 code.push_insns_0(if *boo { OpCode::BPush1 } else { OpCode::BPush0 });
             }
             LiteralExpr::Number((num, _)) => {
-                let idx = constant_pool.push(ConstantEntry::Number(NumberInfo::from(num)));
+                let idx = constant_pool.push(ConstantEntry::Number(NumberInfo::from(num.deref())));
                 code.push_insns_1_16(OpCode::Ldc, idx);
             }
             LiteralExpr::String((str, _)) => {
@@ -195,15 +184,5 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
         }
 
         None
-    }
-}
-
-fn apply_binary_op(op: &BinaryOp, l: &f64, r: &f64) -> f64 {
-    match op {
-        BinaryOp::Plus => l + r,
-        BinaryOp::Minus => l - r,
-        BinaryOp::Mult => l * r,
-        BinaryOp::Div => l / r,
-        _ => panic!("Unsupported binary operator: {}", op.sym()),
     }
 }

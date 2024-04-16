@@ -32,60 +32,63 @@ impl<'a> ArithmeticASTPrinter<'a> {
 }
 
 impl<'a> ASTVisitor<(), ()> for ArithmeticASTPrinter<'a> {
-    fn visit_expr(&mut self, expr: &Expr, _p: &mut ()) -> Option<()> {
+    fn visit_expr(&mut self, expr: &mut Expr, _p: &mut ()) -> Option<()> {
         match expr {
             Expr::Assign(assign_expr) => self.visit_assign_expr(assign_expr, _p),
             Expr::Binary(exp) => self.visit_binary_expr(exp, _p),
             Expr::Unary(exp) => self.visit_unary_expr(exp, _p),
             Expr::Literal(exp) => self.visit_literal_expr(exp, _p),
             Expr::Identifier(exp) => self.visit_identifier_expr(exp, _p),
-            Expr::Grouping(exp) => self.visit_grouping_expr(exp, _p),
             _ => panic!("Not an arithemetic expression"),
         };
 
         None
     }
 
-    fn visit_assign_expr(&mut self, assign_expr: &AssignExpr, p: &mut ()) -> Option<()> {
+    fn visit_assign_expr(&mut self, assign_expr: &mut AssignExpr, p: &mut ()) -> Option<()> {
         self.f.write_str("assign ").unwrap();
-        self.visit_expr(&assign_expr.target, p);
+        self.visit_expr(&mut assign_expr.target, p);
         self.f.write_str(" = ").unwrap();
-        self.visit_expr(&assign_expr.value, p);
+        self.visit_expr(&mut assign_expr.value, p);
         None
     }
 
-    fn visit_binary_expr(&mut self, binary_expr: &BinaryExpr, _p: &mut ()) -> Option<()> {
+    fn visit_binary_expr(&mut self, binary_expr: &mut BinaryExpr, _p: &mut ()) -> Option<()> {
         self.f.write_str("(").unwrap();
-        self.visit_expr(&binary_expr.left, _p);
+        self.visit_expr(&mut binary_expr.left, _p);
         self.f
             .write_str(&format!(" {} ", binary_expr.op.sym()))
             .unwrap();
-        self.visit_expr(&binary_expr.right, _p);
+        self.visit_expr(&mut binary_expr.right, _p);
         self.f.write_str(")").unwrap();
         None
     }
 
-    fn visit_unary_expr(&mut self, unary_expr: &UnaryExpr, _p: &mut ()) -> Option<()> {
+    fn visit_unary_expr(&mut self, unary_expr: &mut UnaryExpr, _p: &mut ()) -> Option<()> {
         self.f
             .write_str(&format!("{}", unary_expr.op.sym()))
             .unwrap();
-        self.visit_expr(&unary_expr.expr, _p);
+        self.visit_expr(&mut unary_expr.expr, _p);
         None
     }
 
-    fn visit_grouping_expr(&mut self, grouping: &GroupingExpr, _p: &mut ()) -> Option<()> {
+    fn visit_grouping_expr(&mut self, grouping: &mut GroupingExpr, _p: &mut ()) -> Option<()> {
         self.f.write_str("(").unwrap();
-        self.visit_expr(&grouping.expr, _p);
+        self.visit_expr(&mut grouping.expr, _p);
         self.f.write_str(")").unwrap();
         None
     }
 
-    fn visit_identifier_expr(&mut self, _identifier: &IdentifierExpr, _p: &mut ()) -> Option<()> {
+    fn visit_identifier_expr(
+        &mut self,
+        _identifier: &mut IdentifierExpr,
+        _p: &mut (),
+    ) -> Option<()> {
         self.f.write_str(&format!("{}", _identifier.name)).unwrap();
         None
     }
 
-    fn visit_literal_expr(&mut self, literal: &LiteralExpr, _p: &mut ()) -> Option<()> {
+    fn visit_literal_expr(&mut self, literal: &mut LiteralExpr, _p: &mut ()) -> Option<()> {
         match literal {
             LiteralExpr::Nil(_) => self.f.write_str("nil").unwrap(),
             LiteralExpr::Bool((boo, _)) => self.f.write_str(&boo.to_string()).unwrap(),

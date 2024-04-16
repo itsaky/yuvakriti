@@ -14,11 +14,12 @@
  */
 
 use std::fs::File;
+use std::io::Cursor;
 use std::path::Path;
 
-use crate::bytecode::{YKBFile, YKBFileWriter, YKBVersion};
+use crate::bytecode::YKBFile;
+use crate::comp::YKCompiler;
 use crate::features::CompilerFeatures;
-use crate::tests::util::parse;
 
 pub(crate) fn compile_to_bytecode<'a>(
     features: &CompilerFeatures,
@@ -30,10 +31,12 @@ pub(crate) fn compile_to_bytecode<'a>(
         std::fs::remove_file(bytecode_path).unwrap();
     }
 
-    let mut program = parse(source);
-    let mut ykbfile = YKBFile::new(YKBVersion::LATEST.clone());
-    let mut ykbwriter = YKBFileWriter::new(&mut ykbfile, &features);
-    ykbwriter.write(&mut program);
+    let mut compiler = YKCompiler::new();
+    let (mut program, has_errors) = compiler.parse(Cursor::new(source)).unwrap();
+    assert!(!has_errors);
+
+    compiler.attr(&mut program, features);
+    let mut ykbfile = compiler.ir(&mut program, features);
 
     let display = bytecode_path.display();
     let file = match File::create(&bytecode_path) {

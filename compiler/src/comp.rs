@@ -13,8 +13,17 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+mod attr;
+mod constfold;
+mod resolve;
+
+pub use crate::comp::attr::Attr;
+pub use crate::comp::constfold::ConstFold;
+pub use crate::comp::resolve::Resolve;
+
 use std::cell::RefCell;
 use std::fs::File;
+use std::io::{Error, Read, Write};
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -23,10 +32,12 @@ use log::error;
 use log::info;
 
 use crate::args::CompileArgs;
-use crate::attr::Attr;
+use crate::ast::Program;
+use crate::bytecode::YKBFile;
+use crate::bytecode::YKBFileWriter;
+use crate::bytecode::YKBVersion;
 use crate::bytecode::EXT_YK;
 use crate::bytecode::EXT_YKB;
-use crate::bytecode::{YKBFile, YKBFileWriter, YKBVersion};
 use crate::diagnostics::collecting_handler;
 use crate::diagnostics::CollectingDiagnosticHandler;
 use crate::features::CompilerFeatures;
@@ -77,14 +88,8 @@ impl YKCompiler {
 
         info!("[{:?}] Parsing file", display);
 
-        let lexer = YKLexer::new(file, self.diagnostics.clone());
-        let mut parser = YKParser::new(lexer, self.diagnostics.clone());
-        let mut program = parser.parse();
-        let mut has_errors = parser.has_errors();
-
-        let mut attr = Attr::new(self.diagnostics.clone());
-        attr.analyze(&mut program);
-        has_errors |= attr.has_errors();
+        let (mut program, mut has_errors) = self.parse(file)?;
+        has_errors |= self.attr(&mut program, features);
 
         if has_errors {
             info!("[{:?}] Compilation failed", display);
@@ -92,9 +97,7 @@ impl YKCompiler {
         }
 
         info!("[{:?}] Generating bytecode", display);
-        let mut ykbfile = YKBFile::new(YKBVersion::LATEST.clone());
-        let mut ykbwriter = YKBFileWriter::new(&mut ykbfile, features);
-        ykbwriter.write(&mut program);
+        let mut ykbfile = self.ir(&mut program, features);
 
         info!("[{:?}] Writing bytecode", display);
 
@@ -106,5 +109,28 @@ impl YKCompiler {
         info!("[{:?}] Compilation successful", display);
 
         Ok(())
+    }
+
+    /// Parse source code and return the resulting AST.
+    pub fn parse<R: Read>(&mut self, source: R) -> Result<(Program, bool), ()> {
+        let lexer = YKLexer::new(source, self.diagnostics.clone());
+        let mut parser = YKParser::new(lexer, self.diagnostics.clone());
+        let program = parser.parse();
+        Ok((program, parser.has_errors()))
+    }
+
+    /// Run the attribution phase on the given program and return whether any errors were found.
+    pub fn attr(&mut self, program: &mut Program, features: &CompilerFeatures) -> bool {
+        let mut attr = Attr::new(features, self.diagnostics.clone());
+        attr.analyze(program);
+        attr.has_errors()
+    }
+
+    /// Generate the intermediate [YKBFile] representation for the given program.
+    pub fn ir(&mut self, program: &mut Program, features: &CompilerFeatures) -> YKBFile {
+        let mut ykbfile = YKBFile::new(YKBVersion::LATEST.clone());
+        let mut ykbwriter = YKBFileWriter::new(&mut ykbfile, features);
+        ykbwriter.write(program);
+        ykbfile
     }
 }

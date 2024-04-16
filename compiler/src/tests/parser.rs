@@ -16,13 +16,16 @@
 use std::cell::RefCell;
 use std::io::Cursor;
 use std::rc::Rc;
+use log::info;
 
+use crate::ast::{ArithmeticASTPrinter, ASTPrinter, ASTVisitor, BinaryOp};
+use crate::ast::{NodeType, Stmt};
 use crate::ast::Spanned;
 use crate::ast::UnaryOp;
 use crate::ast::Visitable;
-use crate::ast::{ASTVisitor, ArithmeticASTPrinter, BinaryOp};
-use crate::ast::{NodeType, Stmt};
+use crate::comp::YKCompiler;
 use crate::diagnostics;
+use crate::features::CompilerFeatures;
 use crate::lexer::YKLexer;
 use crate::messages;
 use crate::parser::YKParser;
@@ -106,7 +109,7 @@ fn test_simple_var_decl() {
 
 #[test]
 fn test_simple_for_statement() {
-    let out = parse("for (var i = 0; i < 10; i = i + 1) {\n    print i;\n}");
+    let mut out = parse("for (var i = 0; i < 10; i = i + 1) {\n    print i;\n}");
 
     let stmts = &out.stmts;
     assert_eq!(1, stmts.len());
@@ -289,7 +292,7 @@ fn test_factors_assoc() {
 
 #[test]
 fn test_arith_prec() {
-    let program = parse("4 * 5 - (2 + 3) / 6 + 7;");
+    let mut program = parse("4 * 5 - (2 + 3) / 6 + 7;");
     let mut out = String::new();
     let mut printer = ArithmeticASTPrinter::new(&mut out);
     program.accept(&mut printer, &mut ());
@@ -320,7 +323,7 @@ fn test_arith_assoc() {
     let mut ok = true;
     for (source, expected) in cases {
         print!("Checking:: source: {}, expected: {}", source, expected);
-        let program = parse(source);
+        let mut program = parse(source);
         let mut out = String::new();
         let mut printer = ArithmeticASTPrinter::new(&mut out);
         program.accept(&mut printer, &mut ());
@@ -344,7 +347,7 @@ fn test_parser_diagnostic_at_end() {
     );
 
     let mut parser = YKParser::new(lexer, diag_handler.clone());
-    let program = parser.parse();
+    let mut program = parser.parse();
     let mut out = String::new();
     let mut printer = ArithmeticASTPrinter::new(&mut out);
     program.accept(&mut printer, &mut ());
@@ -380,4 +383,114 @@ fn test_simple_fun_decl() {
             )],
         ),
     );
+}
+
+#[test]
+fn test_const_folded_ast() {
+    let cases = [
+        ("2 - 3 - 4", Number(-5f64)),
+        ("2 - 3 + 4", Number(3f64)),
+        ("2 + 3 - 4", Number(1f64)),
+        ("2 + 3 + 4", Number(9f64)),
+        ("2 * 3 * 4", Number(24f64)),
+        ("2 * 3 / 4", Number(1.5f64)),
+        ("2 / 3 * 4", Number(2.6666666666666665f64)),
+        ("2 / 3 / 4", Number(0.16666666666666666f64)),
+        ("2 + 3 * 4", Number(14f64)),
+        ("2 * 3 + 4", Number(10f64)),
+        ("2 + 3 / 4", Number(2.75f64)),
+        ("2 / 3 + 4", Number(4.666666666666667f64)),
+        ("2 - 3 * 4", Number(-10f64)),
+        ("2 * 3 - 4", Number(2f64)),
+        ("2 - 3 / 4", Number(1.25f64)),
+        ("2 / 3 - 4", Number(-3.3333333333333335f64)),
+        ("2 - 3 - 4", Number(-5f64)),
+        ("2 - 3 + 4", Number(3f64)),
+        ("-2 + 3 - 4", Number(-3f64)),
+        ("-2 - 3 + 4", Number(-1f64)),
+        ("2 + 3 - (-4)", Number(9f64)),
+        ("-2 * 3 * 4", Number(-24f64)),
+        ("2 * (-3) / 4", Number(-1.5f64)),
+        ("-2 / 3 * 4", Number(-2.6666666666666665f64)),
+        ("-2 / 3 / 4", Number(-0.16666666666666666f64)),
+        ("2 + (-3) * 4", Number(-10f64)),
+        ("(-2) * 3 + 4", Number(-2f64)),
+        ("2 + (-3) / 4", Number(1.25f64)),
+        ("-2 / 3 + 4", Number(3.3333333333333335f64)),
+        ("2 * (3 + 4)", Number(14f64)),
+        ("(2 * 3) + 4", Number(10f64)),
+        ("2 + (3 / 4)", Number(2.75f64)),
+        ("(2 / 3) + 4", Number(4.666666666666667f64)),
+        ("2 - (3 * 4)", Number(-10f64)),
+        ("(2 * 3) - 4", Number(2f64)),
+        ("2 - (3 / 4)", Number(1.25f64)),
+        ("(2 / 3) - 4", Number(-3.3333333333333335f64)),
+        ("2 < 3", Bool(true)),
+        ("2 <= 3", Bool(true)),
+        ("2 > 3", Bool(false)),
+        ("2 >= 3", Bool(false)),
+        ("2 == 3", Bool(false)),
+        ("2 != 3", Bool(true)),
+        ("0 < 1", Bool(true)),
+        ("0 <= 1", Bool(true)),
+        ("0 > 1", Bool(false)),
+        ("0 >= 1", Bool(false)),
+        ("0 == 0", Bool(true)),
+        ("0 != 0", Bool(false)),
+        ("10.5 < 11", Bool(true)),
+        ("10.5 <= 11", Bool(true)),
+        ("10.5 > 11", Bool(false)),
+        ("10.5 >= 11", Bool(false)),
+        ("-5.2 < -5", Bool(true)),
+        ("-5.2 <= -5", Bool(true)),
+        ("-5.2 > -5", Bool(false)),
+        ("-5.2 >= -5", Bool(false)),
+        // ("(2 < 3) && (2 <= 3)", Bool(true)),
+        // ("(2 > 3) || (2 >= 3)", Bool(false)),
+        // ("true && true", Bool(true)),
+        // ("true && false", Bool(false)),
+        // ("false && true", Bool(false)),
+        // ("false && false", Bool(false)),
+        // ("true || true", Bool(true)),
+        // ("true || false", Bool(true)),
+        // ("false || true", Bool(true)),
+        // ("false || false", Bool(false)),
+        // ("!true", Bool(false)),
+        // ("!false", Bool(true)),
+        // ("2 == 2", Bool(true)),
+        // ("3.14 < 3.15", Bool(true)),
+        // ("true != false", Bool(true)),
+    ];
+
+    for (src, exp) in cases {
+        info!("Test constant folding on: {}", src);
+        let mut compiler = YKCompiler::new();
+        let (mut program, has_errors) = compiler
+            .parse(Cursor::new(format!("print {};", src)))
+            .expect("Failed to parse source");
+
+        let mut features = CompilerFeatures::default();
+        features.const_folding = true; // enable constant folding
+        
+        let mut out = String::new();
+        let mut printer = ASTPrinter::new(&mut out, false);
+        program.accept(&mut printer, &mut 0);
+
+        assert!(!compiler.attr(&mut program, &features));
+
+        assert!(!has_errors);
+
+        assert_ast(
+            &mut program,
+            &mut Program(
+                vec![],
+                boxed_vec![
+                Node(NodeType::PrintStmt,
+                    boxed_vec![
+                        exp
+                    ])
+            ],
+            ),
+        )
+    }
 }

@@ -13,10 +13,10 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::comp::Resolve;
 use crate::diagnostics::{collecting_handler, DiagnosticKind};
 use crate::location::Position;
 use crate::messages;
-use crate::resolve::Resolve;
 use crate::tests::util::parse_1;
 use std::cell::RefCell;
 use std::rc::Rc;

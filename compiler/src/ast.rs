@@ -42,6 +42,9 @@ macro_rules! def_node {
             pub fn new($($prop: $ty,)* range: Range) -> Self {
                 Self { $($prop,)* range }
             }
+            pub fn own_range(self) -> Range {
+                self.range
+            }
         }
     };
 }
@@ -91,7 +94,7 @@ macro_rules! def_enum {
         }
 
         impl Visitable for $name {
-            fn accept<P, R>(&self, visitor: &mut (impl ASTVisitor<P, R> + ?Sized), p: &mut P) -> Option<R> {
+            fn accept<P, R>(&mut self, visitor: &mut (impl ASTVisitor<P, R> + ?Sized), p: &mut P) -> Option<R> {
                 match self {
                     $($name::$prop(node) => node.accept(visitor, p),)*
                 }
@@ -175,7 +178,7 @@ pub trait AstNode: Spanned {
 /// An [ASTNode] which can be visited
 pub trait Visitable {
     fn accept<P, R>(
-        self: &Self,
+        self: &mut Self,
         visitor: &mut (impl ASTVisitor<P, R> + ?Sized),
         p: &mut P,
     ) -> Option<R>;
@@ -269,7 +272,6 @@ def_enum!(Expr {
     MemberAccess: Box<MemberAccessExpr>,
     Identifier: IdentifierExpr,
     Literal: LiteralExpr,
-    Grouping: GroupingExpr,
 });
 
 def_node!(AssignExpr {
@@ -358,6 +360,17 @@ impl SpannedMut for LiteralExpr {
             LiteralExpr::Bool(s) => &mut s.1,
             LiteralExpr::Number(s) => &mut s.1,
             LiteralExpr::String(s) => &mut s.1,
+        }
+    }
+}
+
+impl Display for LiteralExpr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LiteralExpr::Nil(_) => write!(f, "nil"),
+            LiteralExpr::Bool((b, _)) => write!(f, "{}", b), 
+            LiteralExpr::Number((n, _)) => write!(f, "{}", n),
+            LiteralExpr::String((s,_)) => write!(f, "\"{}\"", s),
         }
     }
 }

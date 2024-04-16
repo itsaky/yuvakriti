@@ -154,7 +154,7 @@ fn verify_max_stack_size_attr() {
         // add; stack=6
         // as seen above, max stack size is 2
         ("print 1 + 2 + 3;", 2),
-        // this must be true, no matter how deep is the binary expr
+        // this must be true, no matter how deep the binary expr is
         ("print 1 + 2 + 3 + 4 + 5 + 6;", 2),
     ] {
         let ykbfile = compile_to_bytecode(&features, source, &path);

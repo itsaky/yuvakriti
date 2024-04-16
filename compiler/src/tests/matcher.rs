@@ -79,7 +79,11 @@ impl IdentifierMatcher {
     }
 }
 impl ASTVisitor<(), bool> for IdentifierMatcher {
-    fn visit_identifier_expr(&mut self, identifier: &IdentifierExpr, _p: &mut ()) -> Option<bool> {
+    fn visit_identifier_expr(
+        &mut self,
+        identifier: &mut IdentifierExpr,
+        _p: &mut (),
+    ) -> Option<bool> {
         Some(self.name == identifier.name)
     }
 }
@@ -93,14 +97,20 @@ impl LiteralMatcher {
     }
 }
 impl ASTVisitor<(), bool> for LiteralMatcher {
-    fn visit_literal_expr(&mut self, literal: &LiteralExpr, _p: &mut ()) -> Option<bool> {
-        assert!(match (&self.value, literal) {
+    fn visit_literal_expr(&mut self, literal: &mut LiteralExpr, _p: &mut ()) -> Option<bool> {
+        let result = match (&self.value, &literal) {
             (LiteralExpr::Nil(_), LiteralExpr::Nil(_)) => true,
             (LiteralExpr::Bool(f), LiteralExpr::Bool(s)) => &f.0 == &s.0,
             (LiteralExpr::Number(f), LiteralExpr::Number(s)) => &f.0 == &s.0,
             (LiteralExpr::String(f), LiteralExpr::String(s)) => &f.0 == &s.0,
             _ => false,
-        });
+        };
+        
+        if !result {
+            println!("Expected {}, got {}", self.value, &literal);
+            assert!(false);
+        }
+        
         Some(true)
     }
 }
@@ -115,95 +125,103 @@ impl NoOpMatcher {
 
 impl ASTVisitor<(), bool> for NoOpMatcher {
     #[allow(unused_variables)]
-    fn visit_program(&mut self, program: &Program, p: &mut ()) -> Option<bool> {
+    fn visit_program(&mut self, program: &mut Program, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_decl(&mut self, decl: &Decl, p: &mut ()) -> Option<bool> {
+    fn visit_decl(&mut self, decl: &mut Decl, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_stmt(&mut self, stmt: &Stmt, p: &mut ()) -> Option<bool> {
+    fn visit_stmt(&mut self, stmt: &mut Stmt, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_expr(&mut self, expr: &Expr, p: &mut ()) -> Option<bool> {
+    fn visit_expr(&mut self, expr: &mut Expr, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_class_decl(&mut self, class_decl: &ClassDecl, p: &mut ()) -> Option<bool> {
+    fn visit_class_decl(&mut self, class_decl: &mut ClassDecl, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_func_decl(&mut self, func_decl: &FuncDecl, p: &mut ()) -> Option<bool> {
+    fn visit_func_decl(&mut self, func_decl: &mut FuncDecl, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_var_stmt(&mut self, var_decl: &VarStmt, p: &mut ()) -> Option<bool> {
+    fn visit_var_stmt(&mut self, var_decl: &mut VarStmt, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_block_stmt(&mut self, block_stmt: &BlockStmt, p: &mut ()) -> Option<bool> {
+    fn visit_block_stmt(&mut self, block_stmt: &mut BlockStmt, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_expr_stmt(&mut self, expr_stmt: &ExprStmt, p: &mut ()) -> Option<bool> {
+    fn visit_expr_stmt(&mut self, expr_stmt: &mut ExprStmt, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_for_stmt(&mut self, for_stmt: &ForStmt, p: &mut ()) -> Option<bool> {
+    fn visit_for_stmt(&mut self, for_stmt: &mut ForStmt, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_if_stmt(&mut self, if_stmt: &IfStmt, p: &mut ()) -> Option<bool> {
+    fn visit_if_stmt(&mut self, if_stmt: &mut IfStmt, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_print_stmt(&mut self, print_stmt: &PrintStmt, p: &mut ()) -> Option<bool> {
+    fn visit_print_stmt(&mut self, print_stmt: &mut PrintStmt, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_return_stmt(&mut self, return_stmt: &ReturnStmt, p: &mut ()) -> Option<bool> {
+    fn visit_return_stmt(&mut self, return_stmt: &mut ReturnStmt, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_while_stmt(&mut self, while_stmt: &WhileStmt, p: &mut ()) -> Option<bool> {
+    fn visit_while_stmt(&mut self, while_stmt: &mut WhileStmt, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_assign_expr(&mut self, assign_expr: &AssignExpr, p: &mut ()) -> Option<bool> {
+    fn visit_assign_expr(&mut self, assign_expr: &mut AssignExpr, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_binary_expr(&mut self, binary_expr: &BinaryExpr, p: &mut ()) -> Option<bool> {
+    fn visit_binary_expr(&mut self, binary_expr: &mut BinaryExpr, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_unary_expr(&mut self, unary_expr: &UnaryExpr, p: &mut ()) -> Option<bool> {
+    fn visit_unary_expr(&mut self, unary_expr: &mut UnaryExpr, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_func_call_expr(&mut self, func_call_expr: &FuncCallExpr, p: &mut ()) -> Option<bool> {
-        Some(true)
-    }
-    #[allow(unused_variables)]
-    fn visit_member_access_expr(
+    fn visit_func_call_expr(
         &mut self,
-        member_access_expr: &MemberAccessExpr,
+        func_call_expr: &mut FuncCallExpr,
         p: &mut (),
     ) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_grouping_expr(&mut self, grouping: &GroupingExpr, _p: &mut ()) -> Option<bool> {
+    fn visit_member_access_expr(
+        &mut self,
+        member_access_expr: &mut MemberAccessExpr,
+        p: &mut (),
+    ) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_identifier_expr(&mut self, identifier: &IdentifierExpr, _p: &mut ()) -> Option<bool> {
+    fn visit_grouping_expr(&mut self, grouping: &mut GroupingExpr, _p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
-    fn visit_literal_expr(&mut self, literal: &LiteralExpr, _p: &mut ()) -> Option<bool> {
+    fn visit_identifier_expr(
+        &mut self,
+        identifier: &mut IdentifierExpr,
+        _p: &mut (),
+    ) -> Option<bool> {
+        Some(true)
+    }
+    #[allow(unused_variables)]
+    fn visit_literal_expr(&mut self, literal: &mut LiteralExpr, _p: &mut ()) -> Option<bool> {
         Some(true)
     }
 }
@@ -220,7 +238,7 @@ impl BinaryMatcher {
 }
 
 impl ASTVisitor<(), bool> for BinaryMatcher {
-    fn visit_binary_expr(&mut self, binary_expr: &BinaryExpr, _p: &mut ()) -> Option<bool> {
+    fn visit_binary_expr(&mut self, binary_expr: &mut BinaryExpr, _p: &mut ()) -> Option<bool> {
         if let Some(op) = self.op.as_ref() {
             assert_eq!(op, &binary_expr.op);
         }
@@ -257,7 +275,7 @@ impl UnaryMatcher {
 }
 
 impl ASTVisitor<(), bool> for UnaryMatcher {
-    fn visit_unary_expr(&mut self, unary_expr: &UnaryExpr, _p: &mut ()) -> Option<bool> {
+    fn visit_unary_expr(&mut self, unary_expr: &mut UnaryExpr, _p: &mut ()) -> Option<bool> {
         if let Some(op) = self.op.as_ref() {
             assert_eq!(op, &unary_expr.op);
         }
@@ -327,25 +345,33 @@ pub fn Unary(op: UnaryOp, expr: Box<Matcher>) -> UnaryMatcher {
 }
 
 impl ASTVisitor<(), bool> for AssertingAstMatcher {
-    fn visit_program(&mut self, program: &Program, _p: &mut ()) -> Option<bool> {
+    fn visit_program(&mut self, program: &mut Program, _p: &mut ()) -> Option<bool> {
         assert_eq!(&self.typ, &program.typ());
         let mut index = 0;
         for i in 0..program.decls.len() {
             let matcher = &mut self.nested[index];
-            mtch!(&program.decls[i], matcher.as_mut(), "Failed to match decl");
+            mtch!(
+                &mut program.decls[i],
+                matcher.as_mut(),
+                "Failed to match decl"
+            );
             index += 1;
         }
 
         for i in 0..program.stmts.len() {
             let matcher = &mut self.nested[index];
-            mtch!(&program.stmts[i], matcher.as_mut(), "Failed to match stmt");
+            mtch!(
+                &mut program.stmts[i],
+                matcher.as_mut(),
+                "Failed to match stmt"
+            );
             index += 1;
         }
 
         Some(true)
     }
 
-    fn visit_func_decl(&mut self, func_decl: &FuncDecl, _p: &mut ()) -> Option<bool> {
+    fn visit_func_decl(&mut self, func_decl: &mut FuncDecl, _p: &mut ()) -> Option<bool> {
         assert_eq!(&self.typ, &func_decl.typ());
 
         let mut idx = 0;
@@ -372,7 +398,7 @@ impl ASTVisitor<(), bool> for AssertingAstMatcher {
         Some(true)
     }
 
-    fn visit_var_stmt(&mut self, var_decl: &VarStmt, _p: &mut ()) -> Option<bool> {
+    fn visit_var_stmt(&mut self, var_decl: &mut VarStmt, _p: &mut ()) -> Option<bool> {
         assert_eq!(&self.typ, &var_decl.typ());
         let mut idx = 0;
         if let Some(matcher) = self.nested.get_mut(idx) {
@@ -382,7 +408,7 @@ impl ASTVisitor<(), bool> for AssertingAstMatcher {
         idx += 1;
         if let Some(matcher) = self.nested.get_mut(idx) {
             mtch_o!(
-                var_decl.initializer.as_ref(),
+                var_decl.initializer.as_mut(),
                 matcher.as_mut(),
                 "Failed to match expr"
             );
@@ -391,11 +417,12 @@ impl ASTVisitor<(), bool> for AssertingAstMatcher {
         Some(true)
     }
 
-    fn visit_block_stmt(&mut self, block_stmt: &BlockStmt, _p: &mut ()) -> Option<bool> {
+    fn visit_block_stmt(&mut self, block_stmt: &mut BlockStmt, _p: &mut ()) -> Option<bool> {
         assert_eq!(&self.typ, &block_stmt.typ());
 
         let mut idx = 0;
-        for decl in &block_stmt.decls {
+        for i in 0..block_stmt.decls.len() {
+            let decl = block_stmt.decls.get_mut(i).unwrap();
             if let Some(matcher) = self.nested.get_mut(idx) {
                 mtch!(decl, matcher.as_mut(), "Failed to match decl");
             }
@@ -405,7 +432,39 @@ impl ASTVisitor<(), bool> for AssertingAstMatcher {
         Some(true)
     }
 
-    fn visit_print_stmt(&mut self, print_stmt: &PrintStmt, _p: &mut ()) -> Option<bool> {
+    fn visit_for_stmt(&mut self, for_stmt: &mut ForStmt, _p: &mut ()) -> Option<bool> {
+        assert_eq!(self.typ, for_stmt.typ());
+        let mut idx = 0;
+        if let Some(matcher) = self.nested.get_mut(idx) {
+            mtch_o!(
+                for_stmt.init.as_mut(),
+                matcher.as_mut(),
+                "Failed to match for init"
+            );
+        }
+
+        idx += 1;
+        if let Some(matcher) = self.nested.get_mut(idx) {
+            mtch_o!(
+                for_stmt.condition.as_mut(),
+                matcher.as_mut(),
+                "Failed to match for condition"
+            );
+        }
+
+        idx += 1;
+        if let Some(matcher) = self.nested.get_mut(idx) {
+            mtch_o!(
+                for_stmt.step.as_mut(),
+                matcher.as_mut(),
+                "Failed to match for step"
+            );
+        }
+
+        Some(true)
+    }
+
+    fn visit_print_stmt(&mut self, print_stmt: &mut PrintStmt, _p: &mut ()) -> Option<bool> {
         assert_eq!(&self.typ, &print_stmt.typ());
         if let Some(matcher) = self.nested.get_mut(0) {
             mtch!(
@@ -417,39 +476,7 @@ impl ASTVisitor<(), bool> for AssertingAstMatcher {
         Some(true)
     }
 
-    fn visit_for_stmt(&mut self, for_stmt: &ForStmt, _p: &mut ()) -> Option<bool> {
-        assert_eq!(self.typ, for_stmt.typ());
-        let mut idx = 0;
-        if let Some(matcher) = self.nested.get_mut(idx) {
-            mtch_o!(
-                for_stmt.init.as_ref(),
-                matcher.as_mut(),
-                "Failed to match for init"
-            );
-        }
-
-        idx += 1;
-        if let Some(matcher) = self.nested.get_mut(idx) {
-            mtch_o!(
-                for_stmt.condition.as_ref(),
-                matcher.as_mut(),
-                "Failed to match for condition"
-            );
-        }
-
-        idx += 1;
-        if let Some(matcher) = self.nested.get_mut(idx) {
-            mtch_o!(
-                for_stmt.step.as_ref(),
-                matcher.as_mut(),
-                "Failed to match for step"
-            );
-        }
-
-        Some(true)
-    }
-
-    fn visit_assign_expr(&mut self, assign_expr: &AssignExpr, _p: &mut ()) -> Option<bool> {
+    fn visit_assign_expr(&mut self, assign_expr: &mut AssignExpr, _p: &mut ()) -> Option<bool> {
         assert_eq!(self.typ, assign_expr.typ());
         if let Some(matcher) = self.nested.get_mut(0) {
             mtch!(
@@ -469,7 +496,7 @@ impl ASTVisitor<(), bool> for AssertingAstMatcher {
         Some(true)
     }
 
-    fn visit_grouping_expr(&mut self, grouping: &GroupingExpr, _p: &mut ()) -> Option<bool> {
+    fn visit_grouping_expr(&mut self, grouping: &mut GroupingExpr, _p: &mut ()) -> Option<bool> {
         assert_eq!(self.typ, grouping.typ());
         if let Some(matcher) = self.nested.get_mut(0) {
             mtch!(
