@@ -13,6 +13,7 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::ast::ASTVisitor;
 use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
 use crate::ast::Expr;
@@ -20,7 +21,6 @@ use crate::ast::LiteralExpr;
 use crate::ast::Spanned;
 use crate::ast::UnaryExpr;
 use crate::ast::UnaryOp;
-use crate::ast::{ASTVisitor, Program};
 
 /// Helper for constant folding in the compiler.
 pub struct ConstFold;
@@ -176,9 +176,6 @@ impl ConstFold {
 }
 
 impl ASTVisitor<(), ()> for ConstFold {
-    fn visit_program(&mut self, program: &mut Program, p: &mut ()) -> Option<()> {
-        self.default_visit_program(program, p, true, true)
-    }
     fn visit_expr(&mut self, expr: &mut Expr, p: &mut ()) -> Option<()> {
         if let Some(folded) = self.try_fold(expr) {
             *expr = folded;
