@@ -76,3 +76,22 @@ fn test_var_decl_in_sep_scope() {
 
     assert!(diagnostics.is_empty());
 }
+
+#[test]
+fn test_var_self_use_in_decl() {
+    let diags = Rc::new(RefCell::new(collecting_handler()));
+
+    // variables are declared in different scopes
+    // hence, they should not interfere
+    let mut program = parse_1("var a = a + 1;", diags.clone());
+    let mut analyzer = Resolve::new(diags.clone());
+    analyzer.analyze(&mut program);
+
+    let diags = diags.borrow();
+    let diagnostics = &diags.diagnostics;
+
+    assert!(!diagnostics.is_empty());
+    assert_eq!(messages::err_undecl_var("a"), diagnostics[0].message);
+    assert_eq!(Position::new(0, 8, 8), diagnostics[0].range.start);
+    assert_eq!(Position::new(0, 9, 9), diagnostics[0].range.end);
+}
