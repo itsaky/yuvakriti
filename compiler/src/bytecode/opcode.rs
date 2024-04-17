@@ -52,10 +52,15 @@ pub enum OpCode {
     Store1 = 0x18,
     Store2 = 0x19,
     Store3 = 0x1A,
+    Load = 0x1B,
+    Load0 = 0x1C,
+    Load1 = 0x1D,
+    Load2 = 0x1E,
+    Load3 = 0x1F,
 
     // when introducing new opcodes,
     // increment this
-    OpCount = 0x1B,
+    OpCount = 0x20,
 }
 
 impl OpCode {
@@ -82,6 +87,7 @@ impl OpCodeExt for OpCode {
             OpCode::IfGtZ |
             OpCode::IfGeZ |
             // --- store insn with implicit var index ---
+            OpCode::Store |
             OpCode::Store0 |
             OpCode::Store1 |
             OpCode::Store2 |
@@ -90,7 +96,14 @@ impl OpCodeExt for OpCode {
             OpCode::Print => -1,
 
             // these push 1 operand
-            OpCode::Ldc | OpCode::BPush0 | OpCode::BPush1 => 1,
+            OpCode::Ldc |
+            OpCode::BPush0 |
+            OpCode::BPush1 |
+            OpCode::Load |
+            OpCode::Load0 |
+            OpCode::Load1 |
+            OpCode::Load2 |
+            OpCode::Load3 => 1,
 
             // unreachable
             _ => unreachable!("OpCode {} is not yet supported!", self),
@@ -120,6 +133,11 @@ impl OpCodeExt for OpCode {
             OpCode::Store1 => "store_1",
             OpCode::Store2 => "store_2",
             OpCode::Store3 => "store_3",
+            OpCode::Load => "load",
+            OpCode::Load0 => "load_0",
+            OpCode::Load1 => "load_1",
+            OpCode::Load2 => "load_2",
+            OpCode::Load3 => "load_3",
             _ => panic!("Unknown/unsupported opcode: {:?}", self),
         }
     }
@@ -160,6 +178,11 @@ pub fn get_opcode(code: OpSize) -> OpCode {
         0x18 => OpCode::Store1,
         0x19 => OpCode::Store2,
         0x1A => OpCode::Store3,
+        0x1B => OpCode::Load,
+        0x1C => OpCode::Load0,
+        0x1D => OpCode::Load1,
+        0x1E => OpCode::Load2,
+        0x1F => OpCode::Load3,
         _ => panic!("Unknown/unsupported opcode: {}", code),
     };
 }

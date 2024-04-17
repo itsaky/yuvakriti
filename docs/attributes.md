@@ -24,6 +24,7 @@ structure of the `Code` attribute :
 Code {
     u2 attribute_name_index;
     u2 max_stack;
+    u2 max_locals;
     u4 code_length;
     u1 code[code_length];
 }
@@ -33,6 +34,7 @@ Code {
 |---------------------------|--------------------------------------------------------------------------------------------------------------|
 | `u2 attribute_name_index` | The index of the `Utf8Info` entry in the `constant_pool` table. The value at this index is always `Code`     |
 | `u2 max_stack`            | The maximum depth of the operand stack at any point during the instruction execution of this code attribute. |
+| `u2 max_locals`           | The maximum number of local variables at any point during the instruction execution of this code attribute.  |
 | `u4 code_length`          | The number of bytes of instructions in this code attribute.                                                  |
 | `u1 code[code_length]`    | The instructions in this code attribute.                                                                     |
 

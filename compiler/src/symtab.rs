@@ -48,6 +48,7 @@ impl VarSym {
 /// Symbol table to keep track of symbols defined in the program.
 pub struct Symtab {
     symbols: HashMap<String, Symbol>,
+    var_indices: HashMap<String, u16>,
 }
 
 impl Symtab {
@@ -55,6 +56,7 @@ impl Symtab {
     pub fn new() -> Self {
         Symtab {
             symbols: HashMap::new(),
+            var_indices: HashMap::new(),
         }
     }
 
@@ -78,5 +80,25 @@ impl Symtab {
                 Ok(())
             }
         }
+    }
+
+    /// Push the variable symbol to this symbol table, and return its index if successful.
+    pub fn push_var(&mut self, sym: VarSym) -> Result<u16, ()> {
+        let name = sym.name.clone();
+        let index = self.var_indices.len() as u16;
+
+        self.push_sym(Symbol::Variable(sym))
+            .and_then(|_| match self.var_indices.entry(name) {
+                Entry::Occupied(_) => Err(()),
+                Entry::Vacant(vac) => {
+                    vac.insert(index);
+                    Ok(index)
+                }
+            })
+    }
+
+    /// Get index of the variable symbol with the given name.
+    pub fn get_var_idx(&self, name: &String) -> Option<&u16> {
+        self.var_indices.get(name)
     }
 }

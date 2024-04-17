@@ -75,7 +75,7 @@ fn test_arithemetic_constant_folding() {
             OpCode::Print as OpSize,
             OpCode::Ldc as OpSize, 0x00, 0x04, // 0.8
             OpCode::Print as OpSize,
-        ]
+        ], 1, 0
     );
 }
 
@@ -116,7 +116,7 @@ fn test_disabled_arithemetic_constant_folding() {
             OpCode::Ldc as OpSize, 0x00, 0x05, // 5
             OpCode::Div as OpSize,
             OpCode::Print as OpSize,
-        ]
+        ],2, 0
     );
 }
 
@@ -134,6 +134,8 @@ fn test_bpush_ops() {
             OpCode::BPush1 as OpSize,
             OpCode::Print as OpSize,
         ],
+        1,
+        0,
     );
 }
 
@@ -204,12 +206,76 @@ print false;",
     assert_eq!(1, code.max_stack());
 }
 
+#[test]
+fn test_variable_decl_and_load() {
+    let path = Path::new("target/variable_decl_and_load.ykb");
+    let features = CompilerFeatures::default();
+    verify_top_level_insns(
+        "var i = 0; print i;",
+        &path,
+        &features,
+        &vec![],
+        &vec![
+            OpCode::Ldc as OpSize,
+            0x00,
+            0x01, // const at idx 1
+            OpCode::Store0 as OpSize,
+            OpCode::Load0 as OpSize,
+            OpCode::Print as OpSize,
+        ],
+        1,
+        1,
+    );
+}
+
+#[test]
+fn test_multi_variable_decl_and_load() {
+    let path = Path::new("target/variable_decl_and_load.ykb");
+    let features = CompilerFeatures::default();
+    verify_top_level_insns(
+        "var a = 0; var b = 1; var c = 2; print a; print b; print c; print a + b + c;",
+        &path,
+        &features,
+        &vec![],
+        &vec![
+            OpCode::Ldc as OpSize,
+            0x00,
+            0x01, // const at idx 1
+            OpCode::Store0 as OpSize,
+            OpCode::Ldc as OpSize,
+            0x00,
+            0x02, // const at idx 2 (names for var-decls are not stored in constant pool)
+            OpCode::Store1 as OpSize,
+            OpCode::Ldc as OpSize,
+            0x00,
+            0x03, // const at idx 3
+            OpCode::Store2 as OpSize,
+            OpCode::Load0 as OpSize,
+            OpCode::Print as OpSize,
+            OpCode::Load1 as OpSize,
+            OpCode::Print as OpSize,
+            OpCode::Load2 as OpSize,
+            OpCode::Print as OpSize,
+            OpCode::Load0 as OpSize,
+            OpCode::Load1 as OpSize,
+            OpCode::Add as OpSize,
+            OpCode::Load2 as OpSize,
+            OpCode::Add as OpSize,
+            OpCode::Print as OpSize,
+        ],
+        2,
+        3,
+    );
+}
+
 fn verify_top_level_insns(
     source: &str,
     out_path: &Path,
     features: &CompilerFeatures,
     exp_cps: &Vec<ConstantEntry>,
     exp_insns: &Vec<OpSize>,
+    max_stack: u16,
+    max_locals: u16,
 ) {
     let ykbfile = compile_to_bytecode(features, source, &out_path);
 
@@ -225,6 +291,8 @@ fn verify_top_level_insns(
 
     if let attrs::Attr::Code(code) = &attr {
         let insns = code.instructions();
+        assert_eq!(max_stack, code.max_stack());
+        assert_eq!(max_locals, code.max_locals());
         assert_eq!(exp_insns, insns);
     }
 }

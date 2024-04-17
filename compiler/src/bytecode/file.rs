@@ -161,6 +161,7 @@ impl YKBFile {
         match attr {
             Attr::Code(code) => {
                 size += writer.write_u16(code.max_stack())?;
+                size += writer.write_u16(code.max_locals())?;
                 size += writer.write_u32(code.instructions().len().as_code_size())?;
                 size += writer.write_bytes(code.instructions())?;
             }

@@ -150,9 +150,10 @@ impl<R: Read> YKBFileReader<R> {
         let attr = match name.as_str() {
             attrs::CODE => {
                 let max_stack = map_err(self.buf.read_u16(), "Unable to read max stack")?;
+                let max_locals = map_err(self.buf.read_u16(), "Unable to read max locals")?;
                 let insn_count = map_err(self.buf.read_u32(), "Unable to read instruction count")?;
                 let buf = self.buf.read_n_bytes(insn_count as usize)?;
-                attrs::Attr::Code(attrs::Code::with_insns(max_stack, 0, buf))
+                attrs::Attr::Code(attrs::Code::with_insns(max_stack, max_locals, buf))
             }
             attrs::SOURCE_FILE => {
                 let name_index =

@@ -13,7 +13,7 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::symtab::{Symbol, Symtab};
+use crate::symtab::{Symbol, Symtab, VarSym};
 
 /// Scope of symbols in a program
 pub struct Scope<'inst> {
@@ -75,5 +75,15 @@ impl Scope<'_> {
     /// Push a new symbol to this scope. See [Symtab::push_sym] for more details.
     pub fn push_sym(&mut self, sym: Symbol) -> Result<(), ()> {
         return self.symbols.push_sym(sym);
+    }
+
+    /// Push a new variable symbol to this scope. See [Symtab::push_var] for more details.
+    pub fn push_var(&mut self, sym: VarSym) -> Result<u16, ()> {
+        return self.symbols.push_var(sym);
+    }
+
+    /// Get index of the variable symbol with the given name.
+    pub fn get_var_idx(&self, name: &String) -> Option<&u16> {
+        return self.symbols.get_var_idx(name);
     }
 }

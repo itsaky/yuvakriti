@@ -13,16 +13,16 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use log::info;
 use std::cell::RefCell;
 use std::io::Cursor;
 use std::rc::Rc;
-use log::info;
 
-use crate::ast::{ArithmeticASTPrinter, ASTPrinter, ASTVisitor, BinaryOp};
-use crate::ast::{NodeType, Stmt};
 use crate::ast::Spanned;
 use crate::ast::UnaryOp;
 use crate::ast::Visitable;
+use crate::ast::{ASTPrinter, ASTVisitor, ArithmeticASTPrinter, BinaryOp};
+use crate::ast::{NodeType, Stmt};
 use crate::comp::YKCompiler;
 use crate::diagnostics;
 use crate::features::CompilerFeatures;
@@ -471,7 +471,7 @@ fn test_const_folded_ast() {
 
         let mut features = CompilerFeatures::default();
         features.const_folding = true; // enable constant folding
-        
+
         let mut out = String::new();
         let mut printer = ASTPrinter::new(&mut out, false);
         program.accept(&mut printer, &mut 0);
@@ -484,12 +484,7 @@ fn test_const_folded_ast() {
             &mut program,
             &mut Program(
                 vec![],
-                boxed_vec![
-                Node(NodeType::PrintStmt,
-                    boxed_vec![
-                        exp
-                    ])
-            ],
+                boxed_vec![Node(NodeType::PrintStmt, boxed_vec![exp])],
             ),
         )
     }

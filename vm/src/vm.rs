@@ -138,6 +138,7 @@ pub struct CodeExecutor<'inst> {
     variables: Vec<Variable>,
     operands: Vec<Value>,
     max_stack: u16,
+    max_locals: u16,
 }
 
 impl<'inst> CodeExecutor<'inst> {
@@ -147,6 +148,7 @@ impl<'inst> CodeExecutor<'inst> {
             variables: Vec::with_capacity(0),
             operands: Vec::with_capacity(0),
             max_stack: 0,
+            max_locals: 0,
         }
     }
 
@@ -201,11 +203,30 @@ impl<'inst> CodeExecutor<'inst> {
         }
     }
 
+    pub fn store_var(&mut self, index: u16) {
+        let value = self.pop_operand();
+        self.variables[index as usize] = Variable::new(value);
+    }
+
+    pub fn load_var(&mut self, index: u16) {
+        // TODO(itsaky): Avoid cloning
+        let value = self.variables[index as usize].value.clone();
+        self.push_operand(value);
+    }
+
     pub fn execute(&mut self, code: &Code) -> Result<Option<Value>, String> {
         self.max_stack = code.max_stack();
-        debug!("max_stack: {}", self.max_stack);
+        self.max_locals = code.max_locals();
+        debug!(
+            "max_stack: {}, max_locals: {}",
+            self.max_stack, self.max_locals
+        );
 
         self.operands = Vec::with_capacity(max(0, self.max_stack) as usize);
+
+        self.variables.clear();
+        self.variables
+            .resize(max(0, self.max_locals) as usize, Variable::NONE);
 
         let instructions = code.instructions();
         let mut index = 0;
@@ -242,6 +263,26 @@ impl<'inst> CodeExecutor<'inst> {
                 }
                 OpCode::BPush0 => self.push_operand(Value::Bool(false)),
                 OpCode::BPush1 => self.push_operand(Value::Bool(true)),
+                OpCode::Store0 => self.store_var(0),
+                OpCode::Store1 => self.store_var(1),
+                OpCode::Store2 => self.store_var(2),
+                OpCode::Store3 => self.store_var(3),
+                OpCode::Store => {
+                    let var_idx =
+                        instructions[index].as_u16() << 8 | instructions[index + 1].as_u16();
+                    index += 2;
+                    self.store_var(var_idx);
+                }
+                OpCode::Load0 => self.load_var(0),
+                OpCode::Load1 => self.load_var(1),
+                OpCode::Load2 => self.load_var(2),
+                OpCode::Load3 => self.load_var(3),
+                OpCode::Load => {
+                    let var_idx =
+                        instructions[index].as_u16() << 8 | instructions[index + 1].as_u16();
+                    index += 2;
+                    self.load_var(var_idx);
+                }
 
                 _ => return Err(format!("Unsupported opcode: {}", opcode)),
             }

@@ -73,35 +73,10 @@ fn test_cp_push_from_program() {
     writer.write(&mut program);
     let constant_pool = file.constant_pool();
 
-    assert!(7 <= constant_pool.len());
+    assert!(5 <= constant_pool.len());
     assert!(
         0 < constant_pool
             .lookup(&ConstantEntry::Number(NumberInfo::from(&123f64)))
-            .unwrap()
-    );
-    assert!(
-        0 < constant_pool
-            .lookup(&ConstantEntry::Utf8(Utf8Info::from("a")))
-            .unwrap()
-    );
-    assert!(
-        0 < constant_pool
-            .lookup(&ConstantEntry::Utf8(Utf8Info::from("b")))
-            .unwrap()
-    );
-    assert!(
-        0 < constant_pool
-            .lookup(&ConstantEntry::Utf8(Utf8Info::from("c")))
-            .unwrap()
-    );
-    assert!(
-        0 < constant_pool
-            .lookup(&ConstantEntry::Utf8(Utf8Info::from("d")))
-            .unwrap()
-    );
-    assert!(
-        0 < constant_pool
-            .lookup(&ConstantEntry::Utf8(Utf8Info::from("e")))
             .unwrap()
     );
     assert!(

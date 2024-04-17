@@ -25,11 +25,11 @@ use log::info;
 
 use crate::args::CompileArgs;
 use crate::ast::Program;
-use crate::bytecode::EXT_YK;
-use crate::bytecode::EXT_YKB;
 use crate::bytecode::YKBFile;
 use crate::bytecode::YKBFileWriter;
 use crate::bytecode::YKBVersion;
+use crate::bytecode::EXT_YK;
+use crate::bytecode::EXT_YKB;
 pub use crate::comp::attr::Attr;
 pub use crate::comp::constfold::ConstFold;
 pub use crate::comp::resolve::Resolve;

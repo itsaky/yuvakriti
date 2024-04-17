@@ -86,13 +86,13 @@ impl<'inst> ASTVisitor<Scope<'inst>, ()> for Resolve<'_> {
 
     fn visit_var_stmt(&mut self, var_decl: &mut VarStmt, scope: &mut Scope) -> Option<()> {
         let var_name = &var_decl.name.name.clone();
-        
+
         // visit the initializer first, so we could report usage of this variable in its initializer
         // var a = a + 1; // 'a' is used before it is declarec
         if let Some(expr) = var_decl.initializer.as_mut() {
             self.visit_expr(expr, scope);
         }
-        
+
         match scope.push_sym(Symbol::Variable(VarSym::new(var_name.clone()))) {
             Err(_) => self.report_err(&var_decl.name.range(), &messages::err_dup_var(&var_name)),
             Ok(_) => {}

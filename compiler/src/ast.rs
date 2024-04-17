@@ -300,7 +300,38 @@ def_node!(MemberAccessExpr {
     member: IdentifierExpr,
 });
 
-def_node!(IdentifierExpr { name: String });
+def_node!(IdentifierExpr {
+    name: String,
+    typ: IdentifierType
+});
+
+impl IdentifierExpr {
+    pub fn ident_typ(&self) -> &IdentifierType {
+        &self.typ
+    }
+}
+#[derive(PartialEq, Clone, Debug)]
+pub enum IdentifierType {
+    ClassName,
+    FuncName,
+    ParamName,
+    VarName,
+    Keyword,
+    Other,
+}
+
+impl IdentifierType {
+    pub fn is_decl_name(&self) -> bool {
+        match self {
+            IdentifierType::ClassName
+            | IdentifierType::FuncName
+            | IdentifierType::ParamName
+            | IdentifierType::VarName => true,
+
+            IdentifierType::Keyword | IdentifierType::Other => false,
+        }
+    }
+}
 
 def_node!(GroupingExpr { expr: Box<Expr> });
 
@@ -368,9 +399,9 @@ impl Display for LiteralExpr {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             LiteralExpr::Nil(_) => write!(f, "nil"),
-            LiteralExpr::Bool((b, _)) => write!(f, "{}", b), 
+            LiteralExpr::Bool((b, _)) => write!(f, "{}", b),
             LiteralExpr::Number((n, _)) => write!(f, "{}", n),
-            LiteralExpr::String((s,_)) => write!(f, "\"{}\"", s),
+            LiteralExpr::String((s, _)) => write!(f, "\"{}\"", s),
         }
     }
 }

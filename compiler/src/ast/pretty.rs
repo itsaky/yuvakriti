@@ -392,14 +392,18 @@ impl<'a> ASTVisitor<usize, ()> for ASTPrinter<'a> {
     }
 
     fn visit_literal_expr(&mut self, literal: &mut LiteralExpr, _p: &mut usize) -> Option<()> {
-        self.f.write_str(&format!("{}",
-        match literal {
-            LiteralExpr::String((str, _)) => str.to_owned(),
-            LiteralExpr::Nil(_) => "nil".to_string(),
-            LiteralExpr::Bool((b, _)) => b.to_string(),
-            LiteralExpr::Number((n, _)) => n.to_string(),
-        })).unwrap();
-        
+        self.f
+            .write_str(&format!(
+                "{}",
+                match literal {
+                    LiteralExpr::String((str, _)) => str.to_owned(),
+                    LiteralExpr::Nil(_) => "nil".to_string(),
+                    LiteralExpr::Bool((b, _)) => b.to_string(),
+                    LiteralExpr::Number((n, _)) => n.to_string(),
+                }
+            ))
+            .unwrap();
+
         None
     }
 }

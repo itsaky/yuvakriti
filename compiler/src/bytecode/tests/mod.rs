@@ -17,4 +17,4 @@ mod cp;
 mod cp_info;
 mod disassembler;
 mod util;
-mod ykbwriter;
+mod writer;

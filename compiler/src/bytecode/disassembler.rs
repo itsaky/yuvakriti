@@ -151,6 +151,7 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
         match attr {
             Attr::Code(code) => {
                 self.write1(&format!("max_stack={}", code.max_stack()));
+                self.write1(&format!(" max_locals={}", code.max_locals()));
 
                 self.indent += 1;
                 self.write_code(code, constant_pool);
@@ -195,6 +196,8 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
                 OpCode::IfLe => {}
                 OpCode::IfGt => {}
                 OpCode::IfGe => {}
+                OpCode::BPush0 => {}
+                OpCode::BPush1 => {}
                 OpCode::Ldc => {
                     let const_index_high = instructions[index];
                     index += 1;
@@ -205,8 +208,27 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
                     let constant = constant_pool.get(const_index).unwrap();
                     self.write(&format!("#{} // {}", const_index, constant))
                 }
-                OpCode::BPush0 => {}
-                OpCode::BPush1 => {}
+                OpCode::Load => {
+                    let var_idx_high = instructions[index];
+                    index += 1;
+                    let var_idx_low = instructions[index];
+                    index += 1;
+
+                    let var_idx = (var_idx_high.as_u16()) << 8 | var_idx_low as u16;
+                    self.write(&format!("load {}", var_idx))
+                }
+                OpCode::Load0 | OpCode::Load1 | OpCode::Load2 | OpCode::Load3 => {}
+
+                OpCode::Store => {
+                    let var_idx_high = instructions[index];
+                    index += 1;
+                    let var_idx_low = instructions[index];
+                    index += 1;
+
+                    let var_idx = (var_idx_high.as_u16()) << 8 | var_idx_low as u16;
+                    self.write(&format!("store {}", var_idx))
+                }
+                OpCode::Store0 | OpCode::Store1 | OpCode::Store2 | OpCode::Store3 => {}
                 _ => panic!("Unknown/unsupported opcode: {}", instructions[0]),
             }
         }

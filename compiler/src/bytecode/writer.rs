@@ -15,15 +15,18 @@
 
 use std::ops::Deref;
 
-use crate::ast::ASTVisitor;
+use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
+use crate::ast::BlockStmt;
+use crate::ast::ClassDecl;
 use crate::ast::FuncDecl;
 use crate::ast::IdentifierExpr;
 use crate::ast::LiteralExpr;
 use crate::ast::PrintStmt;
 use crate::ast::Program;
+use crate::ast::VarStmt;
 use crate::ast::Visitable;
-use crate::ast::{BinaryExpr, ClassDecl};
+use crate::ast::{ASTVisitor, IdentifierType};
 use crate::bytecode::attrs;
 use crate::bytecode::cp::ConstantEntry;
 use crate::bytecode::cp_info::NumberInfo;
@@ -32,6 +35,9 @@ use crate::bytecode::decls;
 use crate::bytecode::file::YKBFile;
 use crate::bytecode::opcode::OpCode;
 use crate::features::CompilerFeatures;
+use crate::messages;
+use crate::scope::Scope;
+use crate::symtab::VarSym;
 
 /// Converts a program into a YKB file.
 pub struct YKBFileWriter<'inst> {
@@ -54,7 +60,7 @@ impl YKBFileWriter<'_> {
 
     pub fn write(&mut self, program: &mut Program) {
         let mut fpv = CodeGen::new(&mut self.file, &self.features);
-        program.accept(&mut fpv, &mut ());
+        program.accept(&mut fpv, &mut Scope::new());
     }
 }
 
@@ -62,6 +68,7 @@ struct CodeGen<'a> {
     file: &'a mut YKBFile,
     #[allow(unused)]
     features: &'a CompilerFeatures,
+    scope: Option<Scope<'a>>,
     code: Option<attrs::Code>,
 }
 
@@ -70,13 +77,14 @@ impl<'a> CodeGen<'a> {
         return CodeGen {
             file,
             features,
+            scope: None,
             code: None,
         };
     }
 }
 
-impl ASTVisitor<(), ()> for CodeGen<'_> {
-    fn visit_program(&mut self, program: &mut Program, p: &mut ()) -> Option<()> {
+impl ASTVisitor<Scope<'_>, ()> for CodeGen<'_> {
+    fn visit_program(&mut self, program: &mut Program, scope: &mut Scope) -> Option<()> {
         if self
             .file
             .attributes()
@@ -87,12 +95,13 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
             panic!("A YKBFile cannot have multiple Code attributes")
         }
 
+        self.scope = Some(Scope::new());
         self.code = Some(attrs::Code::new(0, 0, 0));
 
-        self.default_visit_program(program, p, true, false);
+        self.default_visit_program(program, scope, true, false);
         for i in 0..program.stmts.len() {
             let stmt = program.stmts.get_mut(i).unwrap();
-            self.visit_stmt(stmt, p);
+            self.visit_stmt(stmt, scope);
         }
 
         if self.code.as_ref().unwrap().instructions().len() > 0 {
@@ -106,10 +115,11 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
         }
 
         self.code = None;
+        self.scope = None;
         None
     }
 
-    fn visit_class_decl(&mut self, class_decl: &mut ClassDecl, _p: &mut ()) -> Option<()> {
+    fn visit_class_decl(&mut self, class_decl: &mut ClassDecl, _scope: &mut Scope) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         let name_index =
             constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&class_decl.name.name)));
@@ -119,7 +129,7 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
         None
     }
 
-    fn visit_func_decl(&mut self, func_decl: &mut FuncDecl, p: &mut ()) -> Option<()> {
+    fn visit_func_decl(&mut self, func_decl: &mut FuncDecl, scope: &mut Scope) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         let name_index =
             constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&func_decl.name.name)));
@@ -127,19 +137,65 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
             .declarations_mut()
             .push(Box::new(decls::FuncDecl::new(name_index)));
 
-        self.default_visit_func_decl(func_decl, p)
+        self.default_visit_func_decl(func_decl, scope)
     }
 
-    fn visit_print_stmt(&mut self, print_stmt: &mut PrintStmt, p: &mut ()) -> Option<()> {
-        self.visit_expr(&mut print_stmt.expr, p);
+    fn visit_var_stmt(&mut self, var_decl: &mut VarStmt, scope: &mut Scope<'_>) -> Option<()> {
+        // Visit the initializer first, if there is one
+        // this ensures that the result of the initializer is pushed onto the stack before
+        // the variable is declared
+        if let Some(expr) = var_decl.initializer.as_mut() {
+            self.visit_expr(expr, scope);
+        }
+
+        let code = self
+            .code
+            .as_mut()
+            .expect("Code must be set before visiting a VarStmt");
+        let var_name = &var_decl.name.name.clone();
+        let var_idx = match scope.push_var(VarSym::new(var_name.clone())) {
+            // This duplicate variable error must have been handled during the attribution phase
+            // if it wansn't somehow reported at that point, then we panic
+            Err(_) => panic!("{}", &messages::err_dup_var(&var_name)),
+            Ok(index) => index,
+        };
+
+        let opcode = match var_idx {
+            0 => OpCode::Store0,
+            1 => OpCode::Store1,
+            2 => OpCode::Store2,
+            3 => OpCode::Store3,
+            _ => OpCode::Store,
+        };
+
+        if opcode != OpCode::Store {
+            code.push_insns_0(opcode);
+        } else {
+            code.push_insns_1_16(opcode, var_idx);
+        }
+
+        // Update the max locals to account for the new variable
+        code.update_max_locals(1);
+
+        None
+    }
+
+    fn visit_block_stmt(&mut self, block_stmt: &mut BlockStmt, scope: &mut Scope) -> Option<()> {
+        let mut new = Scope::new();
+        new.parent = Some(&scope);
+        self.default_visit_block_stmt(block_stmt, &mut new)
+    }
+
+    fn visit_print_stmt(&mut self, print_stmt: &mut PrintStmt, scope: &mut Scope) -> Option<()> {
+        self.visit_expr(&mut print_stmt.expr, scope);
         let code = self.code.as_mut().unwrap();
         code.push_insns_0(OpCode::Print);
         None
     }
 
-    fn visit_binary_expr(&mut self, binary_expr: &mut BinaryExpr, p: &mut ()) -> Option<()> {
-        self.visit_expr(&mut binary_expr.left, p);
-        self.visit_expr(&mut binary_expr.right, p);
+    fn visit_binary_expr(&mut self, binary_expr: &mut BinaryExpr, scope: &mut Scope) -> Option<()> {
+        self.visit_expr(&mut binary_expr.left, scope);
+        self.visit_expr(&mut binary_expr.right, scope);
 
         let code = self.code.as_mut().unwrap();
         let opcode = match binary_expr.op {
@@ -158,14 +214,39 @@ impl ASTVisitor<(), ()> for CodeGen<'_> {
     fn visit_identifier_expr(
         &mut self,
         identifier: &mut IdentifierExpr,
-        _p: &mut (),
+        scope: &mut Scope,
     ) -> Option<()> {
-        let constant_pool = self.file.constant_pool_mut();
-        constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&identifier.name)));
+        let typ = identifier.ident_typ();
+
+        if typ == &IdentifierType::ClassName {
+            let constant_pool = self.file.constant_pool_mut();
+            constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&identifier.name)));
+        }
+
+        if !typ.is_decl_name() && typ != &IdentifierType::Keyword {
+            if let Some(idx) = scope.get_var_idx(&identifier.name) {
+                let code = self.code.as_mut().unwrap();
+                let opcode = match idx {
+                    0 => OpCode::Load0,
+                    1 => OpCode::Load1,
+                    2 => OpCode::Load2,
+                    3 => OpCode::Load3,
+                    _ => OpCode::Load,
+                };
+                if opcode != OpCode::Load {
+                    code.push_insns_0(opcode);
+                } else {
+                    code.push_insns_1_16(opcode, idx.clone());
+                }
+            } else {
+                panic!("Variable not found: {}", &identifier.name);
+            }
+        }
+
         None
     }
 
-    fn visit_literal_expr(&mut self, literal: &mut LiteralExpr, _p: &mut ()) -> Option<()> {
+    fn visit_literal_expr(&mut self, literal: &mut LiteralExpr, _scope: &mut Scope) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         let code = self.code.as_mut().unwrap();
         match literal {

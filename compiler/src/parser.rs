@@ -17,7 +17,6 @@ use std::cell::RefCell;
 use std::io::Read;
 use std::rc::Rc;
 
-use crate::ast::ExprStmt;
 use crate::ast::ForStmt;
 use crate::ast::FuncDecl;
 use crate::ast::IfStmt;
@@ -34,6 +33,7 @@ use crate::ast::{BinaryExpr, IdentifierExpr};
 use crate::ast::{BinaryOp, Spanned};
 use crate::ast::{BlockStmt, SpannedMut};
 use crate::ast::{Decl, LiteralExpr};
+use crate::ast::{ExprStmt, IdentifierType};
 use crate::diagnostics::Diagnostic;
 use crate::diagnostics::DiagnosticHandler;
 use crate::diagnostics::DiagnosticKind;
@@ -177,7 +177,7 @@ impl<R: Read> YKParser<'_, R> {
         }
 
         Some(VarStmt::new(
-            IdentifierExpr::new(var_name.text, var_name.range),
+            IdentifierExpr::new(var_name.text, IdentifierType::VarName, var_name.range),
             init,
             range,
         ))
@@ -191,7 +191,7 @@ impl<R: Read> YKParser<'_, R> {
         let end = body.range().end;
 
         Some(Decl::Func(FuncDecl::new(
-            IdentifierExpr::new(fun_name.text, fun_name.range),
+            IdentifierExpr::new(fun_name.text, IdentifierType::FuncName, fun_name.range),
             params,
             body,
             fun.range.set_end_pos(&end),
@@ -211,7 +211,11 @@ impl<R: Read> YKParser<'_, R> {
             let param = self
                 .accept(TokenType::Identifier, messages::PARS_EXPECTED_PARAM_NAME)
                 .unwrap();
-            params.push(IdentifierExpr::new(param.text, param.range));
+            params.push(IdentifierExpr::new(
+                param.text,
+                IdentifierType::ParamName,
+                param.range,
+            ));
             if self.tmatch(&TokenType::Comma).is_none() {
                 break;
             }
@@ -491,10 +495,12 @@ impl<R: Read> YKParser<'_, R> {
                 )))),
                 TokenType::This => Some(Expr::Identifier(IdentifierExpr::new(
                     String::from("this"),
+                    IdentifierType::Keyword,
                     token.range,
                 ))),
                 TokenType::Identifier => Some(Expr::Identifier(IdentifierExpr::new(
                     token.text,
+                    IdentifierType::Other,
                     token.range,
                 ))),
                 TokenType::LParen => self.grouping(),

@@ -37,28 +37,28 @@ fn test_simple_arithemetic_evaluation() {
     );
 
     #[rustfmt::skip]
-    assert_eq!(30f64, eval_arithemetic(&mut vm, &cp, vec![
+    assert_eq!(30f64, eval_arithemetic(&mut vm, &cp, 2, 0,  vec![
         OpCode::Ldc as OpSize, 0x00, 0x01, // single operand, but u16
         OpCode::Ldc as OpSize, 0x00, 0x02, // single operand, but u16
         OpCode::Add as OpSize, // 10 + 20
     ]));
 
     #[rustfmt::skip]
-    assert_eq!(10f64, eval_arithemetic(&mut vm, &cp, vec![
+    assert_eq!(10f64, eval_arithemetic(&mut vm, &cp, 2, 0, vec![
         OpCode::Ldc as OpSize, 0x00, 0x02, // single operand, but u16
         OpCode::Ldc as OpSize, 0x00, 0x01, // single operand, but u16
         OpCode::Sub as OpSize, // 20 - 10
     ]));
 
     #[rustfmt::skip]
-    assert_eq!(200f64, eval_arithemetic(&mut vm, &cp, vec![
+    assert_eq!(200f64, eval_arithemetic(&mut vm, &cp, 2, 0,  vec![
         OpCode::Ldc as OpSize, 0x00, 0x01, // single operand, but u16
         OpCode::Ldc as OpSize, 0x00, 0x02, // single operand, but u16
         OpCode::Mult as OpSize, // 10 * 20
     ]));
 
     #[rustfmt::skip]
-    assert_eq!(2f64, eval_arithemetic(&mut vm, &cp, vec![
+    assert_eq!(2f64, eval_arithemetic(&mut vm, &cp, 2, 0, vec![
         OpCode::Ldc as OpSize, 0x00, 0x02, // single operand, but u16
         OpCode::Ldc as OpSize, 0x00, 0x01, // single operand, but u16
         OpCode::Div as OpSize, // 20 / 10

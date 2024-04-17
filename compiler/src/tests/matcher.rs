@@ -105,12 +105,12 @@ impl ASTVisitor<(), bool> for LiteralMatcher {
             (LiteralExpr::String(f), LiteralExpr::String(s)) => &f.0 == &s.0,
             _ => false,
         };
-        
+
         if !result {
             println!("Expected {}, got {}", self.value, &literal);
             assert!(false);
         }
-        
+
         Some(true)
     }
 }
