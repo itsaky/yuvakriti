@@ -229,6 +229,34 @@ fn test_variable_decl_and_load() {
 }
 
 #[test]
+fn test_variable_reassigning() {
+    let path = Path::new("target/variable_reassigning.ykb");
+    let features = CompilerFeatures::default();
+    verify_top_level_insns(
+        "var i = 0; i = i + 1; print i;",
+        &path,
+        &features,
+        &vec![],
+        &vec![
+            OpCode::Ldc as OpSize,
+            0x00,
+            0x01, // const at idx 1
+            OpCode::Store0 as OpSize,
+            OpCode::Load0 as OpSize,
+            OpCode::Ldc as OpSize,
+            0x00,
+            0x02, // const at idx 2
+            OpCode::Add as OpSize,
+            OpCode::Store0 as OpSize,
+            OpCode::Load0 as OpSize,
+            OpCode::Print as OpSize,
+        ],
+        2,
+        1,
+    );
+}
+
+#[test]
 fn test_multi_variable_decl_and_load() {
     let path = Path::new("target/variable_decl_and_load.ykb");
     let features = CompilerFeatures::default();

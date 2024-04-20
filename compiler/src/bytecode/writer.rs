@@ -15,7 +15,6 @@
 
 use std::ops::Deref;
 
-use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
 use crate::ast::BlockStmt;
 use crate::ast::ClassDecl;
@@ -27,6 +26,7 @@ use crate::ast::Program;
 use crate::ast::VarStmt;
 use crate::ast::Visitable;
 use crate::ast::{ASTVisitor, IdentifierType};
+use crate::ast::{AssignExpr, BinaryExpr};
 use crate::bytecode::attrs;
 use crate::bytecode::cp::ConstantEntry;
 use crate::bytecode::cp_info::NumberInfo;
@@ -178,6 +178,41 @@ impl ASTVisitor<Scope<'_>, ()> for CodeGen<'_> {
         code.update_max_locals(1);
 
         None
+    }
+
+    fn visit_assign_expr(
+        &mut self,
+        assign_expr: &mut AssignExpr,
+        scope: &mut Scope<'_>,
+    ) -> Option<()> {
+        if let Some(identifier) = assign_expr.target.Identifier() {
+            self.visit_expr(&mut assign_expr.value, scope);
+
+            if let Some(idx) = scope.get_var_idx(&identifier.name) {
+                let code = self
+                    .code
+                    .as_mut()
+                    .expect("Code must be set before visiting an AssignExpr");
+                let opcode = match &idx {
+                    0 => OpCode::Store0,
+                    1 => OpCode::Store1,
+                    2 => OpCode::Store2,
+                    3 => OpCode::Store3,
+                    _ => OpCode::Store,
+                };
+
+                if opcode != OpCode::Store {
+                    code.push_insns_0(opcode);
+                } else {
+                    code.push_insns_1_16(opcode, idx.clone());
+                }
+
+                return None;
+            }
+        }
+
+        // TODO: Support more assign expressions
+        panic!("Unsupported assign expr: {:?}", assign_expr);
     }
 
     fn visit_block_stmt(&mut self, block_stmt: &mut BlockStmt, scope: &mut Scope) -> Option<()> {

@@ -61,3 +61,42 @@ fn test_simple_var_decls() {
         )
     )
 }
+
+#[test]
+fn test_simple_variable_reassignment() {
+    let mut vm = create_vm();
+    let mut constant_pool = create_constant_pool();
+    push_constants(
+        &mut constant_pool,
+        vec![
+            ConstantEntry::Number(NumberInfo::from(&10f64)),
+            ConstantEntry::Number(NumberInfo::from(&20f64)),
+        ],
+    );
+
+    // var a = 10;
+    // a = a + 20
+    // a
+    assert_eq!(
+        30f64,
+        eval_arithemetic(
+            &mut vm,
+            &constant_pool,
+            2,
+            1,
+            vec![
+                OpCode::Ldc as OpSize,
+                0x00,
+                0x01, // const at idx 1
+                OpCode::Store0 as OpSize,
+                OpCode::Load0 as OpSize,
+                OpCode::Ldc as OpSize,
+                0x00,
+                0x02, // const at idx 2
+                OpCode::Add as OpSize,
+                OpCode::Store0 as OpSize,
+                OpCode::Load0 as OpSize,
+            ]
+        )
+    )
+}
