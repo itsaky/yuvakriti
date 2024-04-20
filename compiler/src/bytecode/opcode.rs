@@ -22,45 +22,36 @@ pub trait OpCodeExt {
     fn get_mnemonic(&self) -> &'static str;
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-#[repr(u8)]
-pub enum OpCode {
-    Nop = 0x00,
-    Halt = 0x01,
-    Add = 0x02,
-    Sub = 0x03,
-    Mult = 0x04,
-    Div = 0x05,
-    Print = 0x06,
-    IfEq = 0x07,
-    IfEqZ = 0x08,
-    IfNe = 0x09,
-    IfNeZ = 0x0A,
-    IfLt = 0x0B,
-    IfLtZ = 0x0C,
-    IfLe = 0x0D,
-    IfLeZ = 0x0E,
-    IfGt = 0x0F,
-    IfGtZ = 0x10,
-    IfGe = 0x11,
-    IfGeZ = 0x12,
-    Ldc = 0x13,
-    BPush0 = 0x14,
-    BPush1 = 0x15,
-    Store = 0x16,
-    Store0 = 0x17,
-    Store1 = 0x18,
-    Store2 = 0x19,
-    Store3 = 0x1A,
-    Load = 0x1B,
-    Load0 = 0x1C,
-    Load1 = 0x1D,
-    Load2 = 0x1E,
-    Load3 = 0x1F,
+macro_rules! def_opcodes {
+    ($({$name:ident, $code:literal, $stack_effect:literal, $mnemonic:literal $(,)? } $(,)?)+) => {
+        #[derive(Debug, PartialEq, Clone, Copy)]
+        #[repr(u8)]
+        #[rustfmt::skip]
+        pub enum OpCode {
+            $($name = $code,)+
+        }
 
-    // when introducing new opcodes,
-    // increment this
-    OpCount = 0x20,
+        impl OpCodeExt for OpCode {
+            fn stack_effect(&self) -> i8 {
+                match self {
+                    $(OpCode::$name => $stack_effect,)+
+                }
+            }
+
+            fn get_mnemonic(&self) -> &'static str {
+                match self {
+                    $(OpCode::$name => $mnemonic,)+
+                }
+            }
+        }
+
+        pub fn get_opcode(code: OpSize) -> OpCode {
+            match code {
+                $($code => OpCode::$name,)+
+                _ => unreachable!("Unknown/unsupported opcode: {:?}", code),
+            }
+        }
+    };
 }
 
 impl OpCode {
@@ -69,120 +60,44 @@ impl OpCode {
     }
 }
 
-impl OpCodeExt for OpCode {
-    fn stack_effect(&self) -> i8 {
-        match self {
-            // these ops do not require operands and do not push anything
-            OpCode::Nop | OpCode::Halt => 0,
-
-            // these pop 2 operands, and push 1
-            OpCode::Add | OpCode::Sub | OpCode::Mult | OpCode::Div => -1,
-
-            // these pop 1 operand
-            // --- comparison to zero ---
-            OpCode::IfEqZ |
-            OpCode::IfNeZ |
-            OpCode::IfLtZ |
-            OpCode::IfLeZ |
-            OpCode::IfGtZ |
-            OpCode::IfGeZ |
-            // --- store insn with implicit var index ---
-            OpCode::Store |
-            OpCode::Store0 |
-            OpCode::Store1 |
-            OpCode::Store2 |
-            OpCode::Store3 |
-            // --- printing ---
-            OpCode::Print => -1,
-
-            // these push 1 operand
-            OpCode::Ldc |
-            OpCode::BPush0 |
-            OpCode::BPush1 |
-            OpCode::Load |
-            OpCode::Load0 |
-            OpCode::Load1 |
-            OpCode::Load2 |
-            OpCode::Load3 => 1,
-
-            // unreachable
-            _ => unreachable!("OpCode {} is not yet supported!", self),
-        }
-    }
-
-    fn get_mnemonic(&self) -> &'static str {
-        match self {
-            OpCode::Nop => "nop",
-            OpCode::Halt => "halt",
-            OpCode::Add => "add",
-            OpCode::Sub => "sub",
-            OpCode::Mult => "mult",
-            OpCode::Div => "div",
-            OpCode::Print => "print",
-            OpCode::IfEq => "ifeq",
-            OpCode::IfNe => "ifne",
-            OpCode::IfLt => "iflt",
-            OpCode::IfLe => "ifle",
-            OpCode::IfGt => "ifgt",
-            OpCode::IfGe => "ifge",
-            OpCode::Ldc => "ldc",
-            OpCode::BPush0 => "bpush_0",
-            OpCode::BPush1 => "bpush_1",
-            OpCode::Store => "store",
-            OpCode::Store0 => "store_0",
-            OpCode::Store1 => "store_1",
-            OpCode::Store2 => "store_2",
-            OpCode::Store3 => "store_3",
-            OpCode::Load => "load",
-            OpCode::Load0 => "load_0",
-            OpCode::Load1 => "load_1",
-            OpCode::Load2 => "load_2",
-            OpCode::Load3 => "load_3",
-            _ => panic!("Unknown/unsupported opcode: {:?}", self),
-        }
-    }
-}
+// format: {name, opcode, stack_effect, mnemonic}
+def_opcodes!(
+  {Nop,     0x00,   0,  "nop"       },
+  {Halt,    0x01,   0,  "halt"      },
+  {Add,     0x02,  -1,  "add"       },
+  {Sub,     0x03,  -1,  "sub"       },
+  {Mult,    0x04,  -1,  "mult"      },
+  {Div,     0x05,  -1,  "div"       },
+  {Print,   0x06,  -1,  "print"     },
+  {IfEq,    0x07,   0,  "ifeq"      },
+  {IfEqZ,   0x08,   0,  "ifeqz"     },
+  {IfNe,    0x09,   0,  "ifne"      },
+  {IfNeZ,   0x0A,   0,  "ifnez"     },
+  {IfLt,    0x0B,   0,  "iflt"      },
+  {IfLtZ,   0x0C,   0,  "ifltz"     },
+  {IfLe,    0x0D,   0,  "ifle"      },
+  {IfLeZ,   0x0E,   0,  "iflez"     },
+  {IfGt,    0x0F,   0,  "ifgt"      },
+  {IfGtZ,   0x10,   0,  "ifgtz"     },
+  {IfGe,    0x11,   0,  "ifge"      },
+  {IfGeZ,   0x12,   0,  "ifgez"     },
+  {Ldc,     0x13,   1,  "ldc"       },
+  {BPush0,  0x14,   1,  "bpush_0"   },
+  {BPush1,  0x15,   1,  "bpush_1"   },
+  {Store,   0x16,  -1,  "store"     },
+  {Store0,  0x17,  -1,  "store_0"   },
+  {Store1,  0x18,  -1,  "store_1"   },
+  {Store2,  0x19,  -1,  "store_2"   },
+  {Store3,  0x1A,  -1,  "store_3"   },
+  {Load,    0x1B,   1,  "load"      },
+  {Load0,   0x1C,   1,  "load_0"    },
+  {Load1,   0x1D,   1,  "load_1"    },
+  {Load2,   0x1E,   1,  "load_2"    },
+  {Load3,   0x1F,   1,  "load_3"    },
+);
 
 impl Display for OpCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.get_mnemonic())
     }
-}
-
-pub fn get_opcode(code: OpSize) -> OpCode {
-    return match code {
-        0x00 => OpCode::Nop,
-        0x01 => OpCode::Halt,
-        0x02 => OpCode::Add,
-        0x03 => OpCode::Sub,
-        0x04 => OpCode::Mult,
-        0x05 => OpCode::Div,
-        0x06 => OpCode::Print,
-        0x07 => OpCode::IfEq,
-        0x08 => OpCode::IfEqZ,
-        0x09 => OpCode::IfNe,
-        0x0A => OpCode::IfNeZ,
-        0x0B => OpCode::IfLt,
-        0x0C => OpCode::IfLtZ,
-        0x0D => OpCode::IfLe,
-        0x0E => OpCode::IfLeZ,
-        0x0F => OpCode::IfGt,
-        0x10 => OpCode::IfGtZ,
-        0x11 => OpCode::IfGe,
-        0x12 => OpCode::IfGeZ,
-        0x13 => OpCode::Ldc,
-        0x14 => OpCode::BPush0,
-        0x15 => OpCode::BPush1,
-        0x16 => OpCode::Store,
-        0x17 => OpCode::Store0,
-        0x18 => OpCode::Store1,
-        0x19 => OpCode::Store2,
-        0x1A => OpCode::Store3,
-        0x1B => OpCode::Load,
-        0x1C => OpCode::Load0,
-        0x1D => OpCode::Load1,
-        0x1E => OpCode::Load2,
-        0x1F => OpCode::Load3,
-        _ => panic!("Unknown/unsupported opcode: {}", code),
-    };
 }
