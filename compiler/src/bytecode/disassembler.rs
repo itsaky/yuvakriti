@@ -178,7 +178,7 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
             let opcode = get_opcode(instructions[index]);
 
             self.linindent();
-            self.write1(&format!("{} ", opcode));
+            self.write1(&format!("{:>5}: {} ", index, opcode));
 
             index += 1;
 
@@ -190,47 +190,44 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
                 OpCode::Mult => {}
                 OpCode::Div => {}
                 OpCode::Print => {}
-                OpCode::IfEq => {}
-                OpCode::IfNe => {}
-                OpCode::IfLt => {}
-                OpCode::IfLe => {}
-                OpCode::IfGt => {}
-                OpCode::IfGe => {}
                 OpCode::BPush0 => {}
                 OpCode::BPush1 => {}
                 OpCode::Ldc => {
-                    let const_index_high = instructions[index];
-                    index += 1;
-                    let const_index_low = instructions[index];
-                    index += 1;
-
-                    let const_index = (const_index_high.as_u16()) << 8 | const_index_low as u16;
+                    let const_index =
+                        (instructions[index].as_u16()) << 8 | instructions[index + 1] as u16;
                     let constant = constant_pool.get(const_index).unwrap();
-                    self.write(&format!("#{} // {}", const_index, constant))
-                }
-                OpCode::Load => {
-                    let var_idx_high = instructions[index];
-                    index += 1;
-                    let var_idx_low = instructions[index];
-                    index += 1;
-
-                    let var_idx = (var_idx_high.as_u16()) << 8 | var_idx_low as u16;
-                    self.write(&format!("load {}", var_idx))
+                    self.write(&format!("#{:<5} // {}", const_index, constant));
+                    index += 2
                 }
                 OpCode::Load0 | OpCode::Load1 | OpCode::Load2 | OpCode::Load3 => {}
-
-                OpCode::Store => {
-                    let var_idx_high = instructions[index];
-                    index += 1;
-                    let var_idx_low = instructions[index];
-                    index += 1;
-
-                    let var_idx = (var_idx_high.as_u16()) << 8 | var_idx_low as u16;
-                    self.write(&format!("store {}", var_idx))
-                }
                 OpCode::Store0 | OpCode::Store1 | OpCode::Store2 | OpCode::Store3 => {}
-                _ => panic!("Unknown/unsupported opcode: {}", instructions[0]),
+
+                OpCode::Load
+                | OpCode::Store
+                | OpCode::IfEq
+                | OpCode::IfEqZ
+                | OpCode::IfNe
+                | OpCode::IfNeZ
+                | OpCode::IfLt
+                | OpCode::IfLtZ
+                | OpCode::IfLe
+                | OpCode::IfLeZ
+                | OpCode::IfGt
+                | OpCode::IfGtZ
+                | OpCode::IfGe
+                | OpCode::IfGeZ
+                | OpCode::IfTrue
+                | OpCode::IfFalse
+                | OpCode::Jmp => {
+                    self.write_16(instructions, index);
+                    index += 2;
+                }
             }
         }
+    }
+
+    fn write_16(&mut self, insns: &Vec<u8>, index: usize) {
+        let idx = (insns[index].as_u16() << 8) | insns[index + 1].as_u16();
+        self.write(&format!("{}", idx))
     }
 }

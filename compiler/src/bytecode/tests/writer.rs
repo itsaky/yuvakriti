@@ -296,6 +296,41 @@ fn test_multi_variable_decl_and_load() {
     );
 }
 
+#[test]
+fn simple_branch_insn() {
+    let path = Path::new("target/simple_branch.ykb");
+    let features = CompilerFeatures::default();
+    verify_top_level_insns(
+        "if true { print 1; } else { print 2; } print 3;",
+        &path,
+        &features,
+        &vec![],
+        &vec![
+            OpCode::BPush1 as OpSize,
+            OpCode::IfFalse as OpSize,
+            0x00,
+            0x0B,
+            OpCode::Ldc as OpSize,
+            0x00,
+            0x01,
+            OpCode::Print as OpSize,
+            OpCode::Jmp as OpSize,
+            0x00,
+            0x0F,
+            OpCode::Ldc as OpSize,
+            0x00,
+            0x02,
+            OpCode::Print as OpSize,
+            OpCode::Ldc as OpSize,
+            0x00,
+            0x03,
+            OpCode::Print as OpSize,
+        ],
+        1,
+        0,
+    );
+}
+
 fn verify_top_level_insns(
     source: &str,
     out_path: &Path,

@@ -228,15 +228,15 @@ impl<'inst> CodeExecutor<'inst> {
         self.variables
             .resize(max(0, self.max_locals) as usize, Variable::NONE);
 
-        let instructions = code.instructions();
-        let mut index = 0;
+        let insns = code.instructions();
+        let mut pc = 0;
         let mut is_halted = false;
 
-        'insn: while index < instructions.len() {
-            let instruction = instructions[index].as_op_size();
-            index += 1;
+        'insn: while pc < insns.len() {
+            let instruction = insns[pc].as_op_size();
+            pc += 1;
             let opcode = get_opcode(instruction);
-            match opcode {
+            match &opcode {
                 OpCode::Nop => {
                     debug!("Encountered a nop opcode. Skipping.");
                 }
@@ -253,11 +253,10 @@ impl<'inst> CodeExecutor<'inst> {
                     println!("{}", value);
                 }
                 OpCode::Ldc => {
-                    let const_idx = instructions[index].as_cp_size() << 8
-                        | instructions[index + 1].as_cp_size();
+                    let const_idx = (insns[pc].as_cp_size() << 8) | insns[pc + 1].as_cp_size();
 
                     // we consumed 2 bytes here, so increment the index
-                    index += 2;
+                    pc += 2;
 
                     self.load_constant(const_idx);
                 }
@@ -268,9 +267,8 @@ impl<'inst> CodeExecutor<'inst> {
                 OpCode::Store2 => self.store_var(2),
                 OpCode::Store3 => self.store_var(3),
                 OpCode::Store => {
-                    let var_idx =
-                        instructions[index].as_u16() << 8 | instructions[index + 1].as_u16();
-                    index += 2;
+                    let var_idx = (insns[pc].as_u16() << 8) | insns[pc + 1].as_u16();
+                    pc += 2;
                     self.store_var(var_idx);
                 }
                 OpCode::Load0 => self.load_var(0),
@@ -278,20 +276,38 @@ impl<'inst> CodeExecutor<'inst> {
                 OpCode::Load2 => self.load_var(2),
                 OpCode::Load3 => self.load_var(3),
                 OpCode::Load => {
-                    let var_idx =
-                        instructions[index].as_u16() << 8 | instructions[index + 1].as_u16();
-                    index += 2;
+                    let var_idx = (insns[pc].as_u16() << 8) | insns[pc + 1].as_u16();
+                    pc += 2;
                     self.load_var(var_idx);
+                }
+
+                OpCode::IfTrue | OpCode::IfFalse => {
+                    let addr = (insns[pc].as_u16() << 8) | insns[pc + 1].as_u16();
+                    pc += 2;
+
+                    let value = self.pop_operand();
+
+                    if (opcode == OpCode::IfTrue && self.is_truthy(&value))
+                        || (opcode == OpCode::IfFalse && self.is_falsy(&value))
+                    {
+                        // jump to the specified address
+                        pc = addr as usize;
+                    }
+                }
+
+                OpCode::Jmp => {
+                    let addr = (insns[pc].as_u16() << 8) | insns[pc + 1].as_u16();
+                    pc = addr as usize;
                 }
 
                 _ => return Err(format!("Unsupported opcode: {}", opcode)),
             }
         }
 
-        if index != instructions.len() && !is_halted {
+        if pc != insns.len() && !is_halted {
             error!(
                 "Expected all instructions to be executed, but {} bytes are remaining",
-                instructions.len() - index
+                insns.len() - pc
             );
         }
 
@@ -299,7 +315,7 @@ impl<'inst> CodeExecutor<'inst> {
         Ok(self.try_pop_operand())
     }
 
-    pub fn exec_binary_num_op(&mut self, op: OpCode) {
+    fn exec_binary_num_op(&mut self, op: OpCode) {
         let op2 = self.pop_operand();
         let op1 = self.pop_operand();
         let op2 = op2.as_number().expect("Expected a number operand");
@@ -314,5 +330,16 @@ impl<'inst> CodeExecutor<'inst> {
         };
 
         self.push_operand(Value::Number(result))
+    }
+
+    fn is_truthy(&self, value: &Value) -> bool {
+        match value {
+            Value::Bool(b) => *b,
+            _ => false,
+        }
+    }
+
+    fn is_falsy(&self, value: &Value) -> bool {
+        !self.is_truthy(value)
     }
 }

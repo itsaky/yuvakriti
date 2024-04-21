@@ -139,6 +139,11 @@ impl Code {
         return &self.instructions;
     }
 
+    /// Get the length of the instructions for this [Code] attribute.
+    pub fn len(&self) -> usize {
+        return self.instructions().len();
+    }
+
     /// Push no-operand opcode to this code attribute.
     pub fn push_insns_0(&mut self, opcode: OpCode) {
         self.ensure_size_incr(OP_SIZE);
@@ -180,6 +185,25 @@ impl Code {
         self.ensure_size_incr(OP_SIZE + len.as_code_size());
         self.push_opcode(opcode);
         self.instructions.extend(operands);
+    }
+
+    /// Patch the instruction at the given index with the given value.
+    pub fn patch(&mut self, index: u16, data: u8) {
+        self.instructions[index as usize] = data;
+    }
+
+    /// Patch the instruction at the given index with the given value. The values are `index` and `index+1`
+    /// are overwritten with the given data.
+    pub fn patch_16(&mut self, index: u16, data: u16) {
+        self.instructions[index as usize] = (data >> 8) as u8;
+        self.instructions[index as usize + 1] = data as u8;
+    }
+
+    /// Emit a branch instruction and return the index of the instruction whose address should be
+    /// patched to the target address.
+    pub fn branch(&mut self, op_code: OpCode) -> u16 {
+        self.push_insns_1_16(op_code, 0);
+        return self.len().as_u16() - 3;
     }
 }
 

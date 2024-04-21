@@ -15,7 +15,6 @@
 
 use std::ops::Deref;
 
-use crate::ast::BinaryOp;
 use crate::ast::BlockStmt;
 use crate::ast::ClassDecl;
 use crate::ast::FuncDecl;
@@ -27,7 +26,9 @@ use crate::ast::VarStmt;
 use crate::ast::Visitable;
 use crate::ast::{ASTVisitor, IdentifierType};
 use crate::ast::{AssignExpr, BinaryExpr};
+use crate::ast::{BinaryOp, IfStmt};
 use crate::bytecode::attrs;
+use crate::bytecode::bytes::AssertingByteConversions;
 use crate::bytecode::cp::ConstantEntry;
 use crate::bytecode::cp_info::NumberInfo;
 use crate::bytecode::cp_info::Utf8Info;
@@ -80,6 +81,51 @@ impl<'a> CodeGen<'a> {
             scope: None,
             code: None,
         };
+    }
+
+    fn code(&self) -> &attrs::Code {
+        return self.code.as_ref().expect("Code is not set");
+    }
+
+    fn code_mut(&mut self) -> &mut attrs::Code {
+        return self.code.as_mut().expect("Code is not set");
+    }
+
+    fn push_insns_0(&mut self, opcode: OpCode) {
+        self.code_mut().push_insns_0(opcode);
+    }
+
+    fn push_insns_1(&mut self, opcode: OpCode, operand: u8) {
+        self.code_mut().push_insns_1(opcode, operand);
+    }
+
+    fn push_insns_1_16(&mut self, opcode: OpCode, operand: u16) {
+        self.code_mut().push_insns_1_16(opcode, operand);
+    }
+
+    fn push_insns_2(&mut self, opcode: OpCode, operand1: u8, operand2: u8) {
+        self.code_mut().push_insns_2(opcode, operand1, operand2);
+    }
+
+    fn push_insns_3(&mut self, opcode: OpCode, operand1: u8, operand2: u8, operand3: u8) {
+        self.code_mut()
+            .push_insns_3(opcode, operand1, operand2, operand3);
+    }
+
+    fn push_insns_n(&mut self, opcode: OpCode, operands: &[u8]) {
+        self.code_mut().push_insns_n(opcode, operands);
+    }
+
+    fn patch(&mut self, index: u16, d: u8) {
+        self.code_mut().patch(index, d);
+    }
+
+    fn patch_16(&mut self, index: u16, d: u16) {
+        self.code_mut().patch_16(index, d);
+    }
+
+    fn branch(&mut self, op_code: OpCode) -> u16 {
+        self.code_mut().branch(op_code)
     }
 }
 
@@ -148,10 +194,6 @@ impl ASTVisitor<Scope<'_>, ()> for CodeGen<'_> {
             self.visit_expr(expr, scope);
         }
 
-        let code = self
-            .code
-            .as_mut()
-            .expect("Code must be set before visiting a VarStmt");
         let var_name = &var_decl.name.name.clone();
         let var_idx = match scope.push_var(VarSym::new(var_name.clone())) {
             // This duplicate variable error must have been handled during the attribution phase
@@ -169,14 +211,47 @@ impl ASTVisitor<Scope<'_>, ()> for CodeGen<'_> {
         };
 
         if opcode != OpCode::Store {
-            code.push_insns_0(opcode);
+            self.push_insns_0(opcode);
         } else {
-            code.push_insns_1_16(opcode, var_idx);
+            self.push_insns_1_16(opcode, var_idx);
         }
 
         // Update the max locals to account for the new variable
-        code.update_max_locals(1);
+        self.code_mut().update_max_locals(1);
 
+        None
+    }
+
+    fn visit_block_stmt(&mut self, block_stmt: &mut BlockStmt, scope: &mut Scope) -> Option<()> {
+        let mut new = Scope::new();
+        new.parent = Some(&scope);
+        self.default_visit_block_stmt(block_stmt, &mut new)
+    }
+
+    fn visit_if_stmt(&mut self, if_stmt: &mut IfStmt, p: &mut Scope) -> Option<()> {
+        self.visit_expr(&mut if_stmt.condition, p);
+
+        let branch_addr = self.branch(OpCode::IfFalse);
+        self.visit_block_stmt(&mut if_stmt.then_branch, p);
+
+        // jump to this address if the condition is false
+        let mut jump_to = self.code().len().as_u16();
+
+        if let Some(else_branch) = if_stmt.else_branch.as_mut() {
+            let jump_addr = self.branch(OpCode::Jmp);
+            jump_to = self.code().len().as_u16();
+
+            self.visit_block_stmt(else_branch, p);
+            self.patch_16(jump_addr + 1, self.code().len().as_u16());
+        }
+
+        self.patch_16(branch_addr + 1, jump_to);
+        None
+    }
+
+    fn visit_print_stmt(&mut self, print_stmt: &mut PrintStmt, scope: &mut Scope) -> Option<()> {
+        self.visit_expr(&mut print_stmt.expr, scope);
+        self.push_insns_0(OpCode::Print);
         None
     }
 
@@ -189,10 +264,6 @@ impl ASTVisitor<Scope<'_>, ()> for CodeGen<'_> {
             self.visit_expr(&mut assign_expr.value, scope);
 
             if let Some(idx) = scope.get_var_idx(&identifier.name) {
-                let code = self
-                    .code
-                    .as_mut()
-                    .expect("Code must be set before visiting an AssignExpr");
                 let opcode = match &idx {
                     0 => OpCode::Store0,
                     1 => OpCode::Store1,
@@ -202,9 +273,9 @@ impl ASTVisitor<Scope<'_>, ()> for CodeGen<'_> {
                 };
 
                 if opcode != OpCode::Store {
-                    code.push_insns_0(opcode);
+                    self.push_insns_0(opcode);
                 } else {
-                    code.push_insns_1_16(opcode, idx.clone());
+                    self.push_insns_1_16(opcode, idx.clone());
                 }
 
                 return None;
@@ -215,24 +286,10 @@ impl ASTVisitor<Scope<'_>, ()> for CodeGen<'_> {
         panic!("Unsupported assign expr: {:?}", assign_expr);
     }
 
-    fn visit_block_stmt(&mut self, block_stmt: &mut BlockStmt, scope: &mut Scope) -> Option<()> {
-        let mut new = Scope::new();
-        new.parent = Some(&scope);
-        self.default_visit_block_stmt(block_stmt, &mut new)
-    }
-
-    fn visit_print_stmt(&mut self, print_stmt: &mut PrintStmt, scope: &mut Scope) -> Option<()> {
-        self.visit_expr(&mut print_stmt.expr, scope);
-        let code = self.code.as_mut().unwrap();
-        code.push_insns_0(OpCode::Print);
-        None
-    }
-
     fn visit_binary_expr(&mut self, binary_expr: &mut BinaryExpr, scope: &mut Scope) -> Option<()> {
         self.visit_expr(&mut binary_expr.left, scope);
         self.visit_expr(&mut binary_expr.right, scope);
 
-        let code = self.code.as_mut().unwrap();
         let opcode = match binary_expr.op {
             BinaryOp::Plus => OpCode::Add,
             BinaryOp::Minus => OpCode::Sub,
@@ -241,7 +298,7 @@ impl ASTVisitor<Scope<'_>, ()> for CodeGen<'_> {
             _ => panic!("Unsupported binary operator: {}", binary_expr.op.sym()),
         };
 
-        code.push_insns_0(opcode);
+        self.push_insns_0(opcode);
 
         None
     }
@@ -260,7 +317,6 @@ impl ASTVisitor<Scope<'_>, ()> for CodeGen<'_> {
 
         if !typ.is_decl_name() && typ != &IdentifierType::Keyword {
             if let Some(idx) = scope.get_var_idx(&identifier.name) {
-                let code = self.code.as_mut().unwrap();
                 let opcode = match idx {
                     0 => OpCode::Load0,
                     1 => OpCode::Load1,
@@ -269,9 +325,9 @@ impl ASTVisitor<Scope<'_>, ()> for CodeGen<'_> {
                     _ => OpCode::Load,
                 };
                 if opcode != OpCode::Load {
-                    code.push_insns_0(opcode);
+                    self.push_insns_0(opcode);
                 } else {
-                    code.push_insns_1_16(opcode, idx.clone());
+                    self.push_insns_1_16(opcode, idx.clone());
                 }
             } else {
                 panic!("Variable not found: {}", &identifier.name);
@@ -283,20 +339,19 @@ impl ASTVisitor<Scope<'_>, ()> for CodeGen<'_> {
 
     fn visit_literal_expr(&mut self, literal: &mut LiteralExpr, _scope: &mut Scope) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
-        let code = self.code.as_mut().unwrap();
         match literal {
             LiteralExpr::Nil(_) => {}
             LiteralExpr::Bool((boo, _)) => {
-                code.push_insns_0(if *boo { OpCode::BPush1 } else { OpCode::BPush0 });
+                self.push_insns_0(if *boo { OpCode::BPush1 } else { OpCode::BPush0 });
             }
             LiteralExpr::Number((num, _)) => {
                 let idx = constant_pool.push(ConstantEntry::Number(NumberInfo::from(num.deref())));
-                code.push_insns_1_16(OpCode::Ldc, idx);
+                self.push_insns_1_16(OpCode::Ldc, idx);
             }
             LiteralExpr::String((str, _)) => {
                 let str = &str[1..str.len() - 1]; // remove double quotes
                 let idx = constant_pool.push_str(str);
-                code.push_insns_1_16(OpCode::Ldc, idx);
+                self.push_insns_1_16(OpCode::Ldc, idx);
             }
         }
 
