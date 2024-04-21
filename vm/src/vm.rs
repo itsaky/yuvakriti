@@ -25,11 +25,11 @@ use compiler::bytecode::attrs;
 use compiler::bytecode::attrs::Attr;
 use compiler::bytecode::attrs::Code;
 use compiler::bytecode::bytes::AssertingByteConversions;
-use compiler::bytecode::opcode::get_opcode;
-use compiler::bytecode::opcode::OpCode;
 use compiler::bytecode::ConstantEntry;
 use compiler::bytecode::ConstantPool;
 use compiler::bytecode::CpSize;
+use compiler::bytecode::opcode::get_opcode;
+use compiler::bytecode::opcode::OpCode;
 use compiler::bytecode::YKBFile;
 
 /// The YuvaKriti Virtual Machine
@@ -99,6 +99,17 @@ impl Value {
             _ => None,
         }
     }
+
+    pub fn is_truthy(&self) -> bool {
+        match self {
+            Value::Bool(b) => *b,
+            _ => false,
+        }
+    }
+
+    pub fn is_falsy(&self) -> bool {
+        !self.is_truthy()
+    }
 }
 
 impl Display for Value {
@@ -163,6 +174,14 @@ impl<'inst> CodeExecutor<'inst> {
     pub fn reset(&mut self) {
         self.variables = vec![];
         self.operands = vec![];
+    }
+
+    fn try_peek_operand(&mut self) -> Option<&Value> {
+        self.operands.last()
+    }
+
+    fn peek_operand(&mut self) -> &Value {
+        self.try_peek_operand().expect("Expected an operand to peek")
     }
 
     fn try_pop_operand(&mut self) -> Option<Value> {
@@ -285,20 +304,23 @@ impl<'inst> CodeExecutor<'inst> {
                     let addr = (insns[pc].as_u16() << 8) | insns[pc + 1].as_u16();
                     pc += 2;
 
-                    let value = self.pop_operand();
+                    let value = self.peek_operand();
 
-                    if (opcode == OpCode::IfTruthy && self.is_truthy(&value))
-                        || (opcode == OpCode::IfFalsy && self.is_falsy(&value))
+                    if (opcode == OpCode::IfTruthy && value.is_truthy())
+                        || (opcode == OpCode::IfFalsy && value.is_falsy())
                     {
                         // jump to the specified address
-                        pc = addr as usize;
+                        pc += addr as usize;
                     }
                 }
 
                 OpCode::Jmp => {
                     let addr = (insns[pc].as_u16() << 8) | insns[pc + 1].as_u16();
-                    pc = addr as usize;
+                    pc += 2;
+                    pc += addr as usize;
                 }
+
+                OpCode::Pop => { self.pop_operand(); },
 
                 _ => return Err(format!("Unsupported opcode: {}", opcode)),
             }
@@ -330,16 +352,5 @@ impl<'inst> CodeExecutor<'inst> {
         };
 
         self.push_operand(Value::Number(result))
-    }
-
-    fn is_truthy(&self, value: &Value) -> bool {
-        match value {
-            Value::Bool(b) => *b,
-            _ => false,
-        }
-    }
-
-    fn is_falsy(&self, value: &Value) -> bool {
-        !self.is_truthy(value)
     }
 }

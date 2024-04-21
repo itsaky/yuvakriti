@@ -15,16 +15,15 @@
 
 use std::fs::File;
 use std::path::Path;
-use log::{debug, trace};
 
 use crate::bytecode::attrs;
-use crate::bytecode::bytes::{AssertingByteConversions, ByteInput};
+use crate::bytecode::bytes::ByteInput;
+use crate::bytecode::ConstantEntry;
 use crate::bytecode::cp_info::NumberInfo;
 use crate::bytecode::cp_info::Utf8Info;
-use crate::bytecode::opcode::{get_opcode, OpCode, OpCodeExt};
+use crate::bytecode::opcode::OpCode;
 use crate::bytecode::opcode::OpSize;
 use crate::bytecode::tests::util::compile_to_bytecode;
-use crate::bytecode::ConstantEntry;
 use crate::bytecode::YKBFileReader;
 use crate::features::CompilerFeatures;
 
@@ -333,6 +332,20 @@ fn test_simple_branch_insn() {
 }
 
 #[test]
+fn test_conditional_exprs() {
+    let path = Path::new("target/conditional_exprs.ykb");
+    let features = CompilerFeatures::default();
+    verify_top_level_insns(
+        "var a = true; var b = false; print a and b;",
+        &path,
+        &features, 
+        &vec![],
+        &vec![],
+        2, 1
+    )
+}
+
+#[test]
 fn test_opcode_computation() {
     let path = Path::new("target/opcode_computation.ykb");
     let features = CompilerFeatures::default();
@@ -380,6 +393,75 @@ fn test_opcode_computation() {
             0,
         );
     }
+}
+
+#[test]
+fn test_simple_boolean_and_logic() {
+    let path = Path::new("target/binary_comparison.ykb");
+    let features = CompilerFeatures::default();
+    
+    verify_top_level_insns(
+        "var a = true; var b = false; var c = a and b;",
+        &path,
+        &features,
+        &vec![],
+        &vec![
+            OpCode::BPush1 as OpSize,
+            OpCode::Store0 as OpSize,
+            OpCode::BPush0 as OpSize,
+            OpCode::Store1 as OpSize,
+            OpCode::Load0 as OpSize,
+            OpCode::IfFalsy as OpSize, 0x00, 0x02,
+            OpCode::Pop as OpSize,
+            OpCode::Load1 as OpSize,
+            OpCode::Store2 as OpSize,
+        ],
+        1,
+        3
+    )
+}
+
+#[test]
+fn test_boolean_multi_and_logic() {
+    let path = Path::new("target/binary_comparison.ykb");
+    let features = CompilerFeatures::default();
+
+    verify_top_level_insns(
+        "var a = true; var b = false; var c = true; var d = a and b and c;",
+        &path,
+        &features,
+        &vec![],
+        &vec![
+            // var a = true
+            OpCode::BPush1 as OpSize,
+            OpCode::Store0 as OpSize,
+            
+            // var b = false
+            OpCode::BPush0 as OpSize,
+            OpCode::Store1 as OpSize,
+
+            // var c = true
+            OpCode::BPush1 as OpSize,
+            OpCode::Store2 as OpSize,
+            
+            // if a == false, store false in 'd'
+            OpCode::Load0 as OpSize,
+            OpCode::IfFalsy as OpSize, 0x00, 0x07, // Bpush0
+            OpCode::Pop as OpSize,
+
+            // if b == false, store false in 'd'
+            OpCode::Load1 as OpSize,
+            OpCode::IfFalsy as OpSize, 0x00, 0x02, // Bpush0
+            OpCode::Pop as OpSize,
+
+            // both, a and b are true, store c in 'd'
+            OpCode::Load2 as OpSize,
+            
+            OpCode::Store3 as OpSize,
+        ],
+        1,
+        4
+    )
 }
 
 fn verify_top_level_insns(

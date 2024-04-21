@@ -17,6 +17,12 @@ use std::cell::RefCell;
 use std::io::Read;
 use std::rc::Rc;
 
+use crate::ast::{AssignExpr, Expr};
+use crate::ast::{BinaryExpr, IdentifierExpr};
+use crate::ast::{BinaryOp, Spanned};
+use crate::ast::{BlockStmt, SpannedMut};
+use crate::ast::{Decl, LiteralExpr};
+use crate::ast::{ExprStmt, IdentifierType};
 use crate::ast::ForStmt;
 use crate::ast::FuncDecl;
 use crate::ast::IfStmt;
@@ -28,12 +34,6 @@ use crate::ast::UnaryExpr;
 use crate::ast::UnaryOp;
 use crate::ast::VarStmt;
 use crate::ast::WhileStmt;
-use crate::ast::{AssignExpr, Expr};
-use crate::ast::{BinaryExpr, IdentifierExpr};
-use crate::ast::{BinaryOp, Spanned};
-use crate::ast::{BlockStmt, SpannedMut};
-use crate::ast::{Decl, LiteralExpr};
-use crate::ast::{ExprStmt, IdentifierType};
 use crate::diagnostics::Diagnostic;
 use crate::diagnostics::DiagnosticHandler;
 use crate::diagnostics::DiagnosticKind;
@@ -399,7 +399,18 @@ impl<R: Read> YKParser<'_, R> {
     }
 
     fn assign(&mut self) -> Option<Expr> {
-        self.gen_binary_expr(&Self::or, &TokenType::Eq, &BinaryOp::Eq, &Self::assign)
+        let mut left = self.or()?;
+
+        while self.tmatch(&TokenType::Eq).is_some() {
+            let right = self.assign()?;
+            let mut range = Range::new();
+            range.set_start(&left.range());
+            range.set_end(&right.range());
+
+            left = Expr::Assign(Box::from(AssignExpr::new(left, right, range)));
+        }
+
+        return Some(left);
     }
 
     fn or(&mut self) -> Option<Expr> {
@@ -524,8 +535,8 @@ impl<R: Read> YKParser<'_, R> {
     ) -> Option<Expr> {
         let mut expr = left_expr(self)?;
 
-        while let Some(eq) = self.tmatch(token_op) {
-            expr = self.binary_expr(expr, eq, binary_op, right_expr)?;
+        while self.tmatch(token_op).is_some() {
+            expr = self.binary_expr(expr, binary_op, right_expr)?;
         }
 
         return Some(expr);
@@ -549,7 +560,7 @@ impl<R: Read> YKParser<'_, R> {
                 .position(|typ| *typ == op.token_type)
                 .unwrap();
             let bop = &binary_op[index];
-            expr = self.binary_expr(expr, op, bop, right_expr)?;
+            expr = self.binary_expr(expr, bop, right_expr)?;
         }
 
         return Some(expr);
@@ -558,7 +569,6 @@ impl<R: Read> YKParser<'_, R> {
     fn binary_expr(
         &mut self,
         left: Expr,
-        _op: Token,
         op_type: &BinaryOp,
         next_expr_fn: &dyn Fn(&mut Self) -> Option<Expr>,
     ) -> Option<Expr> {
@@ -567,16 +577,12 @@ impl<R: Read> YKParser<'_, R> {
         range.set_start(&left.range());
         range.set_end(&right.range());
 
-        let expr: Expr = if op_type == &BinaryOp::Eq {
-            Expr::Assign(Box::from(AssignExpr::new(left, right, range)))
-        } else {
-            Expr::Binary(Box::from(BinaryExpr::new(
-                left,
-                op_type.clone(),
-                right,
-                range,
-            )))
-        };
+        let expr: Expr = Expr::Binary(Box::from(BinaryExpr::new(
+            left,
+            op_type.clone(),
+            right,
+            range,
+        )));
 
         Some(expr)
     }

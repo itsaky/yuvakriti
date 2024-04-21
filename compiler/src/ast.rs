@@ -417,7 +417,6 @@ pub enum UnaryOp {
 pub enum BinaryOp {
     Or,
     And,
-    Eq,
     EqEq,
     NotEq,
     Gt,
@@ -452,8 +451,7 @@ impl BinaryOp {
         match self {
             BinaryOp::Or => "or",
             BinaryOp::And => "and",
-            BinaryOp::Eq => "==",
-            BinaryOp::EqEq => "===",
+            BinaryOp::EqEq => "==",
             BinaryOp::NotEq => "!=",
             BinaryOp::Gt => ">",
             BinaryOp::GtEq => ">=",
@@ -470,8 +468,7 @@ impl BinaryOp {
         match self {
             BinaryOp::Or | BinaryOp::And => 6,
 
-            BinaryOp::Eq
-            | BinaryOp::EqEq
+            BinaryOp::EqEq
             | BinaryOp::NotEq
             | BinaryOp::Gt
             | BinaryOp::GtEq
@@ -513,6 +510,14 @@ impl BinaryOp {
             BinaryOp::LtEq => Some(BinaryOp::GtEq),
             _ => None
         }
+    }
+    
+    pub fn is_cmp(&self) -> bool {
+        matches!(self, BinaryOp::EqEq | BinaryOp::NotEq | BinaryOp::Gt | BinaryOp::GtEq | BinaryOp::Lt | BinaryOp::LtEq)
+    }
+    
+    pub fn is_cond(&self) -> bool {
+        matches!(self, BinaryOp::And | BinaryOp::Or)
     }
 }
 
