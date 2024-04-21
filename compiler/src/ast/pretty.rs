@@ -397,7 +397,7 @@ impl<'a> ASTVisitor<usize, ()> for ASTPrinter<'a> {
                 "{}",
                 match literal {
                     LiteralExpr::String((str, _)) => str.to_owned(),
-                    LiteralExpr::Nil(_) => "nil".to_string(),
+                    LiteralExpr::Null(_) => "null".to_string(),
                     LiteralExpr::Bool((b, _)) => b.to_string(),
                     LiteralExpr::Number((n, _)) => n.to_string(),
                 }

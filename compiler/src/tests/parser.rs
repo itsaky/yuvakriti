@@ -32,7 +32,7 @@ use crate::parser::YKParser;
 use crate::tests::matcher::Binary;
 use crate::tests::matcher::Bool;
 use crate::tests::matcher::Identifier;
-use crate::tests::matcher::Nil;
+use crate::tests::matcher::Null;
 use crate::tests::matcher::Node;
 use crate::tests::matcher::Number;
 use crate::tests::matcher::Program;
@@ -165,13 +165,13 @@ fn test_simple_unary_num_negation_expr() {
 #[test]
 fn test_primary_exprs() {
     match_ast(
-        "true; false; nil; this; 123; \"something\"; identifier; (\"grouping\");",
+        "true; false; null; this; 123; \"something\"; identifier; (\"grouping\");",
         &mut Program(
             vec![],
             boxed_vec![
                 Bool(true),
                 Bool(false),
-                Nil(),
+                Null(),
                 Identifier("this"),
                 Number(123f64),
                 String("\"something\""),

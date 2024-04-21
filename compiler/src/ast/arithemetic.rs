@@ -90,7 +90,7 @@ impl<'a> ASTVisitor<(), ()> for ArithmeticASTPrinter<'a> {
 
     fn visit_literal_expr(&mut self, literal: &mut LiteralExpr, _p: &mut ()) -> Option<()> {
         match literal {
-            LiteralExpr::Nil(_) => self.f.write_str("nil").unwrap(),
+            LiteralExpr::Null(_) => self.f.write_str("null").unwrap(),
             LiteralExpr::Bool((boo, _)) => self.f.write_str(&boo.to_string()).unwrap(),
             LiteralExpr::Number((num, _)) => self.f.write_str(&format!("{}", num)).unwrap(),
             LiteralExpr::String((str, _)) => self.f.write_str(&format!("\"{}\"", str)).unwrap(),

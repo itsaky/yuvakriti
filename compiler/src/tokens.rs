@@ -73,7 +73,7 @@ pub enum TokenType {
     Fun,    // fun
     For,    // for
     While,  // while
-    Nil,    // nil
+    Null,   // null
     Return, // return
     Var,    // var
     Super,  // super

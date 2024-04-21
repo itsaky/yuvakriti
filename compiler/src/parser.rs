@@ -484,7 +484,7 @@ impl<R: Read> YKParser<'_, R> {
             match token.token_type {
                 TokenType::True => Some(Expr::Literal(LiteralExpr::Bool((true, token.range)))),
                 TokenType::False => Some(Expr::Literal(LiteralExpr::Bool((false, token.range)))),
-                TokenType::Nil => Some(Expr::Literal(LiteralExpr::Nil(((), token.range)))),
+                TokenType::Null => Some(Expr::Literal(LiteralExpr::Null(((), token.range)))),
                 TokenType::Number => Some(Expr::Literal(LiteralExpr::Number((
                     token.text.parse().unwrap(),
                     token.range,

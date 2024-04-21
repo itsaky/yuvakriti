@@ -340,7 +340,7 @@ impl ASTVisitor<Scope<'_>, ()> for CodeGen<'_> {
     fn visit_literal_expr(&mut self, literal: &mut LiteralExpr, _scope: &mut Scope) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         match literal {
-            LiteralExpr::Nil(_) => {}
+            LiteralExpr::Null(_) => {}
             LiteralExpr::Bool((boo, _)) => {
                 self.push_insns_0(if *boo { OpCode::BPush1 } else { OpCode::BPush0 });
             }

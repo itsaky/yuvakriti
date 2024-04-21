@@ -337,7 +337,7 @@ def_node!(GroupingExpr { expr: Box<Expr> });
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum LiteralExpr {
-    Nil(SpannedNode<()>),
+    Null(SpannedNode<()>),
     Bool(SpannedNode<bool>),
     Number(SpannedNode<f64>),
     String(SpannedNode<String>),
@@ -376,7 +376,7 @@ impl AstNode for LiteralExpr {
 impl Spanned for LiteralExpr {
     fn range(self: &Self) -> &Range {
         match self {
-            LiteralExpr::Nil(s) => &s.1,
+            LiteralExpr::Null(s) => &s.1,
             LiteralExpr::Bool(s) => &s.1,
             LiteralExpr::Number(s) => &s.1,
             LiteralExpr::String(s) => &s.1,
@@ -387,7 +387,7 @@ impl Spanned for LiteralExpr {
 impl SpannedMut for LiteralExpr {
     fn range_mut(self: &mut Self) -> &mut Range {
         match self {
-            LiteralExpr::Nil(s) => &mut s.1,
+            LiteralExpr::Null(s) => &mut s.1,
             LiteralExpr::Bool(s) => &mut s.1,
             LiteralExpr::Number(s) => &mut s.1,
             LiteralExpr::String(s) => &mut s.1,
@@ -398,7 +398,7 @@ impl SpannedMut for LiteralExpr {
 impl Display for LiteralExpr {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            LiteralExpr::Nil(_) => write!(f, "nil"),
+            LiteralExpr::Null(_) => write!(f, "null"),
             LiteralExpr::Bool((b, _)) => write!(f, "{}", b),
             LiteralExpr::Number((n, _)) => write!(f, "{}", n),
             LiteralExpr::String((s, _)) => write!(f, "\"{}\"", s),

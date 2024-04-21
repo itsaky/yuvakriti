@@ -82,7 +82,7 @@ pub enum Value {
     String(String),
     Number(f64),
     Bool(bool),
-    Nil,
+    Null,
 }
 
 impl Value {
@@ -113,8 +113,8 @@ impl Display for Value {
             Value::Bool(b) => {
                 write!(f, "{}", b)
             }
-            Value::Nil => {
-                write!(f, "nil")
+            Value::Null => {
+                write!(f, "null")
             }
         }
     }
@@ -126,7 +126,7 @@ pub struct Variable {
 }
 
 impl Variable {
-    pub const NONE: Variable = Variable::new(Value::Nil);
+    pub const NONE: Variable = Variable::new(Value::Null);
     pub const fn new(value: Value) -> Self {
         return Variable { value };
     }

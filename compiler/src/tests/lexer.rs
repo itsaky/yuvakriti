@@ -234,7 +234,7 @@ fn test_simple_identifier_lexing() {
 fn test_simple_keyword_lexing() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
     let mut lexer = YKLexer::new(
-        Cursor::new("and or if else while nil return true fun for false var this super print"),
+        Cursor::new("and or if else while null return true fun for false var this super print"),
         diag_handler.clone(),
     );
 
@@ -246,7 +246,7 @@ fn test_simple_keyword_lexing() {
             TokenType::If,
             TokenType::Else,
             TokenType::While,
-            TokenType::Nil,
+            TokenType::Null,
             TokenType::Return,
             TokenType::True,
             TokenType::Fun,
@@ -267,7 +267,7 @@ fn test_mixed_identifier_and_keyword_lexing() {
     let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
     let mut lexer = YKLexer::new(
         Cursor::new(
-            "and or andor if else ifelse while nil return true fun identifier for false falseee",
+            "and or andor if else ifelse while null return true fun identifier for false falseee",
         ),
         diag_handler.clone(),
     );
@@ -282,7 +282,7 @@ fn test_mixed_identifier_and_keyword_lexing() {
             TokenType::Else,
             TokenType::Identifier,
             TokenType::While,
-            TokenType::Nil,
+            TokenType::Null,
             TokenType::Return,
             TokenType::True,
             TokenType::Fun,

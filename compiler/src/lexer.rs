@@ -220,7 +220,7 @@ impl<R: Read> YKLexer<'_, R> {
                     },
                 },
                 'i' => self.match_word_rest(1, "f", TokenType::If),
-                'n' => self.match_word_rest(1, "il", TokenType::Nil),
+                'n' => self.match_word_rest(1, "ull", TokenType::Null),
                 'o' => self.match_word_rest(1, "r", TokenType::Or),
                 'p' => self.match_word_rest(1, "rint", TokenType::Print),
                 'r' => self.match_word_rest(1, "eturn", TokenType::Return),

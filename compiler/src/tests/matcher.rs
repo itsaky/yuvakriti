@@ -99,7 +99,7 @@ impl LiteralMatcher {
 impl ASTVisitor<(), bool> for LiteralMatcher {
     fn visit_literal_expr(&mut self, literal: &mut LiteralExpr, _p: &mut ()) -> Option<bool> {
         let result = match (&self.value, &literal) {
-            (LiteralExpr::Nil(_), LiteralExpr::Nil(_)) => true,
+            (LiteralExpr::Null(_), LiteralExpr::Null(_)) => true,
             (LiteralExpr::Bool(f), LiteralExpr::Bool(s)) => &f.0 == &s.0,
             (LiteralExpr::Number(f), LiteralExpr::Number(s)) => &f.0 == &s.0,
             (LiteralExpr::String(f), LiteralExpr::String(s)) => &f.0 == &s.0,
@@ -326,8 +326,8 @@ pub fn String(value: &str) -> LiteralMatcher {
     return LiteralMatcher::new(LiteralExpr::String((value.to_string(), Range::NO_RANGE)));
 }
 #[allow(non_snake_case, unused)]
-pub fn Nil() -> LiteralMatcher {
-    return Literal(LiteralExpr::Nil(((), Range::NO_RANGE)));
+pub fn Null() -> LiteralMatcher {
+    return Literal(LiteralExpr::Null(((), Range::NO_RANGE)));
 }
 #[allow(non_snake_case, unused)]
 pub fn Literal(value: LiteralExpr) -> LiteralMatcher {
