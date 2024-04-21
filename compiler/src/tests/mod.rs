@@ -13,8 +13,9 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+mod constfold;
 mod lexer;
 mod matcher;
 mod parser;
 mod resolve;
-pub mod util;
+pub(crate) mod util;

@@ -13,16 +13,21 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use log::info;
 use std::cell::RefCell;
 use std::io::Cursor;
 use std::rc::Rc;
 
+use log::info;
+
+use crate::ast::ASTPrinter;
+use crate::ast::ArithmeticASTPrinter;
+use crate::ast::BinaryOp;
+use crate::ast::NodeType;
 use crate::ast::Spanned;
+use crate::ast::Stmt;
 use crate::ast::UnaryOp;
 use crate::ast::Visitable;
-use crate::ast::{ASTPrinter, ASTVisitor, ArithmeticASTPrinter, BinaryOp};
-use crate::ast::{NodeType, Stmt};
+use crate::boxed_vec;
 use crate::comp::YKCompiler;
 use crate::diagnostics;
 use crate::features::CompilerFeatures;
@@ -32,27 +37,15 @@ use crate::parser::YKParser;
 use crate::tests::matcher::Binary;
 use crate::tests::matcher::Bool;
 use crate::tests::matcher::Identifier;
-use crate::tests::matcher::Null;
 use crate::tests::matcher::Node;
+use crate::tests::matcher::Null;
 use crate::tests::matcher::Number;
 use crate::tests::matcher::Program;
 use crate::tests::matcher::String;
 use crate::tests::matcher::Unary;
+use crate::tests::util::match_ast;
+use crate::tests::util::match_node;
 use crate::tests::util::parse;
-
-macro_rules! boxed_vec {
-    ($($x:expr),+ $(,)?) => {
-        vec![$(Box::new($x)),+]
-    };
-}
-
-fn assert_ast(node: &mut impl Visitable, visitor: &mut dyn ASTVisitor<(), bool>) {
-    assert!(node.accept(visitor, &mut ()).unwrap());
-}
-
-fn match_ast(source: &str, matcher: &mut dyn ASTVisitor<(), bool>) {
-    assert_ast(&mut parse(source), matcher);
-}
 
 #[test]
 fn test_simple_var_decl() {
@@ -480,7 +473,7 @@ fn test_const_folded_ast() {
 
         assert!(!has_errors);
 
-        assert_ast(
+        match_node(
             &mut program,
             &mut Program(
                 vec![],

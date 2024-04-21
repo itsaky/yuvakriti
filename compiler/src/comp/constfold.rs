@@ -12,7 +12,6 @@
  * You should have received a copy of the GNU General Public License along with this
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
-
 use crate::ast::ASTVisitor;
 use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
@@ -21,6 +20,7 @@ use crate::ast::LiteralExpr;
 use crate::ast::Spanned;
 use crate::ast::UnaryExpr;
 use crate::ast::UnaryOp;
+use log::trace;
 
 /// Helper for constant folding in the compiler.
 pub struct ConstFold;
@@ -53,6 +53,7 @@ impl ConstFold {
         match &unary.op {
             UnaryOp::Negate => {
                 if let Some((num, _)) = &expr.Literal().and_then(|l| l.Number()) {
+                    trace!("[ConstFold] Negating {} to {}", num, -num);
                     return Some(Expr::Literal(LiteralExpr::Number((
                         -num,
                         unary.range().clone(),
@@ -61,6 +62,7 @@ impl ConstFold {
             }
             UnaryOp::Not => {
                 if let Some((boo, _)) = &expr.Literal().and_then(|l| l.Bool()) {
+                    trace!("[ConstFold] Negating {} to {}", boo, !boo);
                     return Some(Expr::Literal(LiteralExpr::Bool((
                         !boo,
                         unary.range().clone(),
@@ -87,52 +89,159 @@ impl ConstFold {
             right = exp;
         }
 
-        if let (Some((l, _)), Some((r, _))) = (
-            left.Literal().and_then(|l| l.Number()),
-            right.Literal().and_then(|r| r.Number()),
-        ) {
-            match &binary.op {
-                BinaryOp::Plus | BinaryOp::Minus | BinaryOp::Mult | BinaryOp::Div => {
-                    return Some(Expr::Literal(LiteralExpr::Number((
-                        self.apply_arithmetic(&binary.op, l, r),
+        match (left, right) {
+            (Expr::Literal(l), Expr::Literal(r)) => match (l, r) {
+                (LiteralExpr::Number((l, _)), LiteralExpr::Number((r, _))) => match &binary.op {
+                    BinaryOp::Plus | BinaryOp::Minus | BinaryOp::Mult | BinaryOp::Div => {
+                        let result = self.apply_arithmetic(&binary.op, l, r);
+                        trace!(
+                            "[ConstFold] Folding {} {} {} => {}",
+                            l,
+                            binary.op.sym(),
+                            r,
+                            &result
+                        );
+                        return Some(Expr::Literal(LiteralExpr::Number((
+                            result,
+                            binary.range().clone(),
+                        ))));
+                    }
+                    BinaryOp::EqEq
+                    | BinaryOp::NotEq
+                    | BinaryOp::Gt
+                    | BinaryOp::GtEq
+                    | BinaryOp::Lt
+                    | BinaryOp::LtEq => {
+                        let result = self.apply_arithmetical_logic(&binary.op, l, r);
+                        trace!(
+                            "[ConstFold] Folding {} {} {} => {}",
+                            l,
+                            binary.op.sym(),
+                            r,
+                            &result
+                        );
+                        return Some(Expr::Literal(LiteralExpr::Bool((
+                            result,
+                            binary.range().clone(),
+                        ))));
+                    }
+                    _ => {}
+                },
+
+                (LiteralExpr::Bool((l, _)), LiteralExpr::Bool((r, _))) => match &binary.op {
+                    BinaryOp::And
+                    | BinaryOp::Or
+                    | BinaryOp::EqEq
+                    | BinaryOp::NotEq
+                    | BinaryOp::Gt
+                    | BinaryOp::GtEq
+                    | BinaryOp::Lt
+                    | BinaryOp::LtEq => {
+                        let result = self.apply_boolean_logic(&binary.op, l, r);
+                        trace!(
+                            "[ConstFold] Folding {} {} {} => {}",
+                            l,
+                            binary.op.sym(),
+                            r,
+                            &result
+                        );
+                        return Some(Expr::Literal(LiteralExpr::Bool((
+                            result,
+                            binary.range().clone(),
+                        ))));
+                    }
+                    _ => {}
+                },
+
+                (LiteralExpr::Bool((b, _)), expr) | (expr, LiteralExpr::Bool((b, _))) => {
+                    return self.fold_bool_binary_expr(b, binary, &|| Expr::Literal(expr.clone()));
+                }
+
+                _ => {}
+            },
+
+            (expr, Expr::Literal(l)) | (Expr::Literal(l), expr) => {
+                if let Some((b, _)) = l.Bool() {
+                    return self.fold_bool_binary_expr(b, binary, &|| expr.clone());
+                }
+            }
+            _ => {}
+        }
+
+        None
+    }
+
+    fn fold_bool_binary_expr(
+        &self,
+        b: &bool,
+        binary: &BinaryExpr,
+        expr: &dyn Fn() -> Expr,
+    ) -> Option<Expr> {
+        match &binary.op {
+            BinaryOp::And => {
+                // b and <expr>
+                // <expr> and b
+                // ===>
+                // false  -- if b == false
+                // <expr> -- otherwise
+                if !b {
+                    return Some(Expr::Literal(LiteralExpr::Bool((
+                        false,
                         binary.range().clone(),
                     ))));
                 }
-                BinaryOp::EqEq
-                | BinaryOp::NotEq
-                | BinaryOp::Gt
-                | BinaryOp::GtEq
-                | BinaryOp::Lt
-                | BinaryOp::LtEq => {
-                    return Some(Expr::Literal(LiteralExpr::Bool((
-                        self.apply_arithmetical_logic(&binary.op, l, r),
-                        binary.range().clone(),
-                    ))))
-                }
-                _ => {}
+                return Some(expr());
             }
-        }
+            BinaryOp::Or => {
+                // b or <expr>
+                // <expr> or b
+                // ===>
+                // true  -- if b == true
+                // <expr> -- otherwise
+                if *b {
+                    return Some(Expr::Literal(LiteralExpr::Bool((
+                        true,
+                        binary.range().clone(),
+                    ))));
+                }
+                return Some(expr());
+            }
 
-        if let (Some((l, _)), Some((r, _))) = (
-            left.Literal().and_then(|l| l.Bool()),
-            right.Literal().and_then(|r| r.Bool()),
-        ) {
-            match &binary.op {
-                BinaryOp::And
-                | BinaryOp::Or
-                | BinaryOp::EqEq
-                | BinaryOp::NotEq
-                | BinaryOp::Gt
-                | BinaryOp::GtEq
-                | BinaryOp::Lt
-                | BinaryOp::LtEq => {
-                    return Some(Expr::Literal(LiteralExpr::Bool((
-                        self.apply_boolean_logic(&binary.op, l, r),
-                        binary.range().clone(),
-                    ))))
+            BinaryOp::EqEq => {
+                // b == <expr>
+                // <expr> == b
+                // ===>
+                // <expr> -- if b == true
+                // !<expr> -- if b == false
+                if *b {
+                    return Some(expr());
                 }
-                _ => {}
+
+                return Some(Expr::Unary(Box::from(UnaryExpr::new(
+                    UnaryOp::Not,
+                    expr(),
+                    binary.range().clone(),
+                ))));
             }
+            BinaryOp::NotEq => {
+                // b != <expr>
+                // <expr> != b
+                // ===>
+                // !<expr> -- if b == true
+                // <expr> -- if b == false
+
+                if *b {
+                    return Some(Expr::Unary(Box::from(UnaryExpr::new(
+                        UnaryOp::Not,
+                        expr(),
+                        binary.range().clone(),
+                    ))));
+                }
+
+                return Some(expr());
+            }
+
+            _ => {}
         }
 
         None

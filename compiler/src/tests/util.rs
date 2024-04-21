@@ -17,13 +17,21 @@ use std::cell::RefCell;
 use std::io::Cursor;
 use std::rc::Rc;
 
-use crate::ast::ASTPrinter;
 use crate::ast::Program;
 use crate::ast::Visitable;
+use crate::ast::{ASTPrinter, ASTVisitor};
 use crate::comp::YKCompiler;
 use crate::diagnostics::CollectingDiagnosticHandler;
+use crate::features::CompilerFeatures;
 use crate::lexer::YKLexer;
 use crate::parser::YKParser;
+
+#[macro_export]
+macro_rules! boxed_vec {
+    ($($x:expr),+ $(,)?) => {
+        vec![$(Box::new($x)),+]
+    };
+}
 
 pub(crate) fn parse_1(
     source: &str,
@@ -36,11 +44,20 @@ pub(crate) fn parse_1(
 }
 
 pub(crate) fn parse(source: &str) -> Program {
+    parse_attr(source, false, &CompilerFeatures::default())
+}
+
+pub(crate) fn parse_attr(source: &str, attr: bool, features: &CompilerFeatures) -> Program {
     let mut compiler = YKCompiler::new();
-    let (program, has_errors) = compiler
+    let (mut program, has_errors) = compiler
         .parse(Cursor::new(source))
         .expect("Failed to parse source");
     assert!(!has_errors);
+
+    if attr {
+        assert!(!compiler.attr(&mut program, features));
+    }
+
     program
 }
 
@@ -56,4 +73,12 @@ pub(crate) fn node_string(program: &mut Program, pretty: bool) -> String {
 pub(crate) fn parse_to_string(source: &str, pretty: bool) -> String {
     let mut program = parse(source);
     node_string(&mut program, pretty)
+}
+
+pub fn match_node(node: &mut impl Visitable, visitor: &mut dyn ASTVisitor<(), bool>) {
+    assert!(node.accept(visitor, &mut ()).unwrap());
+}
+
+pub fn match_ast(source: &str, matcher: &mut dyn ASTVisitor<(), bool>) {
+    match_node(&mut parse(source), matcher);
 }
