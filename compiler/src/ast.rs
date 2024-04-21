@@ -19,6 +19,7 @@ use std::fmt::Formatter;
 pub use arithemetic::ArithmeticASTPrinter;
 pub use pretty::ASTPrinter;
 pub use visitor::ASTVisitor;
+use crate::bytecode::opcode::OpCode;
 
 use crate::location::Range;
 use crate::tokens::Token;
@@ -498,6 +499,19 @@ impl BinaryOp {
             TokenType::And => Some(BinaryOp::And),
             TokenType::Or => Some(BinaryOp::Or),
             _ => None,
+        }
+    }
+    
+    /// Get the inverse of the binary comparison operator.
+    pub fn inv_cmp(&self) -> Option<BinaryOp> {
+        match self {
+            BinaryOp::EqEq => Some(BinaryOp::NotEq),
+            BinaryOp::NotEq => Some(BinaryOp::EqEq),
+            BinaryOp::Gt => Some(BinaryOp::Lt),
+            BinaryOp::GtEq => Some(BinaryOp::LtEq),
+            BinaryOp::Lt => Some(BinaryOp::Gt),
+            BinaryOp::LtEq => Some(BinaryOp::GtEq),
+            _ => None
         }
     }
 }

@@ -34,7 +34,7 @@ use crate::bytecode::cp_info::NumberInfo;
 use crate::bytecode::cp_info::Utf8Info;
 use crate::bytecode::decls;
 use crate::bytecode::file::YKBFile;
-use crate::bytecode::opcode::OpCode;
+use crate::bytecode::opcode::{OpCode, opcode_cmp, opcode_cmpz};
 use crate::features::CompilerFeatures;
 use crate::messages;
 use crate::scope::Scope;
@@ -229,9 +229,34 @@ impl ASTVisitor<Scope<'_>, ()> for CodeGen<'_> {
     }
 
     fn visit_if_stmt(&mut self, if_stmt: &mut IfStmt, p: &mut Scope) -> Option<()> {
+        
         self.visit_expr(&mut if_stmt.condition, p);
+        
+        let mut opcode = OpCode::IfFalsy;
+        if let Some(binary) = if_stmt.condition.Binary() {
+            // 0(is_zero): whether any of the operands are 0
+            // 1(on_left): whether the left operand is 0
+            let (is_zero, on_left) = binary
+                .left
+                .Literal()
+                .and_then(|l| l.Number())
+                .or_else(|| binary.right.Literal().and_then(|l| l.Number()))
+                .map(|l| (&l.0 == &0f64, true))
+                .unwrap_or((false, false));
 
-        let branch_addr = self.branch(OpCode::IfFalse);
+            // Determine the opcode for when the condition is **FALSE**
+            // For example, the binary operator is EqEq in `if true == false`,
+            // therefore, the else condition must be executed if true != false
+            // as a result, the actual opcode should be `IfNe`
+            opcode = match (is_zero, on_left) {
+                (false, false) => opcode_cmp(&binary.op),
+                (false, true) => opcode_cmp(&binary.op.inv_cmp().unwrap()),
+                (true, false) => opcode_cmpz(&binary.op),
+                (true, true) => opcode_cmpz(&binary.op.inv_cmp().unwrap()),
+            }
+        }
+
+        let branch_addr = self.branch(opcode);
         self.visit_block_stmt(&mut if_stmt.then_branch, p);
 
         // jump to this address if the condition is false

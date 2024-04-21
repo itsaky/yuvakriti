@@ -281,14 +281,14 @@ impl<'inst> CodeExecutor<'inst> {
                     self.load_var(var_idx);
                 }
 
-                OpCode::IfTrue | OpCode::IfFalse => {
+                OpCode::IfTruthy | OpCode::IfFalsy => {
                     let addr = (insns[pc].as_u16() << 8) | insns[pc + 1].as_u16();
                     pc += 2;
 
                     let value = self.pop_operand();
 
-                    if (opcode == OpCode::IfTrue && self.is_truthy(&value))
-                        || (opcode == OpCode::IfFalse && self.is_falsy(&value))
+                    if (opcode == OpCode::IfTruthy && self.is_truthy(&value))
+                        || (opcode == OpCode::IfFalsy && self.is_falsy(&value))
                     {
                         // jump to the specified address
                         pc = addr as usize;

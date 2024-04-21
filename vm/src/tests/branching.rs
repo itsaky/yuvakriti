@@ -43,7 +43,7 @@ fn test_simple_branching() {
     #[rustfmt::skip]
     assert_eq!(10f64, eval_arithemetic(&mut vm, &cp, 2, 0,  vec![
         OpCode::BPush0 as OpSize,
-        OpCode::IfFalse as OpSize, 0x00, 0x0E,
+        OpCode::IfFalsy as OpSize, 0x00, 0x0E,
         OpCode::Ldc as OpSize, 0x00, 0x02,
         OpCode::Ldc as OpSize, 0x00, 0x01,
         OpCode::Add as OpSize, // 20 + 10

@@ -14,6 +14,7 @@
  */
 
 use std::fmt::Display;
+use crate::ast::BinaryOp;
 
 pub type OpSize = u8;
 
@@ -81,8 +82,8 @@ def_opcodes!(
   {IfGtZ,       0x10,  -1,  "ifgtz"     },
   {IfGe,        0x11,  -1,  "ifge"      },
   {IfGeZ,       0x12,  -1,  "ifgez"     },
-  {IfTrue,      0x20,  -1,  "iftrue"    },
-  {IfFalse,     0x21,  -1,  "iffalse"   },
+  {IfTruthy,    0x20,  -1,  "iftruthy"  },
+  {IfFalsy,     0x21,  -1,  "iffalsy"   },
   {Ldc,         0x13,   1,  "ldc"       },
   {BPush0,      0x14,   1,  "bpush_0"   },
   {BPush1,      0x15,   1,  "bpush_1"   },
@@ -102,5 +103,29 @@ def_opcodes!(
 impl Display for OpCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.get_mnemonic())
+    }
+}
+
+pub fn opcode_cmp(op: &BinaryOp) -> OpCode {
+    match op {
+        BinaryOp::EqEq => OpCode::IfNe,
+        BinaryOp::NotEq => OpCode::IfEq,
+        BinaryOp::Gt => OpCode::IfLt,
+        BinaryOp::GtEq => OpCode::IfLe,
+        BinaryOp::Lt => OpCode::IfGt,
+        BinaryOp::LtEq => OpCode::IfGe,
+        _ => unreachable!("opcode_cmp is not implemented for {:?}", op)
+    }
+}
+
+pub fn opcode_cmpz(op: &BinaryOp) -> OpCode {
+    match op {
+        BinaryOp::EqEq => OpCode::IfNeZ,
+        BinaryOp::NotEq => OpCode::IfEqZ,
+        BinaryOp::Gt => OpCode::IfLtZ,
+        BinaryOp::GtEq => OpCode::IfLeZ,
+        BinaryOp::Lt => OpCode::IfGtZ,
+        BinaryOp::LtEq => OpCode::IfGeZ,
+        _ => unreachable!("opcode_cmpz is not implemented for {:?}", op)
     }
 }

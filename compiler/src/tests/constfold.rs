@@ -15,9 +15,9 @@
 
 use crate::boxed_vec;
 use crate::features::CompilerFeatures;
-use crate::tests::matcher::{Bool, String};
 use crate::tests::matcher::Number;
 use crate::tests::matcher::Program;
+use crate::tests::matcher::{Bool, String};
 use crate::tests::util::match_node;
 use crate::tests::util::parse_attr;
 

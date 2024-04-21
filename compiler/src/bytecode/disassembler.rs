@@ -216,8 +216,8 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
                 | OpCode::IfGtZ
                 | OpCode::IfGe
                 | OpCode::IfGeZ
-                | OpCode::IfTrue
-                | OpCode::IfFalse
+                | OpCode::IfTruthy
+                | OpCode::IfFalsy
                 | OpCode::Jmp => {
                     self.write_16(instructions, index);
                     index += 2;

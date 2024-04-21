@@ -15,12 +15,13 @@
 
 use std::fs::File;
 use std::path::Path;
+use log::{debug, trace};
 
 use crate::bytecode::attrs;
-use crate::bytecode::bytes::ByteInput;
+use crate::bytecode::bytes::{AssertingByteConversions, ByteInput};
 use crate::bytecode::cp_info::NumberInfo;
 use crate::bytecode::cp_info::Utf8Info;
-use crate::bytecode::opcode::OpCode;
+use crate::bytecode::opcode::{get_opcode, OpCode, OpCodeExt};
 use crate::bytecode::opcode::OpSize;
 use crate::bytecode::tests::util::compile_to_bytecode;
 use crate::bytecode::ConstantEntry;
@@ -297,7 +298,7 @@ fn test_multi_variable_decl_and_load() {
 }
 
 #[test]
-fn simple_branch_insn() {
+fn test_simple_branch_insn() {
     let path = Path::new("target/simple_branch.ykb");
     let features = CompilerFeatures::default();
     verify_top_level_insns(
@@ -307,7 +308,7 @@ fn simple_branch_insn() {
         &vec![],
         &vec![
             OpCode::BPush1 as OpSize,
-            OpCode::IfFalse as OpSize,
+            OpCode::IfFalsy as OpSize,
             0x00,
             0x0B,
             OpCode::Ldc as OpSize,
@@ -329,6 +330,56 @@ fn simple_branch_insn() {
         1,
         0,
     );
+}
+
+#[test]
+fn test_opcode_computation() {
+    let path = Path::new("target/opcode_computation.ykb");
+    let features = CompilerFeatures::default();
+
+    // (<source>, <opcode which checks when to exec **else** branch>)
+    let cases = [
+        // == true will be folded
+        ("1 == true", OpCode::IfFalsy, false),
+        ("0 == true", OpCode::IfFalsy, true),
+        
+        // != true will be folded
+        ("1 != true", OpCode::IfFalsy, false),
+        ("0 != true", OpCode::IfFalsy, true),
+        ("1 < true", OpCode::IfGt, false),
+        ("0 < true", OpCode::IfGtZ, true),
+        ("1 <= true", OpCode::IfGe, false),
+        ("0 <= true", OpCode::IfGeZ, true),
+        ("1 > true", OpCode::IfLt, false),
+        ("0 > true", OpCode::IfLtZ, true),
+        ("1 >= true", OpCode::IfLe, false),
+        ("0 >= true", OpCode::IfLeZ, true),
+    ];
+
+    for (cond, opcode, is_zero) in cases {
+        println!("[Writer] Checking {}, {}, {}", cond, opcode, is_zero);
+        let mut insns = vec![];
+        
+        insns.extend([
+            OpCode::Ldc as OpSize, 0x00, 0x01,
+            opcode as OpSize, 0x00, 0x0D,
+            OpCode::Ldc as OpSize, 0x00, 0x01 + (if is_zero { 1 } else { 0x00 }),
+            OpCode::Print as OpSize,
+            OpCode::Jmp as OpSize, 0x00, 0x11,
+            OpCode::Ldc as OpSize, 0x00, 0x01 + (if is_zero { 1 } else { 0x00 }),
+            OpCode::Print as OpSize,
+        ]);
+        
+        verify_top_level_insns(
+            &format!("if {} {{ print 1; }} else {{ print 1; }}", cond),
+            &path,
+            &features,
+            &vec![],
+            &insns,
+            1,
+            0,
+        );
+    }
 }
 
 fn verify_top_level_insns(
