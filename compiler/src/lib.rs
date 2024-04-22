@@ -6,6 +6,7 @@ pub mod diagnostics;
 pub mod features;
 pub mod lexer;
 pub mod location;
+pub mod macros;
 pub mod messages;
 pub mod parser;
 mod scope;

@@ -34,7 +34,7 @@ use crate::bytecode::cp::ConstantEntry;
 use crate::bytecode::cp_info::NumberInfo;
 use crate::bytecode::cp_info::Utf8Info;
 use crate::bytecode::file::YKBFile;
-use crate::bytecode::opcode::{OpCode, opcode_cmp, opcode_cmpz, OpCodeExt};
+use crate::bytecode::opcode::{get_opcode, OpCode, opcode_cmp, opcode_cmpz, OpCodeExt};
 use crate::features::CompilerFeatures;
 use crate::messages;
 use crate::scope::Scope;
@@ -81,48 +81,41 @@ struct CodeGen<'a> {
 
 struct CodeGenContext<'a> {
     pub scope: Scope<'a>,
-    pub chain: Option<Chain>
+    pub chain: Option<Chain>,
+    pub resolve_chain: bool,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Chain {
     pub pc: CodeSize,
-    pub next: Option<Box<Chain>>
+    pub next: Option<Box<Chain>>,
 }
 
 impl Chain {
     pub fn new(pc: CodeSize) -> Self {
-        return Chain {
-            pc,
-            next: None
-        }
+        return Chain { pc, next: None };
     }
-}
-
-pub struct CondItem {
-    pub opcode: OpCode,
-    pub true_jumps: Chain,
-    pub false_jumps: Chain,
 }
 
 impl CodeGenContext<'_> {
     fn new<'a>() -> CodeGenContext<'a> {
-        return CodeGenContext { scope: Scope::new(), chain: None };
+        return CodeGenContext {
+            scope: Scope::new(),
+            chain: None,
+            resolve_chain: true,
+        };
     }
 
     fn with_scope(scope: Scope) -> CodeGenContext {
-        return CodeGenContext { scope, chain: None };
-    }
-
-    fn branch(&mut self, pc: CodeSize) {
-        let mut new = Chain::new(pc);
-        new.next = self.chain.take().map(|c| Box::from(c));
-        self.chain = Some(new);
+        return CodeGenContext {
+            scope,
+            chain: None,
+            resolve_chain: true,
+        };
     }
 }
 
 impl<'a> CodeGen<'a> {
-
     /// The number of bytes of instructions that can be written to the [Attr::Code] attribute.
     pub const MAX_INSN_SIZE: CodeSize = 0xFFFFFFFF;
 
@@ -174,7 +167,8 @@ impl<'a> CodeGen<'a> {
 
     fn ensure_size_incr(&mut self, additional: CodeSize) {
         self.check_size(additional);
-        self.instructions.resize(self.cp as usize + additional as usize, 0);
+        self.instructions
+            .resize(self.cp as usize + additional as usize, 0);
     }
 
     fn instructions(&self) -> &Vec<u8> {
@@ -189,7 +183,8 @@ impl<'a> CodeGen<'a> {
         return self.instructions[index as usize];
     }
     fn get2(&self, index: CodeSize) -> u16 {
-        return (self.instructions[index as usize].as_u16() << 8) | self.instructions[index as usize + 1].as_u16();
+        return (self.instructions[index as usize].as_u16() << 8)
+            | self.instructions[index as usize + 1].as_u16();
     }
 
     fn put1(&mut self, index: CodeSize, value: u8) {
@@ -267,6 +262,14 @@ impl<'a> CodeGen<'a> {
         self.instructions[index as usize + 1] = data as u8;
     }
 
+    fn jmptocp(&mut self, jmp_from: CodeSize) {
+        self.patch_16(jmp_from + 1, (self.cp() - jmp_from - 3).as_u16());
+    }
+
+    fn patch_jmp(&mut self, jmp_from: CodeSize, jmp_to: CodeSize) {
+        self.patch_16(jmp_from + 1, (jmp_to - jmp_from - 3).as_u16());
+    }
+
     fn emitjmp(&mut self, opcode: OpCode) -> CodeSize {
         self.emit1_16(opcode, 0);
         return self.cp() - 3;
@@ -282,16 +285,56 @@ impl<'a> CodeGen<'a> {
         self.instructions = Vec::with_capacity(0);
     }
 
-    fn branch(&self, ctx: CodeGenContext, op: OpCode) {
-
+    fn branch(&mut self, op: OpCode, ctx: &mut CodeGenContext) -> CodeSize {
+        let pc = self.emitjmp(op);
+        let mut new = Chain::new(pc);
+        new.next = ctx.chain.take().map(|c| Box::from(c));
+        ctx.chain = Some(new);
+        return pc;
     }
 
-    fn resolve(&mut self, ctx: &CodeGenContext, target: CodeSize) {
-        let mut chain = ctx.chain.as_ref();
-        while let Some(c) = chain {
-            self.put2_16(c.pc + 1, (target - c.pc - 3).as_u16());
-            chain = c.next.as_deref();
+    fn resolve_chain(&mut self, ctx: &mut CodeGenContext) {
+        if let Some(chain) = ctx.chain.as_mut() {
+            self._resolve(chain);
         }
+
+        ctx.chain = None;
+    }
+
+    fn _resolve(&mut self, chain: &mut Chain) {
+        if let Some(next) = chain.next.as_deref_mut() {
+            let pc = chain.pc;
+            let op = get_opcode(self.get1(pc));
+            let target = self.get2(pc + 1).as_code_size();
+
+            let nxtpc = next.pc;
+            let nxtop = get_opcode(self.get1(nxtpc));
+
+            if op == nxtop || (op == OpCode::Jmp && nxtop.is_jmp()) {
+                self.patch_jmp(nxtpc, pc + target + 3);
+            }
+
+            self._resolve(next);
+        }
+    }
+
+    fn handle_short_circuit(&mut self, binary: &mut BinaryExpr, op: OpCode, ctx: &mut CodeGenContext) {
+        let resolve = ctx.resolve_chain;
+        ctx.resolve_chain = false;
+
+        self.visit_expr(&mut binary.left, ctx);
+
+        let jmpiffalsy = self.branch(op, ctx);
+        self.emitop0(OpCode::Pop);
+
+        self.visit_expr(&mut binary.right, ctx);
+        self.jmptocp(jmpiffalsy);
+
+        if resolve {
+            self.resolve_chain(ctx);
+        }
+
+        ctx.resolve_chain = resolve;
     }
 }
 
@@ -318,17 +361,23 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
                 .constant_pool_mut()
                 .push(ConstantEntry::Utf8(Utf8Info::from(attrs::CODE)));
 
-            let code = Attr::Code(Code::with_insns(self.max_stack, self.max_locals, self.instructions.clone()));
-            self.file
-                .attributes_mut()
-                .push(code);
+            let code = Attr::Code(Code::with_insns(
+                self.max_stack,
+                self.max_locals,
+                self.instructions.clone(),
+            ));
+            self.file.attributes_mut().push(code);
         }
 
         self.reset();
         None
     }
 
-    fn visit_class_decl(&mut self, class_decl: &mut ClassDecl, _ctx: &mut CodeGenContext) -> Option<()> {
+    fn visit_class_decl(
+        &mut self,
+        class_decl: &mut ClassDecl,
+        _ctx: &mut CodeGenContext,
+    ) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         let name_index =
             constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&class_decl.name.name)));
@@ -338,7 +387,11 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
         None
     }
 
-    fn visit_func_decl(&mut self, func_decl: &mut FuncDecl, ctx: &mut CodeGenContext) -> Option<()> {
+    fn visit_func_decl(
+        &mut self,
+        func_decl: &mut FuncDecl,
+        ctx: &mut CodeGenContext,
+    ) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         let name_index =
             constant_pool.push(ConstantEntry::Utf8(Utf8Info::from(&func_decl.name.name)));
@@ -349,7 +402,11 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
         self.default_visit_func_decl(func_decl, ctx)
     }
 
-    fn visit_var_stmt(&mut self, var_decl: &mut VarStmt, ctx: &mut CodeGenContext<'_>) -> Option<()> {
+    fn visit_var_stmt(
+        &mut self,
+        var_decl: &mut VarStmt,
+        ctx: &mut CodeGenContext<'_>,
+    ) -> Option<()> {
         // Visit the initializer first, if there is one
         // this ensures that the result of the initializer is pushed onto the stack before
         // the variable is declared
@@ -385,39 +442,47 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
         None
     }
 
-    fn visit_block_stmt(&mut self, block_stmt: &mut BlockStmt, ctx: &mut CodeGenContext) -> Option<()> {
+    fn visit_block_stmt(
+        &mut self,
+        block_stmt: &mut BlockStmt,
+        ctx: &mut CodeGenContext,
+    ) -> Option<()> {
         let mut scope = Scope::new();
         scope.parent = Some(&ctx.scope);
 
         let mut new_ctx = CodeGenContext::with_scope(scope);
+        new_ctx.chain = ctx.chain.clone();
+        new_ctx.resolve_chain = ctx.resolve_chain;
+
         self.default_visit_block_stmt(block_stmt, &mut new_ctx)
     }
 
-    fn visit_if_stmt(&mut self, if_stmt: &mut IfStmt, p: &mut CodeGenContext) -> Option<()> {
+    fn visit_if_stmt(&mut self, if_stmt: &mut IfStmt, ctx: &mut CodeGenContext) -> Option<()> {
+        self.visit_expr(&mut if_stmt.condition, ctx);
 
-        self.visit_expr(&mut if_stmt.condition, p);
+        let jmp = self.branch(OpCode::IfFalsy, ctx);
+        self.emitop0(OpCode::Pop);
+        self.visit_block_stmt(&mut if_stmt.then_branch, ctx);
 
-        let opcode = OpCode::IfFalsy;
-        let branch_addr = self.emitjmp(opcode);
-        self.visit_block_stmt(&mut if_stmt.then_branch, p);
-
-        let mut jump_to = self.cp();
-
+        let mut jmpto = self.cp();
         if let Some(else_branch) = if_stmt.else_branch.as_mut() {
-            let jump_addr = self.emitjmp(OpCode::Jmp);
-            jump_to = self.cp();
+            let elsejmp = self.branch(OpCode::Jmp, ctx);
+            jmpto = self.cp();
 
-            self.visit_block_stmt(else_branch, p);
-            let cp = self.cp();
-            self.patch_16(jump_addr+1, (cp - (jump_addr + 3)).as_u16());
+            self.emitop0(OpCode::Pop);
+            self.visit_block_stmt(else_branch, ctx);
+            self.jmptocp(elsejmp);
         }
 
-        let cp = self.cp();
-        self.patch_16(branch_addr+1, (cp - (jump_to + 3)).as_u16());
+        self.patch_jmp(jmp, jmpto);
         None
     }
 
-    fn visit_print_stmt(&mut self, print_stmt: &mut PrintStmt, ctx: &mut CodeGenContext) -> Option<()> {
+    fn visit_print_stmt(
+        &mut self,
+        print_stmt: &mut PrintStmt,
+        ctx: &mut CodeGenContext,
+    ) -> Option<()> {
         self.visit_expr(&mut print_stmt.expr, ctx);
         self.emitop(OpCode::Print);
         None
@@ -454,13 +519,13 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
         panic!("Unsupported assign expr: {:?}", assign_expr);
     }
 
-    fn visit_binary_expr(&mut self, binary: &mut BinaryExpr, ctx: &mut CodeGenContext) -> Option<()> {
-
+    fn visit_binary_expr(
+        &mut self,
+        binary: &mut BinaryExpr,
+        ctx: &mut CodeGenContext,
+    ) -> Option<()> {
         match &binary.op {
-            BinaryOp::Plus |
-            BinaryOp::Minus |
-            BinaryOp::Mult |
-            BinaryOp::Div => {
+            BinaryOp::Plus | BinaryOp::Minus | BinaryOp::Mult | BinaryOp::Div => {
                 self.visit_expr(&mut binary.left, ctx);
                 self.visit_expr(&mut binary.right, ctx);
 
@@ -473,23 +538,17 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
                 };
 
                 self.emitop(opcode);
-                return None
+                return None;
             }
 
             BinaryOp::And => {
-                self.visit_expr(&mut binary.left, ctx);
+                self.handle_short_circuit(binary, OpCode::IfFalsy, ctx);
+                return None;
+            }
 
-                let falsy = self.emitjmp(OpCode::IfFalsy);
-                ctx.branch(falsy);
-
-                self.emitop0(OpCode::Pop);
-                self.visit_expr(&mut binary.right, ctx);
-
-                let cp = self.cp();
-                self.resolve(ctx, cp);
-                self.patch_16(falsy + 1, (cp - falsy - 3).as_u16());
-
-                return None
+            BinaryOp::Or => {
+                self.handle_short_circuit(binary, OpCode::IfTruthy, ctx);
+                return None;
             }
 
             _ => {}
@@ -523,7 +582,7 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
             BinaryOp::GtEq => {}
             BinaryOp::Lt => {}
             BinaryOp::LtEq => {}
-            _ => unreachable!()
+            _ => unreachable!(),
         }
 
         None
@@ -563,7 +622,11 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
         None
     }
 
-    fn visit_literal_expr(&mut self, literal: &mut LiteralExpr, _ctx: &mut CodeGenContext) -> Option<()> {
+    fn visit_literal_expr(
+        &mut self,
+        literal: &mut LiteralExpr,
+        _ctx: &mut CodeGenContext,
+    ) -> Option<()> {
         let constant_pool = self.file.constant_pool_mut();
         match literal {
             LiteralExpr::Null(_) => {}

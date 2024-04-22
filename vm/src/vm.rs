@@ -17,7 +17,7 @@ use std::any::Any;
 use std::cmp::max;
 use std::fmt::Display;
 
-use log::debug;
+use log::{debug, trace};
 use log::error;
 use log::warn;
 
@@ -28,9 +28,10 @@ use compiler::bytecode::bytes::AssertingByteConversions;
 use compiler::bytecode::ConstantEntry;
 use compiler::bytecode::ConstantPool;
 use compiler::bytecode::CpSize;
-use compiler::bytecode::opcode::get_opcode;
+use compiler::bytecode::opcode::{get_opcode, OpCodeExt};
 use compiler::bytecode::opcode::OpCode;
 use compiler::bytecode::YKBFile;
+use compiler::castable_enum;
 
 /// The YuvaKriti Virtual Machine
 #[allow(unused)]
@@ -45,7 +46,7 @@ impl<'inst> YKVM<'inst> {
 }
 
 impl<'inst> YKVM<'inst> {
-    pub fn run(&mut self, file: &YKBFile) -> Result<(), String> {
+    pub fn run(&mut self, file: &YKBFile) -> Result<Option<Value>, String> {
         let attrs = file.attributes();
         let code = attrs.iter().find(|attr| attr.name() == attrs::CODE);
         if code.is_none() {
@@ -62,7 +63,7 @@ impl<'inst> YKVM<'inst> {
             ));
         };
 
-        self.run_code(code, file.constant_pool()).map(|_res| ())
+        self.run_code(code, file.constant_pool())
     }
 
     /// Execute the instructions in the [Code] and returns the value at the top of the stack
@@ -85,15 +86,17 @@ pub enum Value {
     Null,
 }
 
+#[allow(non_snake_case)]
 impl Value {
-    pub fn as_str(&self) -> Option<&String> {
+    
+    pub fn String(&self) -> Option<&String> {
         match self {
             Value::String(str) => Some(str),
             _ => None,
         }
     }
-
-    pub fn as_number(&self) -> Option<&f64> {
+    
+    pub fn Number(&self) -> Option<&f64> {
         match self {
             Value::Number(num) => Some(num),
             _ => None,
@@ -168,10 +171,12 @@ impl<'inst> CodeExecutor<'inst> {
     }
 
     pub fn set_constant_pool(&mut self, pool: Option<&'inst ConstantPool>) {
+        trace!("VM::set_constant_pool: {:?}", pool);
         self.constant_pool = pool;
     }
 
     pub fn reset(&mut self) {
+        trace!("VM::reset()");
         self.variables = vec![];
         self.operands = vec![];
     }
@@ -181,7 +186,8 @@ impl<'inst> CodeExecutor<'inst> {
     }
 
     fn peek_operand(&mut self) -> &Value {
-        self.try_peek_operand().expect("Expected an operand to peek")
+        self.try_peek_operand()
+            .expect("Expected an operand to peek")
     }
 
     fn try_pop_operand(&mut self) -> Option<Value> {
@@ -189,18 +195,31 @@ impl<'inst> CodeExecutor<'inst> {
     }
 
     fn pop_operand(&mut self) -> Value {
-        self.try_pop_operand().expect("Expected an operand to pop")
+        trace!("VM::pop_operand()");
+        let op = self.try_pop_operand().expect("Expected an operand to pop");
+
+        trace!("VM::pop_operand(): {:?}", op);
+        trace!("VM::pop_operand(): operands.len(): {}", self.operands.len());
+
+        op
     }
 
     fn push_operand(&mut self, value: Value) {
+        trace!("VM::push_operand({:?})", value);
         if self.max_stack != 0 && self.operands.len() >= self.max_stack as usize {
-            // TODO(itsaky): Should this fail instead?
-            error!("Critical: Operand stack overflow! max_stack={}. Did the compiler compute invalid stack depth?", self.max_stack);
+            panic!("Critical: Operand stack overflow! max_stack={}. Did the compiler compute invalid stack depth?", self.max_stack);
         }
+
         self.operands.push(value);
+        trace!(
+            "VM::push_operand(): operands.len(): {}",
+            self.operands.len()
+        );
     }
 
     fn load_constant(&mut self, index: CpSize) {
+        trace!("VM::load_constant({})", index);
+
         if let Some(str) = self.constant_pool().get_string(index) {
             self.push_operand(Value::String(str));
             return;
@@ -223,11 +242,13 @@ impl<'inst> CodeExecutor<'inst> {
     }
 
     pub fn store_var(&mut self, index: u16) {
+        trace!("VM::store_var({})", index);
         let value = self.pop_operand();
         self.variables[index as usize] = Variable::new(value);
     }
 
     pub fn load_var(&mut self, index: u16) {
+        trace!("VM::load_var({})", index);
         // TODO(itsaky): Avoid cloning
         let value = self.variables[index as usize].value.clone();
         self.push_operand(value);
@@ -236,9 +257,11 @@ impl<'inst> CodeExecutor<'inst> {
     pub fn execute(&mut self, code: &Code) -> Result<Option<Value>, String> {
         self.max_stack = code.max_stack();
         self.max_locals = code.max_locals();
-        debug!(
-            "max_stack: {}, max_locals: {}",
-            self.max_stack, self.max_locals
+
+        trace!(
+            "VM::execute(max_stack={}, max_locals={})",
+            self.max_stack,
+            self.max_locals
         );
 
         self.operands = Vec::with_capacity(max(0, self.max_stack) as usize);
@@ -248,23 +271,31 @@ impl<'inst> CodeExecutor<'inst> {
             .resize(max(0, self.max_locals) as usize, Variable::NONE);
 
         let insns = code.instructions();
+        trace!("VM::execute(insns.len()={})", insns.len());
+
         let mut pc = 0;
         let mut is_halted = false;
 
         'insn: while pc < insns.len() {
             let instruction = insns[pc].as_op_size();
-            pc += 1;
             let opcode = get_opcode(instruction);
+            trace!(
+                "VM::execute(pc={}, instruction={}, opcode={:?})",
+                pc,
+                instruction,
+                opcode.get_mnemonic()
+            );
+
+            pc += 1;
+
             match &opcode {
-                OpCode::Nop => {
-                    debug!("Encountered a nop opcode. Skipping.");
-                }
+                OpCode::Nop => {}
                 OpCode::Halt => {
-                    debug!("Encountered halt opcode. Halting.");
                     is_halted = true;
                     break 'insn;
                 }
                 OpCode::Add | OpCode::Sub | OpCode::Mult | OpCode::Div => {
+                    trace!("VM::execute(arithmetic): {:?}", opcode);
                     self.exec_binary_num_op(opcode);
                 }
                 OpCode::Print => {
@@ -311,6 +342,7 @@ impl<'inst> CodeExecutor<'inst> {
                     {
                         // jump to the specified address
                         pc += addr as usize;
+                        trace!("VM::execute::jmp(pc={})", pc);
                     }
                 }
 
@@ -318,9 +350,12 @@ impl<'inst> CodeExecutor<'inst> {
                     let addr = (insns[pc].as_u16() << 8) | insns[pc + 1].as_u16();
                     pc += 2;
                     pc += addr as usize;
+                    trace!("VM::execute::jmp(pc={})", pc);
                 }
 
-                OpCode::Pop => { self.pop_operand(); },
+                OpCode::Pop => {
+                    self.pop_operand();
+                }
 
                 _ => return Err(format!("Unsupported opcode: {}", opcode)),
             }
@@ -333,15 +368,22 @@ impl<'inst> CodeExecutor<'inst> {
             );
         }
 
+        trace!("VM::execute(): pc: {}, is_halted: {}", pc, is_halted);
+
+        let result = self.try_pop_operand();
+        if result.is_some() {
+            trace!("VM::execute(): result: {:?}", result);
+        }
+        
         // Return the result at the top of the stack
-        Ok(self.try_pop_operand())
+        Ok(result)
     }
 
     fn exec_binary_num_op(&mut self, op: OpCode) {
         let op2 = self.pop_operand();
         let op1 = self.pop_operand();
-        let op2 = op2.as_number().expect("Expected a number operand");
-        let op1 = op1.as_number().expect("Expected a number operand");
+        let op2 = op2.Number().expect("Expected a number operand");
+        let op1 = op1.Number().expect("Expected a number operand");
 
         let result = match op {
             OpCode::Add => op1 + op2,

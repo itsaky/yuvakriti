@@ -19,6 +19,7 @@ use std::mem::size_of;
 use crate::bytecode::ConstantEntry;
 use crate::bytecode::CpSize;
 use crate::bytecode::opcode::OpSize;
+use crate::castable_enum;
 
 pub type CodeSize = u32;
 pub const OP_SIZE: CodeSize = size_of::<OpSize>() as CodeSize;
@@ -26,11 +27,10 @@ pub const OP_SIZE: CodeSize = size_of::<OpSize>() as CodeSize;
 pub const CODE: &str = "Code";
 pub const SOURCE_FILE: &str = "SourceFile";
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum Attr {
-    Code(Code),
-    SourceFile(SourceFile),
-}
+castable_enum!(pub enum Attr {
+    Code: Code,
+    SourceFile: SourceFile,
+});
 
 impl Attr {
     pub fn name(&self) -> &'static str {
@@ -51,7 +51,6 @@ pub struct Code {
 }
 
 impl Code {
-
     /// Create a new [Code] attribute with the given `max_stack` size and the capacity for the
     /// instruction bytes. `max_stack` is the maximum depth of the operand stack of the [Code]
     /// attribute at any point during the execution of instructions of that [Code] attribute.

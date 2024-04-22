@@ -13,12 +13,17 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::io::Cursor;
+use compiler::ast::{ASTPrinter, Visitable};
+
 use compiler::bytecode::attrs::Code;
-use compiler::bytecode::opcode::OpSize;
 use compiler::bytecode::ConstantEntry;
 use compiler::bytecode::ConstantPool;
+use compiler::bytecode::opcode::OpSize;
+use compiler::comp::YKCompiler;
+use compiler::features::CompilerFeatures;
 
-use crate::YKVM;
+use crate::{Value, YKVM};
 
 pub fn create_vm<'a>() -> YKVM<'a> {
     YKVM::new()
@@ -41,7 +46,42 @@ pub fn eval_arithemetic(
     max_locals: u16,
     insns: Vec<OpSize>,
 ) -> f64 {
+    eval(vm, cp, max_stack, max_locals, insns)
+        .Number()
+        .unwrap()
+        .clone()
+}
+
+pub fn eval(
+    vm: &mut YKVM,
+    cp: &ConstantPool,
+    max_stack: u16,
+    max_locals: u16,
+    insns: Vec<OpSize>,
+) -> Value {
     let code = Code::with_insns(max_stack, max_locals, insns);
-    let result = vm.run_code(&code, cp).unwrap().expect("Expected result");
-    result.as_number().unwrap().clone()
+    vm.run_code(&code, cp).unwrap().expect("Expected result")
+}
+
+pub fn eval_arithmetic_src(src: &str) -> f64 {
+    eval_src(&mut YKVM::new(), src).Number().unwrap().clone()
+}
+pub fn eval_src(vm: &mut YKVM, src: &str) -> Value {
+    let mut compiler = YKCompiler::new();
+    let mut features = CompilerFeatures::default();
+    features.const_folding = false;
+    
+    let (mut program, has_errors) = compiler
+        .parse(Cursor::new(src))
+        .expect("Failed to parse source");
+    assert!(!has_errors);
+    assert!(!compiler.attr(&mut program, &features));
+    
+    // let mut out = String::new();
+    // let mut printer = ASTPrinter::new(&mut out, true);
+    // program.accept(&mut printer, &mut 0);
+    // println!("Evaluating with VM: {}", out);
+    
+    let file = compiler.ir(&mut program, &features);
+    vm.run(&file).unwrap().expect("Expected result")
 }

@@ -13,18 +13,19 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::fmt::Display;
 use crate::ast::BinaryOp;
+use std::fmt::Display;
 
 pub type OpSize = u8;
 
 pub trait OpCodeExt {
     fn stack_effect(&self) -> i8;
     fn get_mnemonic(&self) -> &'static str;
+    fn is_jmp(&self) -> bool;
 }
 
 macro_rules! def_opcodes {
-    ($({$name:ident, $code:literal, $stack_effect:literal, $mnemonic:literal $(,)? } $(,)?)+) => {
+    ($({$name:ident, $code:literal, $stack_effect:literal, $mnemonic:literal $(, $jmp:expr $(,)?)? } $(,)?)+) => {
         #[derive(Debug, PartialEq, Clone, Copy)]
         #[repr(u8)]
         #[rustfmt::skip]
@@ -44,6 +45,13 @@ macro_rules! def_opcodes {
                     $(OpCode::$name => $mnemonic,)+
                 }
             }
+            
+            fn is_jmp(&self) -> bool {
+                match self {
+                    $($(OpCode::$name => $jmp,)*)+
+                    _ => false
+                }
+            }
         }
 
         pub fn get_opcode(code: OpSize) -> OpCode {
@@ -61,7 +69,7 @@ impl OpCode {
     }
 }
 
-// format: {name, opcode, stack_effect, mnemonic}
+// format: {name, opcode, stack_effect, mnemonic, is_jmp}
 def_opcodes!(
   {Nop,         0x00,   0,  "nop"       },
   {Halt,        0x01,   0,  "halt"      },
@@ -70,20 +78,20 @@ def_opcodes!(
   {Mult,        0x04,  -1,  "mult"      },
   {Div,         0x05,  -1,  "div"       },
   {Print,       0x06,  -1,  "print"     },
-  {IfEq,        0x07,   0,  "ifeq"      },
-  {IfEqZ,       0x08,   0,  "ifeqz"     },
-  {IfNe,        0x09,   0,  "ifne"      },
-  {IfNeZ,       0x0A,   0,  "ifnez"     },
-  {IfLt,        0x0B,   0,  "iflt"      },
-  {IfLtZ,       0x0C,   0,  "ifltz"     },
-  {IfLe,        0x0D,   0,  "ifle"      },
-  {IfLeZ,       0x0E,   0,  "iflez"     },
-  {IfGt,        0x0F,   0,  "ifgt"      },
-  {IfGtZ,       0x10,   0,  "ifgtz"     },
-  {IfGe,        0x11,   0,  "ifge"      },
-  {IfGeZ,       0x12,   0,  "ifgez"     },
-  {IfTruthy,    0x20,   0,  "iftruthy"  },
-  {IfFalsy,     0x21,   0,  "iffalsy"   },
+  {IfEq,        0x07,   0,  "ifeq"      , true},
+  {IfEqZ,       0x08,   0,  "ifeqz"     , true},
+  {IfNe,        0x09,   0,  "ifne"      , true},
+  {IfNeZ,       0x0A,   0,  "ifnez"     , true},
+  {IfLt,        0x0B,   0,  "iflt"      , true},
+  {IfLtZ,       0x0C,   0,  "ifltz"     , true},
+  {IfLe,        0x0D,   0,  "ifle"      , true},
+  {IfLeZ,       0x0E,   0,  "iflez"     , true},
+  {IfGt,        0x0F,   0,  "ifgt"      , true},
+  {IfGtZ,       0x10,   0,  "ifgtz"     , true},
+  {IfGe,        0x11,   0,  "ifge"      , true},
+  {IfGeZ,       0x12,   0,  "ifgez"     , true},
+  {IfTruthy,    0x20,   0,  "iftruthy"  , true},
+  {IfFalsy,     0x21,   0,  "iffalsy"   , true},
   {Ldc,         0x13,   1,  "ldc"       },
   {BPush0,      0x14,   1,  "bpush_0"   },
   {BPush1,      0x15,   1,  "bpush_1"   },
@@ -97,8 +105,8 @@ def_opcodes!(
   {Load1,       0x1D,   1,  "load_1"    },
   {Load2,       0x1E,   1,  "load_2"    },
   {Load3,       0x1F,   1,  "load_3"    },
-  {Jmp,         0x22,   0,  "jmp"       },
-  {Pop,         0x23,   -1,  "pop"       },
+  {Jmp,         0x22,   0,  "jmp"       , true},
+  {Pop,         0x23,   -1,  "pop"      },
 );
 
 impl Display for OpCode {
@@ -115,7 +123,7 @@ pub fn opcode_cmp(op: &BinaryOp) -> OpCode {
         BinaryOp::GtEq => OpCode::IfLe,
         BinaryOp::Lt => OpCode::IfGt,
         BinaryOp::LtEq => OpCode::IfGe,
-        _ => unreachable!("opcode_cmp is not implemented for {:?}", op)
+        _ => unreachable!("opcode_cmp is not implemented for {:?}", op),
     }
 }
 
@@ -127,6 +135,6 @@ pub fn opcode_cmpz(op: &BinaryOp) -> OpCode {
         BinaryOp::GtEq => OpCode::IfLeZ,
         BinaryOp::Lt => OpCode::IfGtZ,
         BinaryOp::LtEq => OpCode::IfGeZ,
-        _ => unreachable!("opcode_cmpz is not implemented for {:?}", op)
+        _ => unreachable!("opcode_cmpz is not implemented for {:?}", op),
     }
 }

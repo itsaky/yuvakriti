@@ -16,10 +16,10 @@
 use std::fmt::Display;
 use std::fmt::Formatter;
 
+use crate::bytecode::opcode::OpCode;
 pub use arithemetic::ArithmeticASTPrinter;
 pub use pretty::ASTPrinter;
 pub use visitor::ASTVisitor;
-use crate::bytecode::opcode::OpCode;
 
 use crate::location::Range;
 use crate::tokens::Token;
@@ -498,7 +498,7 @@ impl BinaryOp {
             _ => None,
         }
     }
-    
+
     /// Get the inverse of the binary comparison operator.
     pub fn inv_cmp(&self) -> Option<BinaryOp> {
         match self {
@@ -508,14 +508,22 @@ impl BinaryOp {
             BinaryOp::GtEq => Some(BinaryOp::LtEq),
             BinaryOp::Lt => Some(BinaryOp::Gt),
             BinaryOp::LtEq => Some(BinaryOp::GtEq),
-            _ => None
+            _ => None,
         }
     }
-    
+
     pub fn is_cmp(&self) -> bool {
-        matches!(self, BinaryOp::EqEq | BinaryOp::NotEq | BinaryOp::Gt | BinaryOp::GtEq | BinaryOp::Lt | BinaryOp::LtEq)
+        matches!(
+            self,
+            BinaryOp::EqEq
+                | BinaryOp::NotEq
+                | BinaryOp::Gt
+                | BinaryOp::GtEq
+                | BinaryOp::Lt
+                | BinaryOp::LtEq
+        )
     }
-    
+
     pub fn is_cond(&self) -> bool {
         matches!(self, BinaryOp::And | BinaryOp::Or)
     }

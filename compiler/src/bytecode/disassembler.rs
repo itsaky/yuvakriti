@@ -22,14 +22,14 @@ use crate::bytecode::attrs::Attr;
 use crate::bytecode::attrs::Code;
 use crate::bytecode::bytes::AssertingByteConversions;
 use crate::bytecode::bytes::ByteInput;
-use crate::bytecode::ConstantEntry;
-use crate::bytecode::ConstantPool;
 use crate::bytecode::cp_info::CpInfo;
-use crate::bytecode::CpSize;
-use crate::bytecode::MAGIC_NUMBER;
 use crate::bytecode::opcode::get_opcode;
 use crate::bytecode::opcode::OpCode;
+use crate::bytecode::ConstantEntry;
+use crate::bytecode::ConstantPool;
+use crate::bytecode::CpSize;
 use crate::bytecode::YKBFileReader;
+use crate::bytecode::MAGIC_NUMBER;
 
 pub struct YKBDisassembler<'a, R: Read> {
     r: YKBFileReader<R>,
@@ -183,19 +183,18 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
             index += 1;
 
             match opcode {
-                OpCode::Pop |
-                OpCode::Nop |
-                OpCode::Halt |
-                OpCode::Add |
-                OpCode::Sub |
-                OpCode::Mult |
-                OpCode::Div |
-                OpCode::Print |
-                OpCode::BPush0 |
-                OpCode::BPush1 => {}
+                OpCode::Pop
+                | OpCode::Nop
+                | OpCode::Halt
+                | OpCode::Add
+                | OpCode::Sub
+                | OpCode::Mult
+                | OpCode::Div
+                | OpCode::Print
+                | OpCode::BPush0
+                | OpCode::BPush1 => {}
                 OpCode::Ldc => {
-                    let const_index =
-                        (insns[index].as_u16()) << 8 | insns[index + 1] as u16;
+                    let const_index = (insns[index].as_u16()) << 8 | insns[index + 1] as u16;
                     let constant = constant_pool.get(const_index).unwrap();
                     self.write(&format!("#{:<5} // {}", const_index, constant));
                     index += 2
@@ -203,12 +202,11 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
                 OpCode::Load0 | OpCode::Load1 | OpCode::Load2 | OpCode::Load3 => {}
                 OpCode::Store0 | OpCode::Store1 | OpCode::Store2 | OpCode::Store3 => {}
 
-                OpCode::Load
-                | OpCode::Store => {
+                OpCode::Load | OpCode::Store => {
                     self.write_16(insns, index);
                     index += 2;
                 }
-                | OpCode::IfEq
+                OpCode::IfEq
                 | OpCode::IfEqZ
                 | OpCode::IfNe
                 | OpCode::IfNeZ

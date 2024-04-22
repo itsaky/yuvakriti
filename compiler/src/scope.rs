@@ -84,6 +84,6 @@ impl Scope<'_> {
 
     /// Get index of the variable symbol with the given name.
     pub fn get_var_idx(&self, name: &String) -> Option<&u16> {
-        return self.symbols.get_var_idx(name);
+        return self.symbols.get_var_idx(name).or_else(|| self.parent.and_then(|p| p.get_var_idx(name)));
     }
 }
