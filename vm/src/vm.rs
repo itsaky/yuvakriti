@@ -17,21 +17,20 @@ use std::any::Any;
 use std::cmp::max;
 use std::fmt::Display;
 
-use log::{debug, trace};
 use log::error;
+use log::trace;
 use log::warn;
 
 use compiler::bytecode::attrs;
 use compiler::bytecode::attrs::Attr;
 use compiler::bytecode::attrs::Code;
 use compiler::bytecode::bytes::AssertingByteConversions;
+use compiler::bytecode::opcode::OpCode;
+use compiler::bytecode::opcode::{get_opcode, OpCodeExt};
 use compiler::bytecode::ConstantEntry;
 use compiler::bytecode::ConstantPool;
 use compiler::bytecode::CpSize;
-use compiler::bytecode::opcode::{get_opcode, OpCodeExt};
-use compiler::bytecode::opcode::OpCode;
 use compiler::bytecode::YKBFile;
-use compiler::castable_enum;
 
 /// The YuvaKriti Virtual Machine
 #[allow(unused)]
@@ -88,14 +87,13 @@ pub enum Value {
 
 #[allow(non_snake_case)]
 impl Value {
-    
     pub fn String(&self) -> Option<&String> {
         match self {
             Value::String(str) => Some(str),
             _ => None,
         }
     }
-    
+
     pub fn Number(&self) -> Option<&f64> {
         match self {
             Value::Number(num) => Some(num),
@@ -374,7 +372,7 @@ impl<'inst> CodeExecutor<'inst> {
         if result.is_some() {
             trace!("VM::execute(): result: {:?}", result);
         }
-        
+
         // Return the result at the top of the stack
         Ok(result)
     }

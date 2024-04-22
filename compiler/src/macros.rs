@@ -2,7 +2,7 @@
  * Copyright (c) 2024 The YuvaKriti Lang Authors.
  *
  * This program is free software: you can redistribute it and/or modify it under the
- *  terms of the GNU General Public License as published by the Free Software 
+ *  terms of the GNU General Public License as published by the Free Software
  *  Foundation, version 3.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY
@@ -22,7 +22,7 @@ macro_rules! castable_enum {
         $($pb)? enum $name {
             $( $prop $(($ty))? ),+
         }
-        
+
         #[allow(non_snake_case)]
         impl $name {
             $( pub fn $prop (&self) -> Option<$(&$ty)?> {

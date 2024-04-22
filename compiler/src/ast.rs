@@ -16,7 +16,6 @@
 use std::fmt::Display;
 use std::fmt::Formatter;
 
-use crate::bytecode::opcode::OpCode;
 pub use arithemetic::ArithmeticASTPrinter;
 pub use pretty::ASTPrinter;
 pub use visitor::ASTVisitor;

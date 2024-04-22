@@ -32,5 +32,7 @@ pub fn do_run(args: &mut RunArgs) -> Result<(), ()> {
     let mut file = reader.read_file().unwrap();
     let mut vm = YKVM::new();
 
-    vm.run(&mut file).map_err(|err| error!("{}", err)).map(|_| ())
+    vm.run(&mut file)
+        .map_err(|err| error!("{}", err))
+        .map(|_| ())
 }

@@ -15,9 +15,6 @@
 
 use std::ops::Deref;
 
-use crate::ast::{ASTVisitor, IdentifierType};
-use crate::ast::{AssignExpr, BinaryExpr};
-use crate::ast::{BinaryOp, IfStmt};
 use crate::ast::BlockStmt;
 use crate::ast::ClassDecl;
 use crate::ast::FuncDecl;
@@ -27,14 +24,17 @@ use crate::ast::PrintStmt;
 use crate::ast::Program;
 use crate::ast::VarStmt;
 use crate::ast::Visitable;
-use crate::bytecode::{attrs, decls};
+use crate::ast::{ASTVisitor, IdentifierType};
+use crate::ast::{AssignExpr, BinaryExpr};
+use crate::ast::{BinaryOp, IfStmt};
 use crate::bytecode::attrs::{Attr, Code, CodeSize};
 use crate::bytecode::bytes::AssertingByteConversions;
 use crate::bytecode::cp::ConstantEntry;
 use crate::bytecode::cp_info::NumberInfo;
 use crate::bytecode::cp_info::Utf8Info;
 use crate::bytecode::file::YKBFile;
-use crate::bytecode::opcode::{get_opcode, OpCode, opcode_cmp, opcode_cmpz, OpCodeExt};
+use crate::bytecode::opcode::{get_opcode, opcode_cmp, opcode_cmpz, OpCode, OpCodeExt};
+use crate::bytecode::{attrs, decls};
 use crate::features::CompilerFeatures;
 use crate::messages;
 use crate::scope::Scope;
@@ -318,7 +318,12 @@ impl<'a> CodeGen<'a> {
         }
     }
 
-    fn handle_short_circuit(&mut self, binary: &mut BinaryExpr, op: OpCode, ctx: &mut CodeGenContext) {
+    fn handle_short_circuit(
+        &mut self,
+        binary: &mut BinaryExpr,
+        op: OpCode,
+        ctx: &mut CodeGenContext,
+    ) {
         let resolve = ctx.resolve_chain;
         ctx.resolve_chain = false;
 
@@ -568,7 +573,7 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
         // For example, the binary operator is EqEq in `if true == false`,
         // therefore, the else condition must be executed if true != false
         // as a result, the actual opcode should be `IfNe`
-        let opcode = match (is_zero, on_left) {
+        let _opcode = match (is_zero, on_left) {
             (false, false) => opcode_cmp(&binary.op),
             (false, true) => opcode_cmp(&binary.op.inv_cmp().unwrap()),
             (true, false) => opcode_cmpz(&binary.op),

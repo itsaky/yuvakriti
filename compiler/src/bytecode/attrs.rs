@@ -15,10 +15,10 @@
 
 use std::mem::size_of;
 
+use crate::bytecode::opcode::OpSize;
 #[allow(unused_imports)]
 use crate::bytecode::ConstantEntry;
 use crate::bytecode::CpSize;
-use crate::bytecode::opcode::OpSize;
 use crate::castable_enum;
 
 pub type CodeSize = u32;

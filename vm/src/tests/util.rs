@@ -14,12 +14,11 @@
  */
 
 use std::io::Cursor;
-use compiler::ast::{ASTPrinter, Visitable};
 
 use compiler::bytecode::attrs::Code;
+use compiler::bytecode::opcode::OpSize;
 use compiler::bytecode::ConstantEntry;
 use compiler::bytecode::ConstantPool;
-use compiler::bytecode::opcode::OpSize;
 use compiler::comp::YKCompiler;
 use compiler::features::CompilerFeatures;
 
@@ -70,18 +69,18 @@ pub fn eval_src(vm: &mut YKVM, src: &str) -> Value {
     let mut compiler = YKCompiler::new();
     let mut features = CompilerFeatures::default();
     features.const_folding = false;
-    
+
     let (mut program, has_errors) = compiler
         .parse(Cursor::new(src))
         .expect("Failed to parse source");
     assert!(!has_errors);
     assert!(!compiler.attr(&mut program, &features));
-    
+
     // let mut out = String::new();
     // let mut printer = ASTPrinter::new(&mut out, true);
     // program.accept(&mut printer, &mut 0);
     // println!("Evaluating with VM: {}", out);
-    
+
     let file = compiler.ir(&mut program, &features);
     vm.run(&file).unwrap().expect("Expected result")
 }

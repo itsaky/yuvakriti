@@ -13,8 +13,8 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::tests::util::{create_vm, eval_arithmetic_src};
 use crate::tests::util::eval_src;
+use crate::tests::util::{create_vm, eval_arithmetic_src};
 use crate::Value;
 
 fn eval_bool4(expr: &str, cond: &dyn Fn(bool, bool, bool, bool) -> bool) {
@@ -32,9 +32,14 @@ fn eval_bool4(expr: &str, cond: &dyn Fn(bool, bool, bool, bool) -> bool) {
                     // a and b and c and d
                     assert_eq!(
                         Value::Bool(cond(a, b, c, d)),
-                        eval_src(&mut vm, &format!("var a = {}; var b = {}; var c = {}; var d = {}; {};", a, b, c, d, expr))
+                        eval_src(
+                            &mut vm,
+                            &format!(
+                                "var a = {}; var b = {}; var c = {}; var d = {}; {};",
+                                a, b, c, d, expr
+                            )
+                        )
                     );
-
                 }
             }
         }
@@ -80,30 +85,48 @@ fn test_nested_or_and_branch2() {
 
 #[test]
 fn test_simple_control_flow() {
-    assert_eq!(30f64, eval_arithmetic_src("var a = 10; var b = 20; if true { a + b; } else { b - a; }"));
+    assert_eq!(
+        30f64,
+        eval_arithmetic_src("var a = 10; var b = 20; if true { a + b; } else { b - a; }")
+    );
 }
 
 #[test]
 fn test_simple_control_flow2() {
-    assert_eq!(10f64, eval_arithmetic_src("var a = 10; var b = 20; if false { a + b; } else { b - a; }"));
+    assert_eq!(
+        10f64,
+        eval_arithmetic_src("var a = 10; var b = 20; if false { a + b; } else { b - a; }")
+    );
 }
 
 #[test]
 fn test_simple_control_flow3() {
-    assert_eq!(10f64, eval_arithmetic_src("var a = 10; var b = 20; if false and true { a + b; } else { b - a; }"));
+    assert_eq!(
+        10f64,
+        eval_arithmetic_src("var a = 10; var b = 20; if false and true { a + b; } else { b - a; }")
+    );
 }
 
 #[test]
 fn test_simple_control_flow4() {
-    assert_eq!(10f64, eval_arithmetic_src("var a = 10; var b = 20; if true and false { a + b; } else { b - a; }"));
+    assert_eq!(
+        10f64,
+        eval_arithmetic_src("var a = 10; var b = 20; if true and false { a + b; } else { b - a; }")
+    );
 }
 
 #[test]
 fn test_simple_control_flow5() {
-    assert_eq!(30f64, eval_arithmetic_src("var a = 10; var b = 20; if true or false { a + b; } else { b - a; }"));
+    assert_eq!(
+        30f64,
+        eval_arithmetic_src("var a = 10; var b = 20; if true or false { a + b; } else { b - a; }")
+    );
 }
 
 #[test]
 fn test_simple_control_flow6() {
-    assert_eq!(30f64, eval_arithmetic_src("var a = 10; var b = 20; if false or true { a + b; } else { b - a; }"));
+    assert_eq!(
+        30f64,
+        eval_arithmetic_src("var a = 10; var b = 20; if false or true { a + b; } else { b - a; }")
+    );
 }

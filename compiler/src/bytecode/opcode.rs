@@ -45,7 +45,7 @@ macro_rules! def_opcodes {
                     $(OpCode::$name => $mnemonic,)+
                 }
             }
-            
+
             fn is_jmp(&self) -> bool {
                 match self {
                     $($(OpCode::$name => $jmp,)*)+

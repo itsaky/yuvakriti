@@ -18,12 +18,12 @@ use std::path::Path;
 
 use crate::bytecode::attrs;
 use crate::bytecode::bytes::ByteInput;
-use crate::bytecode::ConstantEntry;
 use crate::bytecode::cp_info::NumberInfo;
 use crate::bytecode::cp_info::Utf8Info;
 use crate::bytecode::opcode::OpCode;
 use crate::bytecode::opcode::OpSize;
 use crate::bytecode::tests::util::compile_to_bytecode;
+use crate::bytecode::ConstantEntry;
 use crate::bytecode::YKBFileReader;
 use crate::features::CompilerFeatures;
 
