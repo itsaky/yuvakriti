@@ -63,9 +63,10 @@ pub fn eval(
 }
 
 pub fn eval_arithmetic_src(src: &str) -> f64 {
-    eval_src(&mut YKVM::new(), src).Number().unwrap().clone()
+    eval_src(src).Number().unwrap().clone()
 }
-pub fn eval_src(vm: &mut YKVM, src: &str) -> Value {
+pub fn eval_src(src: &str) -> Value {
+    let mut vm = YKVM::new();
     let mut compiler = YKCompiler::new();
     let mut features = CompilerFeatures::default();
     features.const_folding = false;

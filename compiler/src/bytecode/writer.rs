@@ -15,9 +15,6 @@
 
 use std::ops::Deref;
 
-use crate::ast::{ASTVisitor, IdentifierType};
-use crate::ast::{AssignExpr, BinaryExpr};
-use crate::ast::{BinaryOp, IfStmt};
 use crate::ast::BlockStmt;
 use crate::ast::ClassDecl;
 use crate::ast::FuncDecl;
@@ -27,14 +24,17 @@ use crate::ast::PrintStmt;
 use crate::ast::Program;
 use crate::ast::VarStmt;
 use crate::ast::Visitable;
-use crate::bytecode::{attrs, decls};
+use crate::ast::{ASTVisitor, IdentifierType};
+use crate::ast::{AssignExpr, BinaryExpr};
+use crate::ast::{BinaryOp, IfStmt};
 use crate::bytecode::attrs::{Attr, Code, CodeSize};
 use crate::bytecode::bytes::AssertingByteConversions;
 use crate::bytecode::cp::ConstantEntry;
 use crate::bytecode::cp_info::NumberInfo;
 use crate::bytecode::cp_info::Utf8Info;
 use crate::bytecode::file::YKBFile;
-use crate::bytecode::opcode::{get_opcode, OpCode, opcode_cmp, opcode_cmpz, OpCodeExt};
+use crate::bytecode::opcode::{get_opcode, opcode_cmp, opcode_cmpz, OpCode, OpCodeExt};
+use crate::bytecode::{attrs, decls};
 use crate::features::CompilerFeatures;
 use crate::messages;
 use crate::scope::Scope;
@@ -514,32 +514,78 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
 
         // 0(is_zero): whether any of the operands are 0
         // 1(on_left): whether the left operand is 0
-        let (is_zero, on_left) = binary
+        let (is_z, z_on_left) = binary
             .left
             .Literal()
-            .and_then(|l| l.Number())
-            .or_else(|| binary.right.Literal().and_then(|l| l.Number()))
-            .map(|l| (&l.0 == &0f64, true))
+            .and_then(|l| l.Number().map(|l| (&l.0 == &0f64, true)))
+            .or_else(|| {
+                binary
+                    .right
+                    .Literal()
+                    .and_then(|l| l.Number().map(|l| (&l.0 == &0f64, false)))
+            })
             .unwrap_or((false, false));
 
-        // Determine the opcode for when the condition is **FALSE**
+        // Determine the opcode which checks if the condition is **FALSE**
         // For example, the binary operator is EqEq in `if true == false`,
         // therefore, the else condition must be executed if true != false
         // as a result, the actual opcode should be `IfNe`
-        let _opcode = match (is_zero, on_left) {
+        let opcode = match (is_z, z_on_left) {
             (false, false) => opcode_cmp(&binary.op),
             (false, true) => opcode_cmp(&binary.op.inv_cmp().unwrap()),
             (true, false) => opcode_cmpz(&binary.op),
-            (true, true) => opcode_cmpz(&binary.op.inv_cmp().unwrap()),
+
+            (true, true) => {
+                if binary.op != BinaryOp::EqEq && binary.op != BinaryOp::NotEq {
+                    opcode_cmpz(&binary.op.inv_cmp().unwrap())
+                } else {
+                    // if 0 is the left operand, and the operator is EqEq or NotEq,
+                    // we don't need to invert the binary operator
+                    // this is becuase a == 0 and 0 == a have the same result
+                    // same goes for a != 0 and 0 != a
+                    opcode_cmpz(&binary.op)
+                }
+            }
         };
 
         match &binary.op {
-            BinaryOp::EqEq => {}
-            BinaryOp::NotEq => {}
-            BinaryOp::Gt => {}
-            BinaryOp::GtEq => {}
-            BinaryOp::Lt => {}
-            BinaryOp::LtEq => {}
+            BinaryOp::EqEq
+            | BinaryOp::NotEq
+            | BinaryOp::Gt
+            | BinaryOp::GtEq
+            | BinaryOp::Lt
+            | BinaryOp::LtEq => {
+                let mut l = &mut binary.left;
+                let mut r = &mut binary.right;
+
+                // if zero is the left operand, swap the operands
+                if z_on_left {
+                    let t = l;
+                    l = r;
+                    r = t;
+                }
+
+                self.visit_expr(l, ctx);
+
+                // if none of the operands are zero, we need to compare with the right operand
+                if !is_z {
+                    self.visit_expr(r, ctx);
+                }
+
+                // compare operands
+                let ifcmps = self.branch(opcode, ctx);
+
+                // 1... if comparison succeeds, push true, and jmp to next insn
+                self.emitop0(OpCode::BPush1);
+                let cmpsj = self.branch(OpCode::Jmp, ctx);
+
+                // 2... if comparison fails, push false
+                let push0 = self.cp();
+                self.emitop0(OpCode::BPush0);
+
+                self.jmptocp(cmpsj); // jump to next insn if comparison succeeds
+                self.patch_jmp(ifcmps, push0); // push false if comparison succeeds
+            }
             _ => unreachable!(),
         }
 

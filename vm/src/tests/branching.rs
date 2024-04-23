@@ -13,12 +13,11 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::tests::util::eval_arithmetic_src;
 use crate::tests::util::eval_src;
-use crate::tests::util::{create_vm, eval_arithmetic_src};
 use crate::Value;
 
 fn eval_bool4(expr: &str, cond: &dyn Fn(bool, bool, bool, bool) -> bool) {
-    let mut vm = create_vm();
     for a in 0..2 {
         for b in 0..2 {
             for c in 0..2 {
@@ -32,13 +31,10 @@ fn eval_bool4(expr: &str, cond: &dyn Fn(bool, bool, bool, bool) -> bool) {
                     // a and b and c and d
                     assert_eq!(
                         Value::Bool(cond(a, b, c, d)),
-                        eval_src(
-                            &mut vm,
-                            &format!(
-                                "var a = {}; var b = {}; var c = {}; var d = {}; {};",
-                                a, b, c, d, expr
-                            )
-                        )
+                        eval_src(&format!(
+                            "var a = {}; var b = {}; var c = {}; var d = {}; {};",
+                            a, b, c, d, expr
+                        ))
                     );
                 }
             }
@@ -48,9 +44,12 @@ fn eval_bool4(expr: &str, cond: &dyn Fn(bool, bool, bool, bool) -> bool) {
 
 #[test]
 fn test_simple_branching() {
-    let mut vm = create_vm();
-    #[rustfmt::skip]
-    assert_eq!(&10f64, eval_src(&mut vm, "var a = 10; var b = 20; if false { b + a; } else { b - a; }").Number().unwrap());
+    assert_eq!(
+        &10f64,
+        eval_src("var a = 10; var b = 20; if false { b + a; } else { b - a; }")
+            .Number()
+            .unwrap()
+    );
 }
 
 #[test]
@@ -129,4 +128,112 @@ fn test_simple_control_flow6() {
         30f64,
         eval_arithmetic_src("var a = 10; var b = 20; if false or true { a + b; } else { b - a; }")
     );
+}
+
+#[test]
+fn test_cmp_eqeq() {
+    assert_eq!(
+        Value::Bool(false),
+        eval_src("var a = 10; var b = 20; a == b;")
+    )
+}
+
+#[test]
+fn test_cmp_eqeqz() {
+    assert_eq!(Value::Bool(false), eval_src("var a = 10; a == 0;"))
+}
+
+#[test]
+fn test_cmp_eqeqz_r() {
+    assert_eq!(Value::Bool(false), eval_src("var a = 10; 0 == a;"))
+}
+
+#[test]
+fn test_cmp_neq() {
+    assert_eq!(
+        Value::Bool(true),
+        eval_src("var a = 10; var b = 20; a != b;")
+    )
+}
+
+#[test]
+fn test_cmp_neqz() {
+    assert_eq!(Value::Bool(true), eval_src("var a = 10; a != 0;"))
+}
+
+#[test]
+fn test_cmp_neqz_r() {
+    assert_eq!(Value::Bool(true), eval_src("var a = 10; 0 != a;"))
+}
+
+#[test]
+fn test_cmp_lt() {
+    assert_eq!(
+        Value::Bool(true),
+        eval_src("var a = 10; var b = 20; a < b;")
+    )
+}
+
+#[test]
+fn test_cmp_ltz() {
+    assert_eq!(Value::Bool(false), eval_src("var a = 10; a < 0;"))
+}
+
+#[test]
+fn test_cmp_ltz_r() {
+    assert_eq!(Value::Bool(true), eval_src("var a = 10; 0 < a;"))
+}
+
+#[test]
+fn test_cmp_le() {
+    assert_eq!(
+        Value::Bool(true),
+        eval_src("var a = 10; var b = 20; a <= b;")
+    )
+}
+
+#[test]
+fn test_cmp_lez() {
+    assert_eq!(Value::Bool(false), eval_src("var a = 10; a <= 0;"))
+}
+
+#[test]
+fn test_cmp_lez_r() {
+    assert_eq!(Value::Bool(true), eval_src("var a = 10; 0 <= a;"))
+}
+
+#[test]
+fn test_cmp_gt() {
+    assert_eq!(
+        Value::Bool(false),
+        eval_src("var a = 10; var b = 20; a > b;")
+    )
+}
+
+#[test]
+fn test_cmp_gtz() {
+    assert_eq!(Value::Bool(true), eval_src("var a = 10; a > 0;"))
+}
+
+#[test]
+fn test_cmp_gtz_r() {
+    assert_eq!(Value::Bool(false), eval_src("var a = 10; 0 > a;"))
+}
+
+#[test]
+fn test_cmp_ge() {
+    assert_eq!(
+        Value::Bool(false),
+        eval_src("var a = 10; var b = 20; a >= b;")
+    )
+}
+
+#[test]
+fn test_cmp_gez() {
+    assert_eq!(Value::Bool(true), eval_src("var a = 10; a >= 0;"))
+}
+
+#[test]
+fn test_cmp_gez_r() {
+    assert_eq!(Value::Bool(false), eval_src("var a = 10; 0 >= a;"))
 }

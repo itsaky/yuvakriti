@@ -153,6 +153,20 @@ pub struct CodeExecutor<'inst> {
     max_locals: u16,
 }
 
+macro_rules! read1 {
+    ($insns:expr, $pc:expr) => {{
+        $pc += 1;
+        $insns[$pc - 1]
+    }};
+}
+
+macro_rules! read2 {
+    ($insns:expr, $pc:expr) => {{
+        $pc += 2;
+        ($insns[$pc - 2]).as_u16() << 8 | $insns[$pc - 1].as_u16()
+    }};
+}
+
 impl<'inst> CodeExecutor<'inst> {
     pub fn new(constant_pool: Option<&ConstantPool>) -> CodeExecutor {
         CodeExecutor {
@@ -275,7 +289,7 @@ impl<'inst> CodeExecutor<'inst> {
         let mut is_halted = false;
 
         'insn: while pc < insns.len() {
-            let instruction = insns[pc].as_op_size();
+            let instruction = read1!(insns, pc).as_op_size();
             let opcode = get_opcode(instruction);
             trace!(
                 "VM::execute(pc={}, instruction={}, opcode={:?})",
@@ -283,8 +297,6 @@ impl<'inst> CodeExecutor<'inst> {
                 instruction,
                 opcode.get_mnemonic()
             );
-
-            pc += 1;
 
             match &opcode {
                 OpCode::Nop => {}
@@ -294,17 +306,14 @@ impl<'inst> CodeExecutor<'inst> {
                 }
                 OpCode::Add | OpCode::Sub | OpCode::Mult | OpCode::Div => {
                     trace!("VM::execute(arithmetic): {:?}", opcode);
-                    self.exec_binary_num_op(opcode);
+                    self.exec_arithmetic(opcode);
                 }
                 OpCode::Print => {
                     let value = self.pop_operand();
                     println!("{}", value);
                 }
                 OpCode::Ldc => {
-                    let const_idx = (insns[pc].as_cp_size() << 8) | insns[pc + 1].as_cp_size();
-
-                    // we consumed 2 bytes here, so increment the index
-                    pc += 2;
+                    let const_idx = read2!(insns, pc);
 
                     self.load_constant(const_idx);
                 }
@@ -315,8 +324,7 @@ impl<'inst> CodeExecutor<'inst> {
                 OpCode::Store2 => self.store_var(2),
                 OpCode::Store3 => self.store_var(3),
                 OpCode::Store => {
-                    let var_idx = (insns[pc].as_u16() << 8) | insns[pc + 1].as_u16();
-                    pc += 2;
+                    let var_idx = read2!(insns, pc);
                     self.store_var(var_idx);
                 }
                 OpCode::Load0 => self.load_var(0),
@@ -324,14 +332,12 @@ impl<'inst> CodeExecutor<'inst> {
                 OpCode::Load2 => self.load_var(2),
                 OpCode::Load3 => self.load_var(3),
                 OpCode::Load => {
-                    let var_idx = (insns[pc].as_u16() << 8) | insns[pc + 1].as_u16();
-                    pc += 2;
+                    let var_idx = read2!(insns, pc);
                     self.load_var(var_idx);
                 }
 
                 OpCode::IfTruthy | OpCode::IfFalsy => {
-                    let addr = (insns[pc].as_u16() << 8) | insns[pc + 1].as_u16();
-                    pc += 2;
+                    let addr = read2!(insns, pc);
 
                     let value = self.peek_operand();
 
@@ -344,9 +350,32 @@ impl<'inst> CodeExecutor<'inst> {
                     }
                 }
 
+                OpCode::IfEq
+                | OpCode::IfNe
+                | OpCode::IfLt
+                | OpCode::IfGt
+                | OpCode::IfLe
+                | OpCode::IfGe => {
+                    let addr = read2!(insns, pc);
+                    if self.cmp(opcode) {
+                        pc += addr as usize;
+                    }
+                }
+
+                OpCode::IfEqZ
+                | OpCode::IfNeZ
+                | OpCode::IfLtZ
+                | OpCode::IfGtZ
+                | OpCode::IfLeZ
+                | OpCode::IfGeZ => {
+                    let addr = read2!(insns, pc);
+                    if self.cmpz(opcode) {
+                        pc += addr as usize;
+                    }
+                }
+
                 OpCode::Jmp => {
-                    let addr = (insns[pc].as_u16() << 8) | insns[pc + 1].as_u16();
-                    pc += 2;
+                    let addr = read2!(insns, pc);
                     pc += addr as usize;
                     trace!("VM::execute::jmp(pc={})", pc);
                 }
@@ -354,8 +383,6 @@ impl<'inst> CodeExecutor<'inst> {
                 OpCode::Pop => {
                     self.pop_operand();
                 }
-
-                _ => return Err(format!("Unsupported opcode: {}", opcode)),
             }
         }
 
@@ -377,7 +404,45 @@ impl<'inst> CodeExecutor<'inst> {
         Ok(result)
     }
 
-    fn exec_binary_num_op(&mut self, op: OpCode) {
+    fn cmp(&mut self, op: OpCode) -> bool {
+        let op2 = self.pop_operand();
+        let op1 = self.pop_operand();
+
+        if let (Some(n2), Some(n1)) = (op2.Number(), op1.Number()) {
+            return match op {
+                OpCode::IfEq => n1 == n2,
+                OpCode::IfNe => n1 != n2,
+                OpCode::IfLt => n1 < n2,
+                OpCode::IfLe => n1 <= n2,
+                OpCode::IfGt => n1 > n2,
+                OpCode::IfGe => n1 >= n2,
+                _ => unreachable!("cmp is not implemented for {:?}", op),
+            };
+        }
+
+        // TODO: implement comparison between other types
+        false
+    }
+
+    fn cmpz(&mut self, op_code: OpCode) -> bool {
+        let op = self.pop_operand();
+        if let Some(n) = op.Number() {
+            return match op_code {
+                OpCode::IfEqZ => n == &0f64,
+                OpCode::IfNeZ => n != &0f64,
+                OpCode::IfLtZ => n < &0f64,
+                OpCode::IfLeZ => n <= &0f64,
+                OpCode::IfGtZ => n > &0f64,
+                OpCode::IfGeZ => n >= &0f64,
+                _ => unreachable!("cmp is not implemented for {:?}", op),
+            };
+        }
+
+        // TODO: implement comparison between other types
+        false
+    }
+
+    fn exec_arithmetic(&mut self, op: OpCode) {
         let op2 = self.pop_operand();
         let op1 = self.pop_operand();
         let op2 = op2.Number().expect("Expected a number operand");
