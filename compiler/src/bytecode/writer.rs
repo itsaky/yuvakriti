@@ -15,6 +15,9 @@
 
 use std::ops::Deref;
 
+use crate::ast::{ASTVisitor, IdentifierType};
+use crate::ast::{AssignExpr, BinaryExpr};
+use crate::ast::{BinaryOp, IfStmt};
 use crate::ast::BlockStmt;
 use crate::ast::ClassDecl;
 use crate::ast::FuncDecl;
@@ -24,17 +27,14 @@ use crate::ast::PrintStmt;
 use crate::ast::Program;
 use crate::ast::VarStmt;
 use crate::ast::Visitable;
-use crate::ast::{ASTVisitor, IdentifierType};
-use crate::ast::{AssignExpr, BinaryExpr};
-use crate::ast::{BinaryOp, IfStmt};
+use crate::bytecode::{attrs, decls};
 use crate::bytecode::attrs::{Attr, Code, CodeSize};
 use crate::bytecode::bytes::AssertingByteConversions;
 use crate::bytecode::cp::ConstantEntry;
 use crate::bytecode::cp_info::NumberInfo;
 use crate::bytecode::cp_info::Utf8Info;
 use crate::bytecode::file::YKBFile;
-use crate::bytecode::opcode::{get_opcode, opcode_cmp, opcode_cmpz, OpCode, OpCodeExt};
-use crate::bytecode::{attrs, decls};
+use crate::bytecode::opcode::{get_opcode, OpCode, opcode_cmp, opcode_cmpz, OpCodeExt};
 use crate::features::CompilerFeatures;
 use crate::messages;
 use crate::scope::Scope;
@@ -157,6 +157,10 @@ impl<'a> CodeGen<'a> {
         if self.stack_count > self.max_stack as i16 {
             self.max_stack = self.stack_count as u16;
         }
+
+        if self.max_stack >= Self::MAX_STACK_SIZE {
+            panic!("Stack size too large!");
+        }
     }
 
     fn check_size(&self, additional: CodeSize) {
@@ -175,28 +179,12 @@ impl<'a> CodeGen<'a> {
         return &self.instructions;
     }
 
-    fn len(&self) -> usize {
-        return self.instructions().len();
-    }
-
     fn get1(&self, index: CodeSize) -> u8 {
         return self.instructions[index as usize];
     }
     fn get2(&self, index: CodeSize) -> u16 {
         return (self.instructions[index as usize].as_u16() << 8)
             | self.instructions[index as usize + 1].as_u16();
-    }
-
-    fn put1(&mut self, index: CodeSize, value: u8) {
-        self.instructions[index as usize] = value;
-    }
-    fn put2(&mut self, index: CodeSize, f: u8, s: u8) {
-        self.instructions[index as usize] = f;
-        self.instructions[index as usize + 1] = s;
-    }
-    fn put2_16(&mut self, index: CodeSize, value: u16) {
-        self.instructions[index as usize] = (value >> 8).as_u8();
-        self.instructions[index as usize + 1] = value.as_u8();
     }
 
     fn emitop(&mut self, opcode: OpCode) {
@@ -212,16 +200,6 @@ impl<'a> CodeGen<'a> {
         self.update_max_stack(opcode.stack_effect());
     }
 
-    fn emit1(&mut self, opcode: OpCode, operand: u8) {
-        self.ensure_size_incr(2);
-
-        self.instructions[self.cp as usize] = opcode.as_op_size();
-        self.instructions[self.cp as usize + 1] = operand;
-        self.cp += 2;
-
-        self._update_max_stack(opcode)
-    }
-
     fn emit1_16(&mut self, opcode: OpCode, operand: u16) {
         self.ensure_size_incr(3);
         self.instructions[self.cp as usize] = opcode.as_op_size();
@@ -230,31 +208,6 @@ impl<'a> CodeGen<'a> {
         self.cp += 3;
 
         self._update_max_stack(opcode);
-    }
-
-    fn emit2(&mut self, opcode: OpCode, operand1: u8, operand2: u8) {
-        self.ensure_size_incr(3);
-        self.instructions[self.cp as usize] = opcode.as_op_size();
-        self.instructions[self.cp as usize + 1] = operand1;
-        self.instructions[self.cp as usize + 2] = operand2;
-        self.cp += 3;
-
-        self._update_max_stack(opcode);
-    }
-
-    fn push_insns_3(&mut self, opcode: OpCode, operand1: u8, operand2: u8, operand3: u8) {
-        self.ensure_size_incr(4);
-        self.instructions[self.cp as usize] = opcode.as_op_size();
-        self.instructions[self.cp as usize + 1] = operand1;
-        self.instructions[self.cp as usize + 2] = operand2;
-        self.instructions[self.cp as usize + 3] = operand3;
-        self.cp += 4;
-
-        self._update_max_stack(opcode);
-    }
-
-    fn patch(&mut self, index: CodeSize, data: u8) {
-        self.instructions[index as usize] = data;
     }
 
     fn patch_16(&mut self, index: CodeSize, data: u16) {
