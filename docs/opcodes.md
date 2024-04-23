@@ -60,6 +60,55 @@ Halt the program execution.
 | Operand stack | `... ->`                                                                 |
 | Description   | The execution of the program is halted and the resources are cleaned up. |
 
+## `if<cond>`
+
+The `if<cond>` instruction variants are conditional jumps which are used to jump to a specified instruction address if
+the top of the stack is truthy or falsy.
+
+| **_if&lt;cond&gt;_** | Description                                                                                                                                                                                                                 |
+|----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Operation            | Jump to the specified instruction address.                                                                                                                                                                                  |
+| Operands             | `u2 address`                                                                                                                                                                                                                |
+| Forms                | _iftruthy_ = 0x20 <br> _iffalsy_ = 0x21                                                                                                                                                                                     |
+| Operand stack        | `... -> ...`                                                                                                                                                                                                                |
+| Description          | The operand at the top of the stack is checked for truthy-ness and falsy-ness. If the condition is satisfied, the VM jumps to the instruction specified by `address` and the program resumes at instruction `pc + address`. |
+
+## `if<cmp>`
+
+The `if<cmp>` instruction is used to compare the two operands at the top of the stack.
+
+| **_if&lt;cmp&gt;_** | Description                                                                                                                                                                                                                                                                                       |
+|---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Operation           | Compare operands and push `true` or `false` to the operand stack.                                                                                                                                                                                                                                 |
+| Operands            | `u2 address`                                                                                                                                                                                                                                                                                      |
+| Forms               | _ifeq_ = 0x07 <br> _ifne_ = 0x09 <br> _iflt_ = 0x0B <br> _ifle_ = 0x0D <br> _ifgt_ = 0x0F <br> _ifge_ = 0x11                                                                                                                                                                                      |
+| Operand stack       | `..., value1, value2 -> ..., result`                                                                                                                                                                                                                                                              |
+| Description         | Two operands are popped from the top of the stack are compared with each other and the result of the comparison is pushed to the stack. If the comparison succeeds, then the VM increments the program counter with the value of `address` and the program resumes at instruction `pc + address`. |
+
+## `if<cmp>z`
+
+The `if<cmp>z` instruction is used to compare the operand at the top of the stack with `0`.
+
+| **_if&lt;cmp&gt;z_** | Description                                                                                                                                                                                                                                                                     |
+|----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Operation            | Compare operand with `0` and push `true` or `false` to the operand stack.                                                                                                                                                                                                       |
+| Operands             | `u2 address`                                                                                                                                                                                                                                                                    |
+| Forms                | _ifeqz_ = 0x08 <br> _ifnez_ = 0x0A <br> _ifltz_ = 0x0C <br> _iflez_ = 0x0E <br> _ifgtz_ = 0x10 <br> _ifgez_ = 0x12                                                                                                                                                              |
+| Operand stack        | `..., value -> ..., result`                                                                                                                                                                                                                                                     |
+| Description          | Operand at the top of the stack is popped, compared with `0` and the result of the comparison is pushed to the stack. If the comparison succeeds, then the VM increments the program counter with the value of `address` and the program resumes at instruction `pc + address`. |
+
+## `jmp`
+
+Unconditional jump instruction.
+
+| **_jmp_**     | Description                                                                                                              |
+|---------------|--------------------------------------------------------------------------------------------------------------------------|
+| Operation     | Unconditional jump to the specified instruction address.                                                                 |
+| Operands      | `u2 address`                                                                                                             |
+| Forms         | _jmp_ = 0x22                                                                                                             |
+| Operand stack | `... -> ...`                                                                                                             |
+| Description   | The VM increments the program counter with the value of `address` and the program resumes at instruction `pc + address`. |
+
 ## `ldc`
 
 Loads a constant.
@@ -119,6 +168,18 @@ Reserved, no-op opcode.
 | Forms         | _nop_ = 0x00  |
 | Operand stack | `... -> ...`  |
 | Description   | Does nothing. |
+
+## `pop`
+
+Pops the operand at the top of the stack.
+
+| **_pop_**     | Description                               |
+|---------------|-------------------------------------------|
+| Operation     | Pops the stack.                           |
+| Operands      | _None_                                    |
+| Forms         | _pop_ = 0x23                              |
+| Operand stack | `..., value -> ...`                       |
+| Description   | Pops the operand at the top of the stack. |
 
 ## `print`
 
