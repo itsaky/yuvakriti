@@ -255,7 +255,7 @@ impl<'inst> CodeExecutor<'inst> {
 
     pub fn store_var(&mut self, index: u16) {
         trace!("VM::store_var({})", index);
-        let value = self.pop_operand();
+        let value = self.try_pop_operand().unwrap_or(Value::Null);
         self.variables[index as usize] = Variable::new(value);
     }
 

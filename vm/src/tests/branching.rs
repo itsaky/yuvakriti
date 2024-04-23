@@ -253,3 +253,8 @@ fn test_while_loop2() {
         eval_src("var a = 10; while a > 0 { a = a - 1; } a;")
     )
 }
+
+#[test]
+fn test_while_loop3() {
+    assert_eq!(Value::Number(1f64), eval_src("var a = 1; var b; while b { a = a + 1; } a;"))
+}
