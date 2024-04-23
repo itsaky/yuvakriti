@@ -34,7 +34,6 @@ use crate::features::CompilerFeatures;
 use crate::lexer::YKLexer;
 use crate::messages;
 use crate::parser::YKParser;
-use crate::tests::matcher::Binary;
 use crate::tests::matcher::Bool;
 use crate::tests::matcher::Identifier;
 use crate::tests::matcher::Node;
@@ -43,6 +42,7 @@ use crate::tests::matcher::Number;
 use crate::tests::matcher::Program;
 use crate::tests::matcher::String;
 use crate::tests::matcher::Unary;
+use crate::tests::matcher::{Any, Binary};
 use crate::tests::util::match_ast;
 use crate::tests::util::match_node;
 use crate::tests::util::parse;
@@ -104,6 +104,11 @@ fn test_simple_var_decl() {
 fn test_simple_for_statement() {
     let mut out = parse("for (var i = 0; i < 10; i = i + 1) {\n    print i;\n}");
 
+    let mut str = String::new();
+    let mut printer = ASTPrinter::new(&mut str, true);
+    out.accept(&mut printer, &mut 0);
+    println!("{}", str);
+
     let stmts = &out.stmts;
     assert_eq!(1, stmts.len());
 
@@ -112,6 +117,7 @@ fn test_simple_for_statement() {
         boxed_vec![Node(
             NodeType::ForStmt,
             boxed_vec![
+                Any(),
                 Node(
                     NodeType::VarStmt,
                     boxed_vec![Identifier("i"), Number(0f64),]
@@ -522,4 +528,80 @@ fn test_continue_stmt_labeled() {
             )],
         ),
     );
+}
+
+#[test]
+fn test_labeled_for_stmt() {
+    match_ast(
+        "\
+    label: for (var i = 0; i < 10; i = i + 1) {\
+        print i;
+    }",
+        &mut Program(
+            vec![],
+            boxed_vec![Node(
+                NodeType::ForStmt,
+                boxed_vec![
+                    Identifier("label"),
+                    Node(NodeType::VarStmt, boxed_vec![Identifier("i"), Number(0f64)]),
+                    Binary(BinaryOp::Lt, boxed_vec![Identifier("i"), Number(10f64)]),
+                    Node(
+                        NodeType::AssignExpr,
+                        boxed_vec![
+                            Identifier("i"),
+                            Binary(BinaryOp::Plus, boxed_vec![Identifier("i"), Number(1f64)])
+                        ]
+                    )
+                ]
+            )],
+        ),
+    )
+}
+
+#[test]
+fn test_simple_while_stmt() {
+    match_ast(
+        "\
+    while true {\
+        print i;
+    }",
+        &mut Program(
+            vec![],
+            boxed_vec![Node(
+                NodeType::WhileStmt,
+                boxed_vec![
+                    Any(),
+                    Bool(true),
+                    Node(
+                        NodeType::BlockStmt,
+                        boxed_vec![Node(NodeType::PrintStmt, boxed_vec![Identifier("i")])]
+                    )
+                ]
+            )],
+        ),
+    )
+}
+
+#[test]
+fn test_labeled_while_stmt() {
+    match_ast(
+        "\
+    label: while true {\
+        print i;
+    }",
+        &mut Program(
+            vec![],
+            boxed_vec![Node(
+                NodeType::WhileStmt,
+                boxed_vec![
+                    Identifier("label"),
+                    Bool(true),
+                    Node(
+                        NodeType::BlockStmt,
+                        boxed_vec![Node(NodeType::PrintStmt, boxed_vec![Identifier("i")])]
+                    )
+                ]
+            )],
+        ),
+    )
 }

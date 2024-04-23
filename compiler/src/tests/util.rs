@@ -29,7 +29,7 @@ use crate::parser::YKParser;
 #[macro_export]
 macro_rules! boxed_vec {
     ($($x:expr),+ $(,)?) => {
-        vec![$(Box::new($x)),+]
+        vec![$(Box::from($x)),+]
     };
 }
 

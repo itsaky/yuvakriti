@@ -449,6 +449,14 @@ impl ASTVisitor<(), bool> for AssertingAstMatcher {
     fn visit_for_stmt(&mut self, for_stmt: &mut ForStmt, _p: &mut ()) -> Option<bool> {
         assert_eq!(self.typ, for_stmt.typ());
         let mut idx = 0;
+
+        if let Some(label) = for_stmt.label.as_mut() {
+            if let Some(matcher) = self.nested.get_mut(idx) {
+                mtch!(label, matcher.as_mut(), "Failed to match for label");
+            }
+        }
+
+        idx += 1;
         if let Some(matcher) = self.nested.get_mut(idx) {
             mtch_o!(
                 for_stmt.init.as_mut(),
@@ -515,6 +523,37 @@ impl ASTVisitor<(), bool> for AssertingAstMatcher {
                 "Failed to match print expr"
             );
         }
+        Some(true)
+    }
+
+    fn visit_while_stmt(&mut self, while_stmt: &mut WhileStmt, _p: &mut ()) -> Option<bool> {
+        assert_eq!(self.typ, while_stmt.typ());
+        let mut idx = 0;
+
+        if let Some(label) = while_stmt.label.as_mut() {
+            if let Some(matcher) = self.nested.get_mut(idx) {
+                mtch!(label, matcher.as_mut(), "Failed to match while label");
+            }
+        }
+
+        idx += 1;
+        if let Some(matcher) = self.nested.get_mut(idx) {
+            mtch!(
+                while_stmt.condition,
+                matcher.as_mut(),
+                "Failed to match while condition"
+            );
+        }
+
+        idx += 1;
+        if let Some(matcher) = self.nested.get_mut(idx) {
+            mtch!(
+                while_stmt.body,
+                matcher.as_mut(),
+                "Failed to match while body"
+            );
+        }
+
         Some(true)
     }
 

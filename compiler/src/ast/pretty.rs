@@ -135,6 +135,9 @@ impl<'a> ASTPrinter<'a> {
                 self.visit_expr_stmt(expr_stmt, indent_level);
             }
             Stmt::For(for_stmt) => {
+                if let Some(label) = for_stmt.label.as_ref() {
+                    self.f.write_str(&format!("{}: ", label.name)).unwrap();
+                }
                 self.f.write_str("for ").unwrap();
                 self.visit_for_stmt(for_stmt, indent_level);
             }
@@ -151,6 +154,9 @@ impl<'a> ASTPrinter<'a> {
                 self.visit_return_stmt(return_stmt, indent_level);
             }
             Stmt::While(while_stmt) => {
+                if let Some(label) = while_stmt.label.as_ref() {
+                    self.f.write_str(&format!("{}: ", label.name)).unwrap();
+                }
                 self.f.write_str("while ").unwrap();
                 self.visit_while_stmt(while_stmt, indent_level);
             }
@@ -255,6 +261,7 @@ impl<'a> ASTVisitor<usize, ()> for ASTPrinter<'a> {
             let decl = block_stmt.decls.get_mut(i).unwrap();
             self.visit_decl(decl, &mut indent_level.add(1));
         }
+        self.linefeed(&mut indent_level.add(0));
         self.f.write_str("}").unwrap();
         None
     }

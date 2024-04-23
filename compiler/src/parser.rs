@@ -17,23 +17,31 @@ use std::cell::RefCell;
 use std::io::Read;
 use std::rc::Rc;
 
+use crate::ast::AssignExpr;
+use crate::ast::BinaryExpr;
+use crate::ast::BinaryOp;
+use crate::ast::BlockStmt;
+use crate::ast::BreakStmt;
+use crate::ast::ContinueStmt;
+use crate::ast::Decl;
+use crate::ast::Expr;
+use crate::ast::ExprStmt;
+use crate::ast::ForStmt;
 use crate::ast::FuncDecl;
+use crate::ast::IdentifierExpr;
+use crate::ast::IdentifierType;
 use crate::ast::IfStmt;
+use crate::ast::LiteralExpr;
 use crate::ast::PrintStmt;
 use crate::ast::Program;
 use crate::ast::ReturnStmt;
+use crate::ast::Spanned;
+use crate::ast::SpannedMut;
 use crate::ast::Stmt;
 use crate::ast::UnaryExpr;
 use crate::ast::UnaryOp;
 use crate::ast::VarStmt;
 use crate::ast::WhileStmt;
-use crate::ast::{AssignExpr, Expr};
-use crate::ast::{BinaryExpr, IdentifierExpr};
-use crate::ast::{BinaryOp, Spanned};
-use crate::ast::{BlockStmt, SpannedMut};
-use crate::ast::{BreakStmt, ContinueStmt, ForStmt};
-use crate::ast::{Decl, LiteralExpr};
-use crate::ast::{ExprStmt, IdentifierType};
 use crate::diagnostics::Diagnostic;
 use crate::diagnostics::DiagnosticHandler;
 use crate::diagnostics::DiagnosticKind;
@@ -147,7 +155,7 @@ impl<R: Read> YKParser<'_, R> {
             Some(token) => match token.token_type {
                 TokenType::Fun => self.fun_decl(),
                 _ => {
-                    let stmt = self.try_parse_stmt_decl();
+                    let stmt = self.try_stmt_decl();
                     if stmt.is_none() {
                         self.report(DiagnosticKind::Error, messages::PARS_DECL_OR_STMT_EXPECTED);
                     }
@@ -247,7 +255,7 @@ impl<R: Read> YKParser<'_, R> {
         Some(BlockStmt::new(decls, start.set_end(&rbrace.range)))
     }
 
-    fn try_parse_stmt_decl(&mut self) -> Option<Decl> {
+    fn try_stmt_decl(&mut self) -> Option<Decl> {
         let token = self.peek()?;
         let token_type = &token.token_type;
 
@@ -259,6 +267,10 @@ impl<R: Read> YKParser<'_, R> {
             TokenType::If => self.if_stmt().map(|stmt| Stmt::If(stmt)),
             TokenType::While => self.while_stmt().map(|stmt| Stmt::While(stmt)),
             TokenType::LBrace => self.block().map(|stmt| Stmt::Block(stmt)),
+            TokenType::Identifier => self.try_labeled_or_expr().or_else(|| {
+                req_semi = true;
+                self.expr().map(|expr| Stmt::Expr(ExprStmt::from(expr)))
+            }),
             _ => {
                 req_semi = true;
                 match token_type {
@@ -277,6 +289,37 @@ impl<R: Read> YKParser<'_, R> {
         }
 
         return Some(Decl::Stmt(stmt));
+    }
+
+    fn try_labeled_or_expr(&mut self) -> Option<Stmt> {
+        let curr = self.peek()?;
+        let next = self.peek_next()?;
+
+        // expected: 'label: <for>|<while>'
+        if curr.token_type != TokenType::Identifier || next.token_type != TokenType::Colon {
+            return None;
+        }
+
+        let label = match self.primary()? {
+            Expr::Identifier(ident) => Some(ident),
+            _ => return None,
+        };
+
+        self.tmatch(&TokenType::Colon).unwrap();
+
+        let token = self.peek()?;
+
+        match &token.token_type {
+            TokenType::For => self.for_stmt().map(|mut stmt| {
+                stmt.label = label;
+                Stmt::For(Box::new(stmt))
+            }),
+            TokenType::While => self.while_stmt().map(|mut stmt| {
+                stmt.label = label;
+                Stmt::While(stmt)
+            }),
+            _ => None,
+        }
     }
 
     fn _break(&mut self) -> Option<BreakStmt> {
@@ -365,7 +408,7 @@ impl<R: Read> YKParser<'_, R> {
         let body = body.unwrap();
         let range = start.range.clone().set_end(body.range());
 
-        return Some(ForStmt::new(init, condition, step, body, range));
+        return Some(ForStmt::new(None, init, condition, step, body, range));
     }
 
     fn if_stmt(&mut self) -> Option<IfStmt> {
@@ -418,7 +461,7 @@ impl<R: Read> YKParser<'_, R> {
         let mut range = Range::from(body.range());
         range.set_start(&token.range);
 
-        return Some(WhileStmt::new(condition.unwrap(), body, range));
+        return Some(WhileStmt::new(None, condition.unwrap(), body, range));
     }
 
     fn return_stmt(&mut self) -> Option<ReturnStmt> {

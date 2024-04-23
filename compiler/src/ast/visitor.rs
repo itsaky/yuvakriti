@@ -217,6 +217,14 @@ pub trait ASTVisitor<P, R> {
     }
     fn default_visit_for_stmt(&mut self, for_stmt: &mut ForStmt, p: &mut P) -> Option<R> {
         let mut r: Option<R> = None;
+        if let Some(label) = for_stmt.label.as_mut() {
+            r = self.visit_identifier_expr(label, p);
+        }
+
+        if r.is_some() {
+            return r;
+        }
+
         if let Some(init) = for_stmt.init.as_mut() {
             r = self.visit_stmt(init, p);
         }
@@ -309,10 +317,19 @@ pub trait ASTVisitor<P, R> {
         self.default_visit_while_stmt(while_stmt, p)
     }
     fn default_visit_while_stmt(&mut self, while_stmt: &mut WhileStmt, p: &mut P) -> Option<R> {
-        let r = self.visit_expr(&mut while_stmt.condition, p);
+        let mut r;
+        if let Some(label) = while_stmt.label.as_mut() {
+            r = self.visit_identifier_expr(label, p);
+            if r.is_some() {
+                return r;
+            }
+        }
+
+        r = self.visit_expr(&mut while_stmt.condition, p);
         if r.is_some() {
             return r;
         }
+
         self.visit_block_stmt(&mut while_stmt.body, p)
     }
 

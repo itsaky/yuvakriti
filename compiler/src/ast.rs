@@ -255,6 +255,7 @@ impl From<Expr> for ExprStmt {
 }
 
 def_node!(ForStmt {
+    label: Option<IdentifierExpr>,
     init: Option<Stmt>,
     condition: Option<Expr>,
     step: Option<Expr>,
@@ -272,6 +273,7 @@ def_node!(PrintStmt { expr: Expr });
 def_node!(ReturnStmt { expr: Expr });
 
 def_node!(WhileStmt {
+    label: Option<IdentifierExpr>,
     condition: Expr,
     body: BlockStmt,
 });
