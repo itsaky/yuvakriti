@@ -209,6 +209,8 @@ impl<R: Read> YKLexer<'_, R> {
         let match_result = match self.token_text.get(0) {
             Some(c1) => match c1 {
                 'a' => self.match_word_rest(1, "nd", TokenType::And),
+                'b' => self.match_word_rest(1, "reak", TokenType::Break),
+                'c' => self.match_word_rest(1, "ontinue", TokenType::Continue),
                 'e' => self.match_word_rest(1, "lse", TokenType::Else),
                 'f' => match self.token_text.get(1) {
                     None => None,

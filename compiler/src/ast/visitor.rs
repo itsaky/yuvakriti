@@ -15,7 +15,6 @@
 
 use paste::paste;
 
-use crate::ast::AssignExpr;
 use crate::ast::BinaryExpr;
 use crate::ast::BlockStmt;
 use crate::ast::ClassDecl;
@@ -38,6 +37,7 @@ use crate::ast::UnaryExpr;
 use crate::ast::VarStmt;
 use crate::ast::Visitable;
 use crate::ast::WhileStmt;
+use crate::ast::{AssignExpr, BreakStmt, ContinueStmt};
 
 /// ASTVisitor for visiting AST nodes. Methods in the visitor result an [Option<R>]. If the result
 /// is [Some], then the child nodes of the AST node will not be visited.
@@ -101,6 +101,8 @@ pub trait ASTVisitor<P, R> {
             Stmt::While(while_stmt) => self.visit_while_stmt(while_stmt, p),
             Stmt::Var(var_decl) => self.visit_var_stmt(var_decl, p),
             Stmt::Block(block_stmt) => self.visit_block_stmt(block_stmt, p),
+            Stmt::Break(br) => self.visit_break_stmt(br, p),
+            Stmt::Continue(cont) => self.visit_continue_stmt(cont, p),
         }
     }
 
@@ -240,6 +242,32 @@ pub trait ASTVisitor<P, R> {
         }
 
         self.visit_block_stmt(&mut for_stmt.body, p)
+    }
+
+    fn visit_break_stmt(&mut self, break_stmt: &mut BreakStmt, p: &mut P) -> Option<R> {
+        self.default_visit_break_stmt(break_stmt, p)
+    }
+
+    fn default_visit_break_stmt(&mut self, break_stmt: &mut BreakStmt, p: &mut P) -> Option<R> {
+        if let Some(label) = break_stmt.label.as_mut() {
+            return self.visit_identifier_expr(label, p);
+        }
+        None
+    }
+
+    fn visit_continue_stmt(&mut self, continue_stmt: &mut ContinueStmt, p: &mut P) -> Option<R> {
+        self.default_visit_continue_stmt(continue_stmt, p)
+    }
+
+    fn default_visit_continue_stmt(
+        &mut self,
+        continue_stmt: &mut ContinueStmt,
+        p: &mut P,
+    ) -> Option<R> {
+        if let Some(label) = continue_stmt.label.as_mut() {
+            return self.visit_identifier_expr(label, p);
+        }
+        None
     }
 
     fn visit_if_stmt(&mut self, if_stmt: &mut IfStmt, p: &mut P) -> Option<R> {
@@ -411,6 +439,8 @@ impl_visitables!(
     PrintStmt,
     ReturnStmt,
     WhileStmt,
+    BreakStmt,
+    ContinueStmt,
     AssignExpr,
     BinaryExpr,
     UnaryExpr,

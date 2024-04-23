@@ -68,17 +68,19 @@ pub enum TokenType {
     And, // and
     Or,  // or
 
-    If,     // if
-    Else,   // else
-    Fun,    // fun
-    For,    // for
-    While,  // while
-    Null,   // null
-    Return, // return
-    Var,    // var
-    Super,  // super
-    This,   // this
-    Print,  // print
+    If,       // if
+    Else,     // else
+    Fun,      // fun
+    For,      // for
+    While,    // while
+    Break,    // break,
+    Continue, // continue
+    Null,     // null
+    Return,   // return
+    Var,      // var
+    Super,    // super
+    This,     // this
+    Print,    // print
 
     Identifier,
     String,

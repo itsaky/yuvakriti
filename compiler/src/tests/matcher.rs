@@ -13,7 +13,6 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::ast::ASTVisitor;
 use crate::ast::AssignExpr;
 use crate::ast::AstNode;
 use crate::ast::BinaryExpr;
@@ -41,6 +40,7 @@ use crate::ast::UnaryOp;
 use crate::ast::VarStmt;
 use crate::ast::Visitable;
 use crate::ast::WhileStmt;
+use crate::ast::{ASTVisitor, BreakStmt, ContinueStmt};
 use crate::location::Range;
 
 pub type Matcher = dyn ASTVisitor<(), bool>;
@@ -165,6 +165,18 @@ impl ASTVisitor<(), bool> for NoOpMatcher {
         Some(true)
     }
     #[allow(unused_variables)]
+    fn visit_break_stmt(&mut self, break_stmt: &mut BreakStmt, p: &mut ()) -> Option<bool> {
+        Some(true)
+    }
+    #[allow(unused_variables)]
+    fn visit_continue_stmt(
+        &mut self,
+        continue_stmt: &mut ContinueStmt,
+        p: &mut (),
+    ) -> Option<bool> {
+        Some(true)
+    }
+    #[allow(unused_variables)]
     fn visit_if_stmt(&mut self, if_stmt: &mut IfStmt, p: &mut ()) -> Option<bool> {
         Some(true)
     }
@@ -212,6 +224,7 @@ impl ASTVisitor<(), bool> for NoOpMatcher {
     fn visit_grouping_expr(&mut self, grouping: &mut GroupingExpr, _p: &mut ()) -> Option<bool> {
         Some(true)
     }
+
     #[allow(unused_variables)]
     fn visit_identifier_expr(
         &mut self,
@@ -220,6 +233,7 @@ impl ASTVisitor<(), bool> for NoOpMatcher {
     ) -> Option<bool> {
         Some(true)
     }
+
     #[allow(unused_variables)]
     fn visit_literal_expr(&mut self, literal: &mut LiteralExpr, _p: &mut ()) -> Option<bool> {
         Some(true)
@@ -461,6 +475,34 @@ impl ASTVisitor<(), bool> for AssertingAstMatcher {
             );
         }
 
+        Some(true)
+    }
+
+    fn visit_break_stmt(&mut self, break_stmt: &mut BreakStmt, _p: &mut ()) -> Option<bool> {
+        assert_eq!(&self.typ, &break_stmt.typ());
+        if let Some(matcher) = self.nested.get_mut(0) {
+            mtch_o!(
+                break_stmt.label.as_mut(),
+                matcher.as_mut(),
+                "Failed to match break label"
+            );
+        }
+        Some(true)
+    }
+
+    fn visit_continue_stmt(
+        &mut self,
+        continue_stmt: &mut ContinueStmt,
+        _p: &mut (),
+    ) -> Option<bool> {
+        assert_eq!(&self.typ, &continue_stmt.typ());
+        if let Some(matcher) = self.nested.get_mut(0) {
+            mtch_o!(
+                continue_stmt.label.as_mut(),
+                matcher.as_mut(),
+                "Failed to match break label"
+            );
+        }
         Some(true)
     }
 

@@ -482,3 +482,44 @@ fn test_const_folded_ast() {
         )
     }
 }
+
+#[test]
+fn test_break_stmt() {
+    match_ast(
+        "break;",
+        &mut Program(vec![], boxed_vec![Node(NodeType::BreakStmt, vec![])]),
+    );
+}
+
+#[test]
+fn test_break_stmt_labeled() {
+    match_ast(
+        "break label;",
+        &mut Program(
+            vec![],
+            boxed_vec![Node(NodeType::BreakStmt, boxed_vec![Identifier("label")])],
+        ),
+    );
+}
+
+#[test]
+fn test_continue_stmt() {
+    match_ast(
+        "continue;",
+        &mut Program(vec![], boxed_vec![Node(NodeType::ContinueStmt, vec![])]),
+    );
+}
+
+#[test]
+fn test_continue_stmt_labeled() {
+    match_ast(
+        "continue label;",
+        &mut Program(
+            vec![],
+            boxed_vec![Node(
+                NodeType::ContinueStmt,
+                boxed_vec![Identifier("label")]
+            )],
+        ),
+    );
+}

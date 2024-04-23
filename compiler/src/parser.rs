@@ -17,7 +17,6 @@ use std::cell::RefCell;
 use std::io::Read;
 use std::rc::Rc;
 
-use crate::ast::ForStmt;
 use crate::ast::FuncDecl;
 use crate::ast::IfStmt;
 use crate::ast::PrintStmt;
@@ -32,6 +31,7 @@ use crate::ast::{AssignExpr, Expr};
 use crate::ast::{BinaryExpr, IdentifierExpr};
 use crate::ast::{BinaryOp, Spanned};
 use crate::ast::{BlockStmt, SpannedMut};
+use crate::ast::{BreakStmt, ContinueStmt, ForStmt};
 use crate::ast::{Decl, LiteralExpr};
 use crate::ast::{ExprStmt, IdentifierType};
 use crate::diagnostics::Diagnostic;
@@ -265,6 +265,8 @@ impl<R: Read> YKParser<'_, R> {
                     TokenType::Print => self.print_stmt().map(|stmt| Stmt::Print(stmt)),
                     TokenType::Return => self.return_stmt().map(|stmt| Stmt::Return(stmt)),
                     TokenType::Var => self.var_stmt().map(|stmt| Stmt::Var(stmt)),
+                    TokenType::Break => self._break().map(|stmt| Stmt::Break(stmt)),
+                    TokenType::Continue => self._continue().map(|stmt| Stmt::Continue(stmt)),
                     _ => self.expr().map(|expr| Stmt::Expr(ExprStmt::from(expr))),
                 }
             }
@@ -275,6 +277,46 @@ impl<R: Read> YKParser<'_, R> {
         }
 
         return Some(Decl::Stmt(stmt));
+    }
+
+    fn _break(&mut self) -> Option<BreakStmt> {
+        self._labeled_stmt(TokenType::Break, "break", &BreakStmt::new)
+    }
+
+    fn _continue(&mut self) -> Option<ContinueStmt> {
+        self._labeled_stmt(TokenType::Continue, "continue", &ContinueStmt::new)
+    }
+
+    fn _labeled_stmt<LabeledT>(
+        &mut self,
+        tk: TokenType,
+        name: &str,
+        new: &dyn Fn(Option<IdentifierExpr>, Range) -> LabeledT,
+    ) -> Option<LabeledT> {
+        let token = self.accept(tk, &err_exp_kywrd(name))?;
+
+        let mut label = None;
+
+        if self
+            .peek()
+            .map(|t| t.token_type == TokenType::Identifier)
+            .unwrap_or(false)
+        {
+            label = match self.primary().take() {
+                Some(Expr::Identifier(ident)) => Some(ident),
+                _ => {
+                    self.report(DiagnosticKind::Error, messages::PARS_EXPECTED_LABEL);
+                    None
+                }
+            }
+        }
+
+        let mut range = token.range.clone();
+        if let Some(l) = &label {
+            range.set_end(l.range());
+        }
+
+        Some(new(label, range))
     }
 
     fn print_stmt(&mut self) -> Option<PrintStmt> {

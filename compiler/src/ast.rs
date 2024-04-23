@@ -140,6 +140,8 @@ pub enum NodeType {
     ReturnStmt,
     VarStmt,
     BlockStmt,
+    BreakStmt,
+    ContinueStmt,
     AssignExpr,
     BinaryExpr,
     UnaryExpr,
@@ -222,6 +224,16 @@ def_enum!(Stmt {
     While: WhileStmt,
     Var: VarStmt,
     Block: BlockStmt,
+    Break: BreakStmt,
+    Continue: ContinueStmt,
+});
+
+def_node!(BreakStmt {
+    label: Option<IdentifierExpr>
+});
+
+def_node!(ContinueStmt {
+    label: Option<IdentifierExpr>
 });
 
 def_node!(VarStmt {
@@ -559,6 +571,8 @@ impl_node!(FuncDecl);
 impl_node!(ExprStmt);
 impl_node!(ForStmt);
 impl_node!(WhileStmt);
+impl_node!(BreakStmt);
+impl_node!(ContinueStmt);
 impl_node!(IfStmt);
 impl_node!(PrintStmt);
 impl_node!(ReturnStmt);

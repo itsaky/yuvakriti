@@ -32,6 +32,7 @@ pub const PARS_EXPECTED_PARAM_NAME: &str = "expected a parameter name";
 pub const PARS_EXPECTED_STMT: &str = "expected a statement";
 pub const PARS_EXPECTED_BODY: &str = "expected body";
 pub const PARS_INVALID_ASSIGN_TARGET: &str = "invalid assignment target";
+pub const PARS_EXPECTED_LABEL: &str = "expected a label";
 
 pub fn err_exp_kywrd(keyword: &str) -> String {
     return format!("expected '{}' keyword", keyword);

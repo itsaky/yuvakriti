@@ -162,6 +162,14 @@ impl<'a> ASTPrinter<'a> {
                 self.f.write_str("block ").unwrap();
                 self.visit_block_stmt(block_stmt, indent_level);
             }
+            Stmt::Break(br) => {
+                self.f.write_str("break ").unwrap();
+                self.visit_break_stmt(br, indent_level);
+            }
+            Stmt::Continue(cont) => {
+                self.f.write_str("continue").unwrap();
+                self.visit_continue_stmt(cont, indent_level);
+            }
         }
         self.f.write_str(")").unwrap();
     }
