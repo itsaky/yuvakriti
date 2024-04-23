@@ -15,7 +15,6 @@
 
 use std::ops::Deref;
 
-use crate::ast::ClassDecl;
 use crate::ast::FuncDecl;
 use crate::ast::IdentifierExpr;
 use crate::ast::LiteralExpr;
@@ -27,6 +26,7 @@ use crate::ast::{ASTVisitor, IdentifierType};
 use crate::ast::{AssignExpr, BinaryExpr};
 use crate::ast::{BinaryOp, IfStmt};
 use crate::ast::{BlockStmt, WhileStmt};
+use crate::ast::{ClassDecl, ForStmt};
 use crate::bytecode::attrs::{Attr, Code, CodeSize};
 use crate::bytecode::bytes::AssertingByteConversions;
 use crate::bytecode::cp::ConstantEntry;
@@ -427,6 +427,44 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
         self.default_visit_block_stmt(block_stmt, &mut new_ctx)
     }
 
+    fn visit_for_stmt(
+        &mut self,
+        for_stmt: &mut ForStmt,
+        ctx: &mut CodeGenContext<'_>,
+    ) -> Option<()> {
+        // step1: exec init stmt
+        if let Some(init) = for_stmt.init.as_mut() {
+            self.visit_stmt(init, ctx);
+        }
+
+        let cp = self.cp();
+
+        // step2: exec condition, if any
+        if let Some(condition) = for_stmt.condition.as_mut() {
+            self.visit_expr(condition, ctx);
+        }
+
+        // if condition is false, jump to the end
+        let branch = self.branch(OpCode::IfFalsy, ctx);
+        self.emitop0(OpCode::Pop);
+
+        // if condition is true, exec body
+        self.visit_block_stmt(&mut for_stmt.body, ctx);
+
+        // exec step expr, if any
+        if let Some(step) = for_stmt.step.as_mut() {
+            self.visit_expr(step, ctx);
+        }
+
+        // step3: jmp to start of loop (condition check)
+        self.emitjmp1(OpCode::Jmp, cp);
+
+        self.jmptocp(branch);
+        self.emitop0(OpCode::Pop);
+
+        None
+    }
+
     fn visit_if_stmt(&mut self, if_stmt: &mut IfStmt, ctx: &mut CodeGenContext) -> Option<()> {
         self.visit_expr(&mut if_stmt.condition, ctx);
 
@@ -467,8 +505,10 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
         self.visit_expr(&mut while_stmt.condition, ctx);
         let branch = self.branch(OpCode::IfFalsy, ctx);
         self.emitop0(OpCode::Pop);
+
         self.visit_block_stmt(&mut while_stmt.body, ctx);
         self.emitjmp1(OpCode::Jmp, cp);
+
         self.jmptocp(branch);
         self.emitop0(OpCode::Pop);
         None

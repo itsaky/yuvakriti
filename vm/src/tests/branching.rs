@@ -256,5 +256,32 @@ fn test_while_loop2() {
 
 #[test]
 fn test_while_loop3() {
-    assert_eq!(Value::Number(1f64), eval_src("var a = 1; var b; while b { a = a + 1; } a;"))
+    assert_eq!(
+        Value::Number(1f64),
+        eval_src("var a = 1; var b; while b { a = a + 1; } a;")
+    )
+}
+
+#[test]
+fn test_for_loop() {
+    assert_eq!(
+        Value::Number(55f64),
+        eval_src("var sum = 0; for (var i = 1; i <= 10; i = i + 1) { sum = sum + i; } sum;")
+    )
+}
+
+#[test]
+fn test_for_loop2() {
+    assert_eq!(
+        Value::Number(0f64),
+        eval_src("var sum = 0; for (var i = 1; false; i = i + 1) { sum = sum + i; } sum;")
+    )
+}
+
+#[test]
+fn test_for_loop3() {
+    assert_eq!(
+        Value::Number(55f64),
+        eval_src("var sum = 0; for (var i = 10; i > 0; i = i - 1) { sum = sum + i; } sum;")
+    )
 }
