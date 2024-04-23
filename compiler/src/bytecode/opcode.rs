@@ -97,9 +97,7 @@ def_opcodes!(
   {IfGeZ,       0x12,   0,  "ifgez"     , true},
 
     // these are conditional jumps, used in *statements*
-    // stacks do not modify the stack themselves
-    // however, these are also used for short-circuiting conditionals
-    // which pop operands and based on that operand, push a boolean, hence 0 stack effect
+    // conditional jumps do not modify the stack by themselves
   {IfTruthy,    0x20,   0,  "iftruthy"  , true},
   {IfFalsy,     0x21,   0,  "iffalsy"   , true},
 

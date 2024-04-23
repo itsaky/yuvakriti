@@ -15,7 +15,6 @@
 
 use std::ops::Deref;
 
-use crate::ast::BlockStmt;
 use crate::ast::ClassDecl;
 use crate::ast::FuncDecl;
 use crate::ast::IdentifierExpr;
@@ -27,6 +26,7 @@ use crate::ast::Visitable;
 use crate::ast::{ASTVisitor, IdentifierType};
 use crate::ast::{AssignExpr, BinaryExpr};
 use crate::ast::{BinaryOp, IfStmt};
+use crate::ast::{BlockStmt, WhileStmt};
 use crate::bytecode::attrs::{Attr, Code, CodeSize};
 use crate::bytecode::bytes::AssertingByteConversions;
 use crate::bytecode::cp::ConstantEntry;
@@ -210,22 +210,34 @@ impl<'a> CodeGen<'a> {
         self._update_max_stack(opcode);
     }
 
-    fn patch_16(&mut self, index: CodeSize, data: u16) {
-        self.instructions[index as usize] = (data >> 8) as u8;
-        self.instructions[index as usize + 1] = data as u8;
+    fn patch2(&mut self, index: CodeSize, d1: u8, d2: u8) {
+        self.instructions[index as usize] = d1;
+        self.instructions[index as usize + 1] = d2;
+    }
+
+    fn patch_u16(&mut self, index: CodeSize, data: u16) {
+        self.patch2(index, (data >> 8).as_u8(), data.as_u8());
     }
 
     fn jmptocp(&mut self, jmp_from: CodeSize) {
-        self.patch_16(jmp_from + 1, (self.cp() - jmp_from - 3).as_u16());
+        self.patch_u16(jmp_from + 1, (self.cp() - jmp_from - 3).as_u16());
     }
 
     fn patch_jmp(&mut self, jmp_from: CodeSize, jmp_to: CodeSize) {
-        self.patch_16(jmp_from + 1, (jmp_to - jmp_from - 3).as_u16());
+        let target = (jmp_to as i64 - jmp_from as i64 - 3) as i16;
+        self.patch2(jmp_from + 1, (target >> 8) as u8, target as u8);
     }
 
     fn emitjmp(&mut self, opcode: OpCode) -> CodeSize {
         self.emit1_16(opcode, 0);
         return self.cp() - 3;
+    }
+
+    fn emitjmp1(&mut self, opcode: OpCode, target: CodeSize) -> CodeSize {
+        self.emit1_16(opcode, 0);
+        let idx = self.cp() - 3;
+        self.patch_jmp(idx, target);
+        idx
     }
 
     fn reset(&mut self) {
@@ -443,6 +455,22 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
     ) -> Option<()> {
         self.visit_expr(&mut print_stmt.expr, ctx);
         self.emitop(OpCode::Print);
+        None
+    }
+
+    fn visit_while_stmt(
+        &mut self,
+        while_stmt: &mut WhileStmt,
+        ctx: &mut CodeGenContext<'_>,
+    ) -> Option<()> {
+        let cp = self.cp();
+        self.visit_expr(&mut while_stmt.condition, ctx);
+        let branch = self.branch(OpCode::IfFalsy, ctx);
+        self.emitop0(OpCode::Pop);
+        self.visit_block_stmt(&mut while_stmt.body, ctx);
+        self.emitjmp1(OpCode::Jmp, cp);
+        self.jmptocp(branch);
+        self.emitop0(OpCode::Pop);
         None
     }
 

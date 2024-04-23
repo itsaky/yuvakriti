@@ -221,9 +221,14 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
                 | OpCode::IfTruthy
                 | OpCode::IfFalsy
                 | OpCode::Jmp => {
-                    let idx = ((insns[index].as_u16() << 8) | insns[index + 1].as_u16()) as usize;
+                    let idx = ((insns[index].as_u16() << 8) | insns[index + 1].as_u16()) as i16;
                     index += 2;
-                    self.write(&format!("{}", index + idx));
+                    self.write(&format!(
+                        "{}",
+                        index
+                            .checked_add_signed(idx as isize)
+                            .expect(&format!("Invalid jump address: too big: {}", idx))
+                    ));
                 }
             }
         }

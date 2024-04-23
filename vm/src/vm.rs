@@ -337,7 +337,7 @@ impl<'inst> CodeExecutor<'inst> {
                 }
 
                 OpCode::IfTruthy | OpCode::IfFalsy => {
-                    let addr = read2!(insns, pc);
+                    let addr = read2!(insns, pc) as i16;
 
                     let value = self.peek_operand();
 
@@ -345,7 +345,7 @@ impl<'inst> CodeExecutor<'inst> {
                         || (opcode == OpCode::IfFalsy && value.is_falsy())
                     {
                         // jump to the specified address
-                        pc += addr as usize;
+                        jmp(&mut pc, addr);
                         trace!("VM::execute::jmp(pc={})", pc);
                     }
                 }
@@ -356,9 +356,9 @@ impl<'inst> CodeExecutor<'inst> {
                 | OpCode::IfGt
                 | OpCode::IfLe
                 | OpCode::IfGe => {
-                    let addr = read2!(insns, pc);
+                    let addr = read2!(insns, pc) as i16;
                     if self.cmp(opcode) {
-                        pc += addr as usize;
+                        jmp(&mut pc, addr);
                     }
                 }
 
@@ -368,15 +368,15 @@ impl<'inst> CodeExecutor<'inst> {
                 | OpCode::IfGtZ
                 | OpCode::IfLeZ
                 | OpCode::IfGeZ => {
-                    let addr = read2!(insns, pc);
+                    let addr = read2!(insns, pc) as i16;
                     if self.cmpz(opcode) {
-                        pc += addr as usize;
+                        jmp(&mut pc, addr);
                     }
                 }
 
                 OpCode::Jmp => {
-                    let addr = read2!(insns, pc);
-                    pc += addr as usize;
+                    let addr = read2!(insns, pc) as i16;
+                    jmp(&mut pc, addr);
                     trace!("VM::execute::jmp(pc={})", pc);
                 }
 
@@ -458,4 +458,10 @@ impl<'inst> CodeExecutor<'inst> {
 
         self.push_operand(Value::Number(result))
     }
+}
+
+fn jmp(pc: &mut usize, offset: i16) {
+    *pc = pc
+        .checked_add_signed(offset as isize)
+        .expect(&format!("Invalid jump address: too big: {}", offset));
 }

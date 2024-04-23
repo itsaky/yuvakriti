@@ -237,3 +237,19 @@ fn test_cmp_gez() {
 fn test_cmp_gez_r() {
     assert_eq!(Value::Bool(false), eval_src("var a = 10; 0 >= a;"))
 }
+
+#[test]
+fn test_while_loop() {
+    assert_eq!(
+        Value::Number(10f64),
+        eval_src("var a = 0; while a < 10 { a = a + 1; } a;")
+    )
+}
+
+#[test]
+fn test_while_loop2() {
+    assert_eq!(
+        Value::Number(0f64),
+        eval_src("var a = 10; while a > 0 { a = a - 1; } a;")
+    )
+}
