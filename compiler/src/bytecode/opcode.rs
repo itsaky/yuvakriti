@@ -22,10 +22,11 @@ pub trait OpCodeExt {
     fn stack_effect(&self) -> i8;
     fn get_mnemonic(&self) -> &'static str;
     fn is_jmp(&self) -> bool;
+    fn operand_size(&self) -> u8;
 }
 
 macro_rules! def_opcodes {
-    ($({$name:ident, $code:literal, $stack_effect:literal, $mnemonic:literal $(, $jmp:expr $(,)?)? } $(,)?)+) => {
+    ($({$name:ident, $code:literal, $stack_effect:literal, $mnemonic:literal, $opsize:literal $(, $jmp:expr $(,)?)? } $(,)?)+) => {
         #[derive(Debug, PartialEq, Clone, Copy)]
         #[repr(u8)]
         #[rustfmt::skip]
@@ -52,6 +53,12 @@ macro_rules! def_opcodes {
                     _ => false
                 }
             }
+
+            fn operand_size(&self) -> u8 {
+                match self {
+                    $(OpCode::$name => $opsize,)+
+                }
+            }
         }
 
         pub fn get_opcode(code: OpSize) -> OpCode {
@@ -69,53 +76,53 @@ impl OpCode {
     }
 }
 
-// format: {name, opcode, stack_effect, mnemonic [, is_jmp]}
+// format: {name, opcode, stack_effect, mnemonic, operand_size, [, is_jmp]}
 def_opcodes!(
-  {Nop,         0x00,   0,  "nop"       },
-  {Halt,        0x01,   0,  "halt"      },
-  {Add,         0x02,  -1,  "add"       },
-  {Sub,         0x03,  -1,  "sub"       },
-  {Mult,        0x04,  -1,  "mult"      },
-  {Div,         0x05,  -1,  "div"       },
-  {Print,       0x06,  -1,  "print"     },
+  {Nop,         0x00,   0,  "nop"       , 0},
+  {Halt,        0x01,   0,  "halt"      , 0},
+  {Add,         0x02,  -1,  "add"       , 0},
+  {Sub,         0x03,  -1,  "sub"       , 0},
+  {Mult,        0x04,  -1,  "mult"      , 0},
+  {Div,         0x05,  -1,  "div"       , 0},
+  {Print,       0x06,  -1,  "print"     , 0},
 
     // these are comparison operators, used in *expressions*
     // expressions can modify the stack
     // comparison with non-zero pops two operands, compares and pushes the result, hence -1 stack effect
     // comparison with zero pops one operand, compares and pushes the result, hence 0 stack effect
-  {IfEq,        0x07,  -1,  "ifeq"      , true},
-  {IfEqZ,       0x08,   0,  "ifeqz"     , true},
-  {IfNe,        0x09,  -1,  "ifne"      , true},
-  {IfNeZ,       0x0A,   0,  "ifnez"     , true},
-  {IfLt,        0x0B,  -1,  "iflt"      , true},
-  {IfLtZ,       0x0C,   0,  "ifltz"     , true},
-  {IfLe,        0x0D,  -1,  "ifle"      , true},
-  {IfLeZ,       0x0E,   0,  "iflez"     , true},
-  {IfGt,        0x0F,  -1,  "ifgt"      , true},
-  {IfGtZ,       0x10,   0,  "ifgtz"     , true},
-  {IfGe,        0x11,  -1,  "ifge"      , true},
-  {IfGeZ,       0x12,   0,  "ifgez"     , true},
+  {IfEq,        0x07,  -1,  "ifeq"      , 2, true},
+  {IfEqZ,       0x08,   0,  "ifeqz"     , 2, true},
+  {IfNe,        0x09,  -1,  "ifne"      , 2, true},
+  {IfNeZ,       0x0A,   0,  "ifnez"     , 2, true},
+  {IfLt,        0x0B,  -1,  "iflt"      , 2, true},
+  {IfLtZ,       0x0C,   0,  "ifltz"     , 2, true},
+  {IfLe,        0x0D,  -1,  "ifle"      , 2, true},
+  {IfLeZ,       0x0E,   0,  "iflez"     , 2, true},
+  {IfGt,        0x0F,  -1,  "ifgt"      , 2, true},
+  {IfGtZ,       0x10,   0,  "ifgtz"     , 2, true},
+  {IfGe,        0x11,  -1,  "ifge"      , 2, true},
+  {IfGeZ,       0x12,   0,  "ifgez"     , 2, true},
 
     // these are conditional jumps, used in *statements*
     // conditional jumps do not modify the stack by themselves
-  {IfTruthy,    0x20,   0,  "iftruthy"  , true},
-  {IfFalsy,     0x21,   0,  "iffalsy"   , true},
+  {IfTruthy,    0x20,   0,  "iftruthy"  , 2, true},
+  {IfFalsy,     0x21,   0,  "iffalsy"   , 2, true},
 
-  {Ldc,         0x13,   1,  "ldc"       },
-  {BPush0,      0x14,   1,  "bpush_0"   },
-  {BPush1,      0x15,   1,  "bpush_1"   },
-  {Store,       0x16,  -1,  "store"     },
-  {Store0,      0x17,  -1,  "store_0"   },
-  {Store1,      0x18,  -1,  "store_1"   },
-  {Store2,      0x19,  -1,  "store_2"   },
-  {Store3,      0x1A,  -1,  "store_3"   },
-  {Load,        0x1B,   1,  "load"      },
-  {Load0,       0x1C,   1,  "load_0"    },
-  {Load1,       0x1D,   1,  "load_1"    },
-  {Load2,       0x1E,   1,  "load_2"    },
-  {Load3,       0x1F,   1,  "load_3"    },
-  {Jmp,         0x22,   0,  "jmp"       , true},
-  {Pop,         0x23,   -1,  "pop"      },
+  {Ldc,         0x13,   1,  "ldc"       , 2},
+  {BPush0,      0x14,   1,  "bpush_0"   , 0},
+  {BPush1,      0x15,   1,  "bpush_1"   , 0},
+  {Store,       0x16,  -1,  "store"     , 2},
+  {Store0,      0x17,  -1,  "store_0"   , 0},
+  {Store1,      0x18,  -1,  "store_1"   , 0},
+  {Store2,      0x19,  -1,  "store_2"   , 0},
+  {Store3,      0x1A,  -1,  "store_3"   , 0},
+  {Load,        0x1B,   1,  "load"      , 2},
+  {Load0,       0x1C,   1,  "load_0"    , 0},
+  {Load1,       0x1D,   1,  "load_1"    , 0},
+  {Load2,       0x1E,   1,  "load_2"    , 0},
+  {Load3,       0x1F,   1,  "load_3"    , 0},
+  {Jmp,         0x22,   0,  "jmp"       , 2, true},
+  {Pop,         0x23,   -1,  "pop"      , 0},
 );
 
 impl Display for OpCode {

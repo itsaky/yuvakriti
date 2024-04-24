@@ -196,7 +196,7 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
                 OpCode::Ldc => {
                     let const_index = (insns[index].as_u16()) << 8 | insns[index + 1] as u16;
                     let constant = constant_pool.get(const_index).unwrap();
-                    self.write(&format!("#{:<5} // {}", const_index, constant));
+                    self.write(&format!("#{:<10} // {}", const_index, constant));
                     index += 2
                 }
                 OpCode::Load0 | OpCode::Load1 | OpCode::Load2 | OpCode::Load3 => {}

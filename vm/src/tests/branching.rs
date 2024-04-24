@@ -285,3 +285,149 @@ fn test_for_loop3() {
         eval_src("var sum = 0; for (var i = 10; i > 0; i = i - 1) { sum = sum + i; } sum;")
     )
 }
+
+#[test]
+fn test_continue_in_while_stmt() {
+    assert_eq!(
+        Value::Number(50f64),
+        eval_src(
+            "var a = 11;
+            var s = 0;
+            while a > 0 {
+                a = a - 1;
+                if a == 5 {
+                    continue;
+                }
+                s = s + a;
+            }
+            s;"
+        )
+    )
+}
+
+#[test]
+fn test_continue_in_nested_while_stmt() {
+    assert_eq!(
+        Value::Number(143f64),
+        eval_src(
+            "var a = 11;
+            var s = 0;
+            var j;
+            while a > 0 {
+                a = a - 1;
+                j = 0;
+                while j < 4 {
+                    j = j + 1;
+                    if j == 2 {
+                        continue;
+                    }
+                    s = s + j;
+                }
+                s = s + a;
+            }
+            s;"
+        )
+    )
+}
+
+#[test]
+fn test_break_in_nested_while_stmt() {
+    assert_eq!(
+        Value::Number(66f64),
+        eval_src(
+            "var a = 11;
+            var s = 0;
+            var j;
+            while a > 0 {
+                a = a - 1;
+                j = 0;
+                while j < 4 {
+                    j = j + 1;
+                    if j == 2 {
+                        break;
+                    }
+                    s = s + j;
+                }
+                s = s + a;
+            }
+            s;"
+        )
+    )
+}
+
+#[test]
+fn test_break_in_nested_for_stmt() {
+    assert_eq!(
+        Value::Number(65f64),
+        eval_src(
+            "
+            var s = 0;
+            var j = 0;
+            for (var a = 10; a > 0; a = a-1) {
+                for(j = 1; j < 4; j = j + 1) {
+                    if j == 2 {
+                        break;
+                    }
+                    s = s + j;
+                }
+                s = s + a;
+            }
+            s;"
+        )
+    )
+}
+
+#[test]
+fn test_break_in_while_stmt() {
+    assert_eq!(
+        Value::Number(40f64),
+        eval_src(
+            "var a = 11;
+            var s = 0;
+            while a > 0 {
+                a = a - 1;
+                if a == 5 {
+                    break;
+                }
+                s = s + a;
+            }
+            s;"
+        )
+    )
+}
+
+#[test]
+fn test_continue_in_for_stmt() {
+    assert_eq!(
+        Value::Number(40f64),
+        eval_src(
+            "
+            var s = 0;
+            for (var i =0; i < 10; i = i+1) {
+              if i == 5 {
+                continue;
+              }
+              s = s + i;
+            }
+            s;"
+        )
+    )
+}
+
+#[test]
+fn test_break_in_for_stmt() {
+    assert_eq!(
+        Value::Number(10f64),
+        eval_src(
+            "
+            var s = 0;
+            for (var i =0; i < 10; i = i+1) {
+              if i == 5 {
+                break;
+              }
+              s = s + i;
+            }
+            s;"
+        )
+    )
+}
