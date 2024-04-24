@@ -53,7 +53,7 @@ pub struct LoopSym {
 }
 
 impl LoopSym {
- 
+
     /// Create a new [LoopSym] with the given loop label.
     pub fn new(label: String) -> Self {
         LoopSym { label }
@@ -67,7 +67,7 @@ pub struct Symtab {
 }
 
 impl Symtab {
-    
+
     /// Creates a new instance of [Symtab].
     pub fn new() -> Self {
         Symtab {

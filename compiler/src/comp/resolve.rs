@@ -16,7 +16,11 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::ast::{ASTVisitor, BreakStmt, ContinueStmt, ForStmt, WhileStmt};
+use crate::ast::ASTVisitor;
+use crate::ast::BreakStmt;
+use crate::ast::ContinueStmt;
+use crate::ast::ForStmt;
+use crate::ast::WhileStmt;
 use crate::ast::BlockStmt;
 use crate::ast::IdentifierExpr;
 use crate::ast::Program;
@@ -112,7 +116,7 @@ impl<'inst> ASTVisitor<Scope<'inst>, ()> for Resolve<'_> {
             self.visit_expr(expr, scope);
         }
 
-        match scope.push_sym(Symbol::Variable(VarSym::new(var_name.clone()))) {
+        match scope.push_var(VarSym::new(var_name.clone())) {
             Err(_) => self.report_err(&var_decl.name.range(), &messages::err_dup_var(&var_name)),
             Ok(_) => {}
         };

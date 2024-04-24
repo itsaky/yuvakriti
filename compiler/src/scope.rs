@@ -13,7 +13,7 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::symtab::Symbol;
+use crate::symtab::{Sym, Symbol};
 use crate::symtab::Symtab;
 use crate::symtab::VarSym;
 
@@ -84,14 +84,23 @@ impl Scope<'_> {
 
     /// Push a new symbol to this scope. See [Symtab::push_sym] for more details.
     pub fn push_sym(&mut self, sym: Symbol) -> Result<(), ()> {
-        return self.symbols.push_sym(sym);
+        match self.find_sym(&String::from(sym.name())) {
+            None => self.symbols.push_sym(sym),
+            Some(_) => Err(())
+        }
     }
 
     /// Push a new variable symbol to this scope. See [Symtab::push_var] for more details.
-    pub fn push_var(&mut self, sym: VarSym) -> Result<u16, ()> {
-        let r = self.symbols.push_var(sym, self.var_count);
-        self.var_count += 1;
-        r
+    pub fn push_var(&mut self, sym: VarSym) -> Result<u16, ()> { 
+        match self.find_sym(&sym.name) {
+            None => {
+                let r = self.symbols.push_var(sym, self.var_count);
+                self.var_count += 1;
+                r
+            },
+            
+            Some(_) => Err(())
+        }
     }
 
     /// Get index of the variable symbol with the given name.
