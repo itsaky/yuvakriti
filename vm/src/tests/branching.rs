@@ -312,10 +312,9 @@ fn test_continue_in_nested_while_stmt() {
         eval_src(
             "var a = 11;
             var s = 0;
-            var j;
             while a > 0 {
                 a = a - 1;
-                j = 0;
+                var j = 0;
                 while j < 4 {
                     j = j + 1;
                     if j == 2 {
@@ -337,10 +336,9 @@ fn test_break_in_nested_while_stmt() {
         eval_src(
             "var a = 11;
             var s = 0;
-            var j;
             while a > 0 {
                 a = a - 1;
-                j = 0;
+                var j = 0;
                 while j < 4 {
                     j = j + 1;
                     if j == 2 {
@@ -362,9 +360,8 @@ fn test_break_in_nested_for_stmt() {
         eval_src(
             "
             var s = 0;
-            var j = 0;
             for (var a = 10; a > 0; a = a-1) {
-                for(j = 1; j < 4; j = j + 1) {
+                for(var j = 1; j < 4; j = j + 1) {
                     if j == 2 {
                         break;
                     }

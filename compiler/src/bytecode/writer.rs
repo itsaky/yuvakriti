@@ -117,8 +117,6 @@ enum JumpType {
 }
 
 impl PendingJump {
-    pub const TYP_CONTINUE: u8 = 0;
-    pub const TYP_BREAK: u8 = 0;
     
     fn new(typ: JumpType, from: CodeSize) -> PendingJump {
         return PendingJump {
@@ -169,10 +167,6 @@ impl LoopContext<> {
             pending_jumps: Vec::with_capacity(0),
         };
     }
-    
-    fn clone_without_jumps(&self) -> LoopContext {
-        LoopContext::new(self.pc, self.typ.clone(), self.label.clone())
-    }
 
     fn matches_label(&mut self, label: Option<&IdentifierExpr>) -> bool {
         if label.is_none() {
@@ -212,10 +206,6 @@ impl CodeGenContext<'_> {
 
     fn pop_loop(&mut self) -> Option<LoopContext> {
         self.loops.pop()
-    }
-
-    fn peek_loop_mut(&mut self) -> Option<&mut LoopContext> {
-        self.loops.last_mut()
     }
     
     fn find_loop(&mut self, label: Option<&IdentifierExpr>) -> Option<&mut LoopContext> {
@@ -295,6 +285,8 @@ impl<'a> CodeGen<'a> {
     fn get_u1(&self, index: CodeSize) -> u8 {
         return self.instructions[index as usize];
     }
+    
+    #[allow(unused)]
     fn get_u2(&self, index: CodeSize) -> u16 {
         return (self.instructions[index as usize].as_u16() << 8)
             | self.instructions[index as usize + 1].as_u16();
@@ -561,7 +553,7 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
     ) -> Option<()> {
         
         // push a new scope of variables
-        let mut scope = Scope::new();
+        let mut scope = Scope::with_var_count(ctx.scope.var_count);
         scope.parent = Some(&ctx.scope);
 
         self.default_visit_block_stmt(block_stmt, &mut CodeGenContext::with_scope(scope, ctx.loops.as_mut()))

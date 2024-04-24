@@ -52,6 +52,7 @@ pub struct Symtab {
 }
 
 impl Symtab {
+    
     /// Creates a new instance of [Symtab].
     pub fn new() -> Self {
         Symtab {
@@ -83,9 +84,8 @@ impl Symtab {
     }
 
     /// Push the variable symbol to this symbol table, and return its index if successful.
-    pub fn push_var(&mut self, sym: VarSym) -> Result<u16, ()> {
+    pub fn push_var(&mut self, sym: VarSym, index: u16) -> Result<u16, ()> {
         let name = sym.name.clone();
-        let index = self.var_indices.len() as u16;
 
         self.push_sym(Symbol::Variable(sym))
             .and_then(|_| match self.var_indices.entry(name) {
