@@ -23,12 +23,14 @@ pub trait Sym {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Symbol {
     Variable(VarSym),
+    LabeledLoop(LoopSym)
 }
 
 impl Sym for Symbol {
     fn name(&self) -> &str {
         match self {
             Symbol::Variable(var) => &var.name,
+            Symbol::LabeledLoop(_loop) => &_loop.label,
         }
     }
 }
@@ -42,6 +44,19 @@ impl VarSym {
     /// Create a new [VarSym] with the given name.
     pub fn new(name: String) -> Self {
         VarSym { name }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct LoopSym {
+    pub label: String,
+}
+
+impl LoopSym {
+ 
+    /// Create a new [LoopSym] with the given loop label.
+    pub fn new(label: String) -> Self {
+        LoopSym { label }
     }
 }
 

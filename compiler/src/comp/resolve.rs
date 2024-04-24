@@ -16,7 +16,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::ast::ASTVisitor;
+use crate::ast::{ASTVisitor, BreakStmt, ContinueStmt, ForStmt, WhileStmt};
 use crate::ast::BlockStmt;
 use crate::ast::IdentifierExpr;
 use crate::ast::Program;
@@ -29,7 +29,7 @@ use crate::diagnostics::DiagnosticKind;
 use crate::location::Range;
 use crate::messages;
 use crate::scope::Scope;
-use crate::symtab::Symbol;
+use crate::symtab::{LoopSym, Symbol};
 use crate::symtab::VarSym;
 
 /// The name resolution helper.
@@ -73,9 +73,28 @@ impl Resolve<'_> {
             message: msg.to_string(),
         });
     }
+    
+    fn def_loop_label(&mut self, label: Option<&IdentifierExpr>, scope: &mut Scope) {
+        if let Some(label) = label {
+            match scope.push_sym(Symbol::LabeledLoop(LoopSym::new(label.name.clone()))) {
+                Ok(_) => {}
+                Err(_) => self.report_err(&label.range(), &messages::err_dup_label(&label.name))
+            }
+        } 
+    }
+
+    fn resolve_loop_label(&mut self, label: Option<&IdentifierExpr>, scope: &mut Scope) {
+        if let Some(label) = label {
+            match scope.find_sym(&label.name) {
+                Some(_) => {}
+                None => self.report_err(&label.range(), &messages::err_undef_label(&label.name))
+            }
+        }
+    }
 }
 
 impl<'inst> ASTVisitor<Scope<'inst>, ()> for Resolve<'_> {
+    
     fn visit_program(&mut self, program: &mut Program, p: &mut Scope) -> Option<()> {
         self.scope = Some(Scope::new());
         self.default_visit_program(program, p, true, true);
@@ -109,6 +128,26 @@ impl<'inst> ASTVisitor<Scope<'inst>, ()> for Resolve<'_> {
         None
     }
 
+    fn visit_for_stmt(&mut self, for_stmt: &mut ForStmt, scope: &mut Scope<'inst>) -> Option<()> {
+        self.def_loop_label(for_stmt.label.as_ref(), scope);
+        self.default_visit_for_stmt(for_stmt, scope)
+    }
+
+    fn visit_break_stmt(&mut self, break_stmt: &mut BreakStmt, scope: &mut Scope<'inst>) -> Option<()> {
+        self.resolve_loop_label(break_stmt.label.as_ref(), scope);
+        None
+    }
+
+    fn visit_continue_stmt(&mut self, continue_stmt: &mut ContinueStmt, scope: &mut Scope<'inst>) -> Option<()> {
+        self.resolve_loop_label(continue_stmt.label.as_ref(), scope);
+        None
+    }
+
+    fn visit_while_stmt(&mut self, while_stmt: &mut WhileStmt, scope: &mut Scope<'inst>) -> Option<()> {
+        self.def_loop_label(while_stmt.label.as_ref(), scope);
+        self.default_visit_while_stmt(while_stmt, scope)
+    }
+
     fn visit_identifier_expr(
         &mut self,
         identifier: &mut IdentifierExpr,
@@ -116,7 +155,7 @@ impl<'inst> ASTVisitor<Scope<'inst>, ()> for Resolve<'_> {
     ) -> Option<()> {
         let name = &identifier.name;
         if _p.find_sym(name).is_none() {
-            self.report_err(identifier.range(), &messages::err_undecl_var(name));
+            self.report_err(identifier.range(), &messages::err_undef_var(name));
         }
 
         None

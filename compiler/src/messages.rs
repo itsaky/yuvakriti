@@ -44,8 +44,16 @@ pub fn err_exp_sym(sym: &str) -> String {
 
 // ------------------------ analyzer --------------------------
 pub fn err_dup_var(sym: &str) -> String {
-    return format!("Variable '{}' is already declared", sym);
+    return format!("Variable '{}' is already defined", sym);
 }
-pub fn err_undecl_var(sym: &str) -> String {
-    return format!("Variable '{}' is not declared", sym);
+pub fn err_undef_var(sym: &str) -> String {
+    return format!("Variable '{}' is not defined", sym);
+}
+
+pub(crate) fn err_dup_label(label: &str) -> String {
+    return format!("Loop '{}' is already defined", label)
+}
+
+pub(crate) fn err_undef_label(label: &str) -> String {
+    return format!("Loop '{}' is not defined", label)
 }
