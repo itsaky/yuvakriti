@@ -15,7 +15,6 @@
 
 use std::ops::Deref;
 
-use crate::ast::{AssignExpr, BreakStmt};
 use crate::ast::ASTVisitor;
 use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
@@ -33,7 +32,7 @@ use crate::ast::Program;
 use crate::ast::VarStmt;
 use crate::ast::Visitable;
 use crate::ast::WhileStmt;
-use crate::bytecode::{attrs, decls};
+use crate::ast::{AssignExpr, BreakStmt};
 use crate::bytecode::attrs::Attr;
 use crate::bytecode::attrs::Code;
 use crate::bytecode::attrs::CodeSize;
@@ -42,10 +41,11 @@ use crate::bytecode::cp::ConstantEntry;
 use crate::bytecode::cp_info::NumberInfo;
 use crate::bytecode::cp_info::Utf8Info;
 use crate::bytecode::file::YKBFile;
-use crate::bytecode::opcode::{get_opcode, opcode_cmp};
-use crate::bytecode::opcode::OpCode;
 use crate::bytecode::opcode::opcode_cmpz;
+use crate::bytecode::opcode::OpCode;
 use crate::bytecode::opcode::OpCodeExt;
+use crate::bytecode::opcode::{get_opcode, opcode_cmp};
+use crate::bytecode::{attrs, decls};
 use crate::features::CompilerFeatures;
 use crate::messages;
 use crate::scope::Scope;
@@ -91,7 +91,6 @@ struct CodeGen<'a> {
 }
 
 struct CodeGenContext<'a> {
-    
     /// The scope in which [CodeGen] is visiting the AST.
     pub scope: Scope<'a>,
 
@@ -102,10 +101,9 @@ struct CodeGenContext<'a> {
 
 #[derive(Debug, PartialEq)]
 struct PendingJump {
-
     /// The type of jump.
     pub typ: JumpType,
-    
+
     /// The index of the instruction where jump occurs.
     pub from: CodeSize,
 }
@@ -113,30 +111,25 @@ struct PendingJump {
 #[derive(Debug, PartialEq, Clone)]
 enum JumpType {
     Continue,
-    Break
+    Break,
 }
 
 impl PendingJump {
-    
     fn new(typ: JumpType, from: CodeSize) -> PendingJump {
-        return PendingJump {
-            typ,
-            from
-        }
+        return PendingJump { typ, from };
     }
-    
+
     pub fn _continue(from: CodeSize) -> PendingJump {
-        return PendingJump::new(JumpType::Continue, from)
+        return PendingJump::new(JumpType::Continue, from);
     }
 
     pub fn _break(from: CodeSize) -> PendingJump {
-        return PendingJump::new(JumpType::Break, from)
+        return PendingJump::new(JumpType::Break, from);
     }
 }
 
 #[derive(Debug, PartialEq)]
 struct LoopContext {
-    
     /// The index of the instruction which begins the loop.
     pub pc: CodeSize,
 
@@ -145,20 +138,19 @@ struct LoopContext {
 
     /// An optional label for the loop.
     pub label: Option<String>,
-    
+
     /// A list of [PendingJump]s, which contain information about jump instructions which must be
-    /// patched after the bytecode for a loop has been written. 
+    /// patched after the bytecode for a loop has been written.
     pub pending_jumps: Vec<PendingJump>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 enum LoopType {
     For,
-    While
+    While,
 }
 
-impl LoopContext<> {
-
+impl LoopContext {
     fn new(pc: CodeSize, typ: LoopType, label: Option<String>) -> LoopContext {
         return LoopContext {
             pc,
@@ -174,11 +166,7 @@ impl LoopContext<> {
         }
 
         let _label = &label.unwrap().name;
-        if self
-            .label.as_ref()
-            .map(|l| l == _label)
-            .unwrap_or(false)
-        {
+        if self.label.as_ref().map(|l| l == _label).unwrap_or(false) {
             return true;
         }
 
@@ -207,14 +195,14 @@ impl CodeGenContext<'_> {
     fn pop_loop(&mut self) -> Option<LoopContext> {
         self.loops.pop()
     }
-    
+
     fn find_loop(&mut self, label: Option<&IdentifierExpr>) -> Option<&mut LoopContext> {
         for _loop in self.loops.iter_mut().rev() {
             if _loop.matches_label(label) {
-                return Some(_loop)
+                return Some(_loop);
             }
         }
-        
+
         None
     }
 }
@@ -285,7 +273,7 @@ impl<'a> CodeGen<'a> {
     fn get_u1(&self, index: CodeSize) -> u8 {
         return self.instructions[index as usize];
     }
-    
+
     #[allow(unused)]
     fn get_u2(&self, index: CodeSize) -> u16 {
         return (self.instructions[index as usize].as_u16() << 8)
@@ -380,7 +368,7 @@ impl<'a> CodeGen<'a> {
             if opcode.is_jmp() {
                 self.resolve_jmp(opcode, idx);
             }
-        
+
             idx += 1 + opcode.operand_size() as CodeSize;
         }
     }
@@ -417,7 +405,7 @@ impl<'a> CodeGen<'a> {
             self.patch_jmp(idx, t_addr);
         }
     }
-    
+
     /// Patch pending jumps in loops. `continue_at` is the address of the instruction at which the
     /// program continues when a [JumpType::Continue] jump is encountered. `break_to` is the address of
     /// the instruction at which the program continues when a [JumpType::Break] jump is encountered.
@@ -425,16 +413,12 @@ impl<'a> CodeGen<'a> {
         &mut self,
         pending: &Vec<PendingJump>,
         continue_at: CodeSize,
-        break_to: CodeSize
+        break_to: CodeSize,
     ) {
         for pending in pending {
             match pending.typ {
-                JumpType::Continue => {
-                    self.patch_jmp(pending.from, continue_at)
-                }
-                JumpType::Break => {
-                    self.patch_jmp(pending.from, break_to)
-                }
+                JumpType::Continue => self.patch_jmp(pending.from, continue_at),
+                JumpType::Break => self.patch_jmp(pending.from, break_to),
             }
         }
     }
@@ -551,12 +535,14 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
         block_stmt: &mut BlockStmt,
         ctx: &mut CodeGenContext,
     ) -> Option<()> {
-        
         // push a new scope of variables
         let mut scope = Scope::with_var_count(ctx.scope.var_count);
         scope.parent = Some(&ctx.scope);
 
-        self.default_visit_block_stmt(block_stmt, &mut CodeGenContext::with_scope(scope, ctx.loops.as_mut()))
+        self.default_visit_block_stmt(
+            block_stmt,
+            &mut CodeGenContext::with_scope(scope, ctx.loops.as_mut()),
+        )
     }
 
     fn visit_for_stmt(
@@ -571,8 +557,12 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
 
         let cp = self.cp();
         let mut _continue = cp;
-        
-        ctx.push_loop(cp, LoopType::For, for_stmt.label.as_ref().map(|l| l.name.clone()));
+
+        ctx.push_loop(
+            cp,
+            LoopType::For,
+            for_stmt.label.as_ref().map(|l| l.name.clone()),
+        );
 
         // step2: exec condition, if any
         if let Some(condition) = for_stmt.condition.as_mut() {
@@ -597,7 +587,7 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
 
         self.jmptocp(branch);
         self.emitop0(OpCode::Pop);
-        
+
         let _break = self.cp();
 
         let _loop = ctx.pop_loop().unwrap();
@@ -606,7 +596,11 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
         None
     }
 
-    fn visit_break_stmt(&mut self, break_stmt: &mut BreakStmt, ctx: &mut CodeGenContext<'_>) -> Option<()> {
+    fn visit_break_stmt(
+        &mut self,
+        break_stmt: &mut BreakStmt,
+        ctx: &mut CodeGenContext<'_>,
+    ) -> Option<()> {
         let _loop = ctx
             .find_loop(break_stmt.label.as_ref())
             .expect("Expected a loop context");
@@ -625,10 +619,10 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
         let _loop = ctx
             .find_loop(continue_stmt.label.as_ref())
             .expect("Expected a loop context");
-        
+
         let pc = self.emitjmp(OpCode::Jmp);
         _loop.pending_jumps.push(PendingJump::_continue(pc));
-            
+
         None
     }
 
@@ -682,7 +676,7 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
         );
 
         let _continue = cp;
-        
+
         self.visit_expr(&mut while_stmt.condition, ctx);
         let jmp = self.emitjmp(OpCode::IfFalsy);
         self.emitop0(OpCode::Pop);
@@ -692,7 +686,7 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
 
         self.jmptocp(jmp);
         self.emitop0(OpCode::Pop);
-        
+
         let _break = self.cp();
 
         if let Some(_loop) = ctx.pop_loop() {

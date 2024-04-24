@@ -116,41 +116,61 @@ fn test_var_self_use_in_decl() {
 
 #[test]
 fn test_undef_label_in_break_for_while() {
-    match_single_diagnostic("while true { break something; }", err_undef_label("something"));
+    match_single_diagnostic(
+        "while true { break something; }",
+        err_undef_label("something"),
+    );
 }
 
 #[test]
 fn test_undef_label_in_break_for_for() {
-    match_single_diagnostic("for (var i =0; i<10; i=i+1) { break something; }", err_undef_label("something"));
+    match_single_diagnostic(
+        "for (var i =0; i<10; i=i+1) { break something; }",
+        err_undef_label("something"),
+    );
 }
 
 #[test]
 fn test_undef_label_in_continue_for_while() {
-    match_single_diagnostic("while true { continue something; }", err_undef_label("something"));
+    match_single_diagnostic(
+        "while true { continue something; }",
+        err_undef_label("something"),
+    );
 }
 
 #[test]
 fn test_undef_label_in_continue_for_for() {
-    match_single_diagnostic("for (var i =0; i<10; i=i+1) { continue something; }", err_undef_label("something"));
+    match_single_diagnostic(
+        "for (var i =0; i<10; i=i+1) { continue something; }",
+        err_undef_label("something"),
+    );
 }
 
 #[test]
 fn test_undef_label_in_continue_for_nested_while() {
-    match_single_diagnostic("outer: while true { while false {continue inner;} }", err_undef_label("inner"));
+    match_single_diagnostic(
+        "outer: while true { while false {continue inner;} }",
+        err_undef_label("inner"),
+    );
 }
 
 #[test]
 fn test_undef_label_in_continue_for_nested_for() {
-    match_single_diagnostic("for (var i =0; i<10; i=i+1) { for (var j =0; j<10; j=j+1) { continue inner; } }", err_undef_label("inner"));
+    match_single_diagnostic(
+        "for (var i =0; i<10; i=i+1) { for (var j =0; j<10; j=j+1) { continue inner; } }",
+        err_undef_label("inner"),
+    );
 }
 
 #[test]
 fn test_dup_var_in_nested_loop() {
-    match_single_diagnostic("for (var i =0; i<10; i=i+1) { for (var i =0; i<10; i=i+1) {} }", err_dup_var("i"));
+    match_single_diagnostic(
+        "for (var i =0; i<10; i=i+1) { for (var i =0; i<10; i=i+1) {} }",
+        err_dup_var("i"),
+    );
 }
 
 #[test]
 fn test_dup_var_in_nested_scope() {
     match_single_diagnostic("var i = 0; { var i = 1; }", err_dup_var("i"));
 }
-

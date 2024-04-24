@@ -51,9 +51,9 @@ pub fn err_undef_var(sym: &str) -> String {
 }
 
 pub(crate) fn err_dup_label(label: &str) -> String {
-    return format!("Loop '{}' is already defined", label)
+    return format!("Loop '{}' is already defined", label);
 }
 
 pub(crate) fn err_undef_label(label: &str) -> String {
-    return format!("Loop '{}' is not defined", label)
+    return format!("Loop '{}' is not defined", label);
 }

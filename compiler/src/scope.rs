@@ -13,9 +13,9 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::symtab::{Sym, Symbol};
 use crate::symtab::Symtab;
 use crate::symtab::VarSym;
+use crate::symtab::{Sym, Symbol};
 
 /// Scope of symbols in a program
 pub struct Scope<'inst> {
@@ -25,18 +25,17 @@ pub struct Scope<'inst> {
 }
 
 impl Scope<'_> {
-    
     /// Create a new instance of [Scope] with the given parent scope.
     pub fn new<'a>() -> Scope<'a> {
         return Self::with_var_count(0);
     }
-    
+
     /// Create a new scope with the given initial variable count.
     pub fn with_var_count<'a>(count: u16) -> Scope<'a> {
         Scope {
             parent: None,
             symbols: Symtab::new(),
-            var_count: count
+            var_count: count,
         }
     }
 
@@ -86,20 +85,20 @@ impl Scope<'_> {
     pub fn push_sym(&mut self, sym: Symbol) -> Result<(), ()> {
         match self.find_sym(&String::from(sym.name())) {
             None => self.symbols.push_sym(sym),
-            Some(_) => Err(())
+            Some(_) => Err(()),
         }
     }
 
     /// Push a new variable symbol to this scope. See [Symtab::push_var] for more details.
-    pub fn push_var(&mut self, sym: VarSym) -> Result<u16, ()> { 
+    pub fn push_var(&mut self, sym: VarSym) -> Result<u16, ()> {
         match self.find_sym(&sym.name) {
             None => {
                 let r = self.symbols.push_var(sym, self.var_count);
                 self.var_count += 1;
                 r
-            },
-            
-            Some(_) => Err(())
+            }
+
+            Some(_) => Err(()),
         }
     }
 

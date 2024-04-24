@@ -15,6 +15,6 @@
 
 mod arithemetic;
 mod branching;
+mod loops;
 mod util;
 mod variables;
-mod loops;
