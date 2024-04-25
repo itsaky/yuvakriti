@@ -381,7 +381,32 @@ impl<'inst> CodeExecutor<'inst> {
                 }
 
                 OpCode::Pop => {
+                    trace!("VM::execute::pop()");
                     self.pop_operand();
+                }
+                
+                OpCode::Neg => {
+                    trace!("VM::execute::neg()");
+                    let value = self.pop_operand();
+                    self.push_operand(match value {
+                        Value::Number(num) => Value::Number(-num),
+                        _ => {
+                            // TODO: Should we warn the user?
+                            Value::Number(0.0)
+                        },
+                    });
+                }
+
+                OpCode::Not => {
+                    trace!("VM::execute::not()");
+                    let value = self.pop_operand();
+                    self.push_operand(match value {
+                        Value::Bool(bool) => Value::Bool(!bool),
+                        _ => {
+                            // TODO: Should we warn the user?
+                            Value::Bool(false)
+                        },
+                    });
                 }
             }
         }

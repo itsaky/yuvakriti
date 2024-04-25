@@ -173,6 +173,18 @@ Multiply two values.
 | Operand stack | `..., value1, value2 -> ..., (value1 * value2)`                                                                                            |
 | Description   | The `mult` instruction pops the top two values from the operand stack, multiplies them, and pushes the result back onto the operand stack. |
 
+## `neg`
+
+Unary number negation.
+
+| **_neg_**     | Description                                                                                                                                                                              |
+|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Operation     | Negates the value.                                                                                                                                                                       |
+| Operands      | _None_                                                                                                                                                                                   |
+| Forms         | _neg_ = 0x24                                                                                                                                                                             |
+| Operand stack | `..., value -> ..., (-value)`                                                                                                                                                            |
+| Description   | Negates the number value at the top of the operand stack and pushes the result back onto the stack. If the value at the top of the stack is not a number, then the reuslt is always `0`. |
+
 ## `nop`
 
 Reserved, no-op opcode.
@@ -184,6 +196,18 @@ Reserved, no-op opcode.
 | Forms         | _nop_ = 0x00  |
 | Operand stack | `... -> ...`  |
 | Description   | Does nothing. |
+
+## `not`
+
+Unary boolean negation.
+
+| **_not_**     | Description                                                                                                                                                                                    |
+|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Operation     | Negates the value.                                                                                                                                                                             |
+| Operands      | _None_                                                                                                                                                                                         |
+| Forms         | _not_ = 0x25                                                                                                                                                                                   |
+| Operand stack | `..., value -> ..., (!value)`                                                                                                                                                                  |
+| Description   | Negates the boolean value at the top of the operand stack and pushes the result back onto the stack. If the value at the top of the stack is not a boolean, then the result is always `false`. |
 
 ## `pop`
 

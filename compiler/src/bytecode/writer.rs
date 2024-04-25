@@ -15,7 +15,7 @@
 
 use std::ops::Deref;
 
-use crate::ast::ASTVisitor;
+use crate::ast::{ASTVisitor, UnaryExpr, UnaryOp};
 use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
 use crate::ast::BlockStmt;
@@ -839,6 +839,15 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
             _ => unreachable!(),
         }
 
+        None
+    }
+
+    fn visit_unary_expr(&mut self, unary_expr: &mut UnaryExpr, ctx: &mut CodeGenContext<'_>) -> Option<()> {
+        self.visit_expr(&mut unary_expr.expr, ctx);
+        self.emitop0(match &unary_expr.op {
+            UnaryOp::Negate => OpCode::Neg,
+            UnaryOp::Not => OpCode::Not,
+        });
         None
     }
 

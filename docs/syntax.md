@@ -65,6 +65,19 @@ print !a; // false
 print !b; // true
 ```
 
+## Unary operators
+
+```
+var a = true;
+a = !a; // false
+a = !a; // true
+a = !(!a); // true
+
+var b = 10;
+b = -(-b); // 10
+b = -b; // -10
+```
+
 ## Control flow
 
 ```

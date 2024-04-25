@@ -122,7 +122,9 @@ def_opcodes!(
   {Load2,       0x1E,   1,  "load_2"    , 0},
   {Load3,       0x1F,   1,  "load_3"    , 0},
   {Jmp,         0x22,   0,  "jmp"       , 2, true},
-  {Pop,         0x23,   -1,  "pop"      , 0},
+  {Pop,         0x23,  -1,  "pop"       , 0},
+  {Neg,         0x24,   0,  "neg"       , 0},
+  {Not,         0x25,   0,  "not"       , 0},
 );
 
 impl Display for OpCode {
