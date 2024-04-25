@@ -1,11 +1,20 @@
 # Opcodes
 
-| Symbol | Size in bits |   Type   |
+Symbols, their types and their sizes (in bits) :
+
+| Symbol | Size in bits | Type     |
 |--------|--------------|----------|
 | `u1`   | 8            | Unsigned |
 | `u2`   | 16           | Unsigned |
 | `u4`   | 32           | Unsigned |
 | `i2`   | 16           | Signed   |
+
+A `u2` is a 16-bit unsigned integer, created by reading two `u1` values and concatenating them together to a 16-bit
+unsigned integer by shifting the first `u1` value left by 8 bits and performing a bitwise OR with the second `u1`
+value (`(u1 << 8) | u1`). An `i2` value is read similarly, but the sign bit is considered.
+
+A `u4` is a 32-bit unsigned integer, created by reading four `u1` values and concatenating them together to a 32-bit
+unsigned integer (`(u1 << 24) | (u1 << 16) | (u1 << 8) | u1`).
 
 ## `add`
 

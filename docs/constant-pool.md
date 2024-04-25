@@ -1,9 +1,8 @@
 # The Constant Pool
 
-The constant_pool is a table of structures representing various string
-constants, class names, field names, and other constants that are
-referred to within the `YKBFile` structure and its substructures. The format of each `constant_pool` table entry is
-indicated by its first `tag` byte.
+The `constant_pool` is a table of structures representing various string constants, class names, field names, and other
+constants that are referred to within the `YKBFile` structure and its substructures. The format of each `constant_pool`
+table entry is indicated by its first `tag` byte.
 
 This document describes the type of entries in the constant pool. Each section for the entries in this document contains
 a table defining the format of the constant pool entry. Each entry starts with a `tag` value of 8-bit byte, followed by

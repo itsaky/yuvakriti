@@ -1,5 +1,9 @@
 # The YK Lexer
 
+This document describes the `YKLexer`, a component responsible for tokenizing source code written in the YuvaKriti
+programming language. The lexer's role is to read the source code and convert it into a stream of tokens that can be
+further processed by other parts of the compiler (like `YKParser`).
+
 ## Lexical tokens
 
 The following are the valid lexical tokens in YuvaKriti.
@@ -14,7 +18,9 @@ used as identifiers.
 - `if`
 - `else`
 - `while`
-- `nil`
+- `continue`
+- `break`
+- `null`
 - `return`
 - `true`
 - `false`
@@ -69,7 +75,7 @@ Example :
 ```
 // Keywords
 if true and false {
-    return nil;
+    return null;
 }
 
 // Operators
@@ -89,7 +95,8 @@ var str = "Hello, YuvaKriti!";
 ## Strings
 
 A string literal in YuvaKriti is a sequence of characters enclosed in double quotes (`"`). The characters within the
-quotes may include regular printable characters as well as escape sequences. Escape sequences start with a backslash (`\`)
+quotes may include regular printable characters as well as escape sequences. Escape sequences start with a
+backslash (`\`)
 and represent special characters or control sequences. The valid escape sequences are:
 
 - `\"`: Double quote (")
