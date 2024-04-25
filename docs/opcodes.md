@@ -1,10 +1,11 @@
 # Opcodes
 
-| Symbol | Size in bits |
-|--------|--------------|
-| `u1`   | 8            |
-| `u2`   | 16           |
-| `u4`   | 32           |
+| Symbol | Size in bits |   Type   |
+|--------|--------------|----------|
+| `u1`   | 8            | Unsigned |
+| `u2`   | 16           | Unsigned |
+| `u4`   | 32           | Unsigned |
+| `i2`   | 16           | Signed   |
 
 ## `add`
 
