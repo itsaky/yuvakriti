@@ -384,7 +384,7 @@ impl<'inst> CodeExecutor<'inst> {
                     trace!("VM::execute::pop()");
                     self.pop_operand();
                 }
-                
+
                 OpCode::Neg => {
                     trace!("VM::execute::neg()");
                     let value = self.pop_operand();

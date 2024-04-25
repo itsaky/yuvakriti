@@ -15,10 +15,12 @@
 
 use std::ops::Deref;
 
-use crate::ast::{ASTVisitor, UnaryExpr, UnaryOp};
+use crate::ast::ASTVisitor;
+use crate::ast::AssignExpr;
 use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
 use crate::ast::BlockStmt;
+use crate::ast::BreakStmt;
 use crate::ast::ClassDecl;
 use crate::ast::ContinueStmt;
 use crate::ast::ForStmt;
@@ -29,10 +31,12 @@ use crate::ast::IfStmt;
 use crate::ast::LiteralExpr;
 use crate::ast::PrintStmt;
 use crate::ast::Program;
+use crate::ast::UnaryExpr;
+use crate::ast::UnaryOp;
 use crate::ast::VarStmt;
 use crate::ast::Visitable;
 use crate::ast::WhileStmt;
-use crate::ast::{AssignExpr, BreakStmt};
+use crate::bytecode::attrs;
 use crate::bytecode::attrs::Attr;
 use crate::bytecode::attrs::Code;
 use crate::bytecode::attrs::CodeSize;
@@ -40,12 +44,13 @@ use crate::bytecode::bytes::AssertingByteConversions;
 use crate::bytecode::cp::ConstantEntry;
 use crate::bytecode::cp_info::NumberInfo;
 use crate::bytecode::cp_info::Utf8Info;
+use crate::bytecode::decls;
 use crate::bytecode::file::YKBFile;
+use crate::bytecode::opcode::get_opcode;
+use crate::bytecode::opcode::opcode_cmp;
 use crate::bytecode::opcode::opcode_cmpz;
 use crate::bytecode::opcode::OpCode;
 use crate::bytecode::opcode::OpCodeExt;
-use crate::bytecode::opcode::{get_opcode, opcode_cmp};
-use crate::bytecode::{attrs, decls};
 use crate::features::CompilerFeatures;
 use crate::messages;
 use crate::scope::Scope;
@@ -90,15 +95,6 @@ struct CodeGen<'a> {
     instructions: Vec<u8>,
 }
 
-struct CodeGenContext<'a> {
-    /// The scope in which [CodeGen] is visiting the AST.
-    pub scope: Scope<'a>,
-
-    /// A stack of [LoopContext]s, which keep track of information about the loops [CodeGen]
-    /// is currently visiting.
-    pub loops: &'a mut Vec<LoopContext>,
-}
-
 #[derive(Debug, PartialEq)]
 struct PendingJump {
     /// The type of jump.
@@ -110,7 +106,10 @@ struct PendingJump {
 
 #[derive(Debug, PartialEq, Clone)]
 enum JumpType {
+    /// Jump instruction for a `continue` statement in a loop.
     Continue,
+
+    /// Jump instruction for a `break` statement in a loop.
     Break,
 }
 
@@ -142,9 +141,12 @@ struct LoopContext {
     /// A list of [PendingJump]s, which contain information about jump instructions which must be
     /// patched after the bytecode for a loop has been written.
     pub pending_jumps: Vec<PendingJump>,
+
+    /// Whether [CodeGen] is writing bytecode for this loop's condition expression.
+    pub is_cond: bool,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq)]
 enum LoopType {
     For,
     While,
@@ -157,6 +159,7 @@ impl LoopContext {
             typ,
             label,
             pending_jumps: Vec::with_capacity(0),
+            is_cond: false,
         };
     }
 
@@ -174,6 +177,15 @@ impl LoopContext {
     }
 }
 
+struct CodeGenContext<'a> {
+    /// The scope in which [CodeGen] is visiting the AST.
+    pub scope: Scope<'a>,
+
+    /// A stack of [LoopContext]s, which keep track of information about the loops [CodeGen]
+    /// is currently visiting.
+    pub loops: &'a mut Vec<LoopContext>,
+}
+
 impl CodeGenContext<'_> {
     fn new(loops: &mut Vec<LoopContext>) -> CodeGenContext {
         return CodeGenContext {
@@ -188,12 +200,26 @@ impl CodeGenContext<'_> {
         return ctx;
     }
 
-    fn push_loop(&mut self, pc: CodeSize, typ: LoopType, label: Option<String>) {
-        self.loops.push(LoopContext::new(pc, typ, label))
+    fn push_loop(
+        &mut self,
+        pc: CodeSize,
+        typ: LoopType,
+        label: Option<String>,
+    ) -> &mut LoopContext {
+        self.loops.push(LoopContext::new(pc, typ, label));
+        self.loops.last_mut().unwrap()
     }
 
     fn pop_loop(&mut self) -> Option<LoopContext> {
         self.loops.pop()
+    }
+
+    fn peek_loop(&self) -> Option<&LoopContext> {
+        self.loops.last()
+    }
+
+    fn peek_loop_mut(&mut self) -> Option<&mut LoopContext> {
+        self.loops.last_mut()
     }
 
     fn find_loop(&mut self, label: Option<&IdentifierExpr>) -> Option<&mut LoopContext> {
@@ -227,8 +253,9 @@ impl<'a> CodeGen<'a> {
         };
     }
 
+    #[inline(always)]
     fn cp(&self) -> CodeSize {
-        return self.cp.clone();
+        return self.cp;
     }
 
     pub fn update_max_locals(&mut self, locals_effect: i8) {
@@ -285,6 +312,7 @@ impl<'a> CodeGen<'a> {
             | self.instructions[index as usize + 1] as i16;
     }
 
+    #[inline(always)]
     fn emitop(&mut self, opcode: OpCode) {
         self.emitop0(opcode);
     }
@@ -313,17 +341,28 @@ impl<'a> CodeGen<'a> {
         self.instructions[index as usize + 1] = d2;
     }
 
-    fn patch_u16(&mut self, index: CodeSize, data: u16) {
-        self.patch2(index, (data >> 8).as_u8(), data.as_u8());
-    }
-
+    #[inline(always)]
     fn jmptocp(&mut self, jmp_from: CodeSize) {
-        self.patch_u16(jmp_from + 1, (self.cp() - jmp_from - 3).as_u16());
+        self.patch_jmp(jmp_from, self.cp());
     }
 
-    fn patch_jmp(&mut self, jmp_from: CodeSize, jmp_to: CodeSize) {
-        let target = (jmp_to as i64 - jmp_from as i64 - 3) as i16;
-        self.patch2(jmp_from + 1, (target >> 8) as u8, target as u8);
+    #[inline(always)]
+    fn jmpdelta(from: CodeSize, to: CodeSize) -> i16 {
+        (to as i64 - from as i64 - 3) as i16
+    }
+
+    fn patch_jmp(&mut self, from: CodeSize, to: CodeSize) {
+        let delta = Self::jmpdelta(from, to);
+        if delta == 0 {
+            // jumps to the next instruction
+            self.instructions.remove(from as usize);
+            self.instructions.remove(from as usize);
+            self.instructions.remove(from as usize);
+            self.cp -= 3;
+            return;
+        }
+
+        self.patch2(from + 1, (delta >> 8) as u8, delta as u8);
     }
 
     fn emitjmp(&mut self, opcode: OpCode) -> CodeSize {
@@ -331,10 +370,14 @@ impl<'a> CodeGen<'a> {
         return self.cp() - 3;
     }
 
-    fn emitjmp1(&mut self, opcode: OpCode, target: CodeSize) -> CodeSize {
+    fn emitjmp1(&mut self, opcode: OpCode, target: CodeSize) {
+        if Self::jmpdelta(self.cp(), target) == 0 {
+            // jumps to the next instruction
+            return;
+        }
+
         let idx = self.emitjmp(opcode);
         self.patch_jmp(idx, target);
-        idx
     }
 
     fn reset(&mut self) {
@@ -375,6 +418,7 @@ impl<'a> CodeGen<'a> {
 
     fn resolve_jmp(&mut self, op: OpCode, idx: CodeSize) {
         let jmp_delta = self.get_i2(idx + 1);
+
         let target = idx.checked_add_signed(jmp_delta as i32 + 3).unwrap();
 
         // target address jumps out of execution
@@ -394,28 +438,25 @@ impl<'a> CodeGen<'a> {
         let t_delta = self.get_i2(target + 1);
         let t_addr = target.checked_add_signed(t_delta as i32 + 3).unwrap();
 
-        // target's target address jumps out of execution
-        if t_addr >= self.cp() {
-            return;
-        }
-
         // if both opcodes are same, or if the current jmp jumps to an unconditional jmp
         // then update this jmp to jump directly to where the target jmp jumps
         if op == t_op || t_op == OpCode::Jmp {
             self.patch_jmp(idx, t_addr);
         }
+
+        return;
     }
 
     /// Patch pending jumps in loops. `continue_at` is the address of the instruction at which the
     /// program continues when a [JumpType::Continue] jump is encountered. `break_to` is the address of
     /// the instruction at which the program continues when a [JumpType::Break] jump is encountered.
-    fn patch_pending(
+    fn patch_loop_jmps(
         &mut self,
-        pending: &Vec<PendingJump>,
+        pending: &mut Vec<PendingJump>,
         continue_at: CodeSize,
         break_to: CodeSize,
     ) {
-        for pending in pending {
+        for pending in pending.drain(0..) {
             match pending.typ {
                 JumpType::Continue => self.patch_jmp(pending.from, continue_at),
                 JumpType::Break => self.patch_jmp(pending.from, break_to),
@@ -447,6 +488,8 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
                 .constant_pool_mut()
                 .push(ConstantEntry::Utf8(Utf8Info::from(attrs::CODE)));
 
+            self.optimize();
+
             let code = Attr::Code(Code::with_insns(
                 self.max_stack,
                 self.max_locals,
@@ -454,8 +497,6 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
             ));
             self.file.attributes_mut().push(code);
         }
-
-        self.optimize();
 
         self.reset();
         None
@@ -590,8 +631,8 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
 
         let _break = self.cp();
 
-        let _loop = ctx.pop_loop().unwrap();
-        self.patch_pending(_loop.pending_jumps.as_ref(), _continue, _break);
+        let mut _loop = ctx.pop_loop().unwrap();
+        self.patch_loop_jmps(_loop.pending_jumps.as_mut(), _continue, _break);
 
         None
     }
@@ -689,8 +730,8 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
 
         let _break = self.cp();
 
-        if let Some(_loop) = ctx.pop_loop() {
-            self.patch_pending(_loop.pending_jumps.as_ref(), _continue, _break);
+        if let Some(mut _loop) = ctx.pop_loop() {
+            self.patch_loop_jmps(_loop.pending_jumps.as_mut(), _continue, _break);
         }
 
         None
@@ -842,7 +883,11 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
         None
     }
 
-    fn visit_unary_expr(&mut self, unary_expr: &mut UnaryExpr, ctx: &mut CodeGenContext<'_>) -> Option<()> {
+    fn visit_unary_expr(
+        &mut self,
+        unary_expr: &mut UnaryExpr,
+        ctx: &mut CodeGenContext<'_>,
+    ) -> Option<()> {
         self.visit_expr(&mut unary_expr.expr, ctx);
         self.emitop0(match &unary_expr.op {
             UnaryOp::Negate => OpCode::Neg,
