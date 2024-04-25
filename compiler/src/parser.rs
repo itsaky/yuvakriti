@@ -740,6 +740,15 @@ impl<R: Read> YKParser<'_, R> {
             .unwrap_or(self.position);
         self.current = self.next.take();
         self.next = self.lexer.next();
+
+        if self
+            .peek()
+            .map(|t| t.token_type == TokenType::Comment)
+            .unwrap_or(false)
+        {
+            return self.advance();
+        }
+
         return result;
     }
 
