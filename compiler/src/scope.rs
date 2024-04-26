@@ -109,4 +109,9 @@ impl Scope<'_> {
             .get_var_idx(name)
             .or_else(|| self.parent.and_then(|p| p.get_var_idx(name)));
     }
+
+    pub fn req_var_idx(&self, name: &String) -> &u16 {
+        self.get_var_idx(name)
+            .expect(&format!("Expected a variable with name: {}", name))
+    }
 }

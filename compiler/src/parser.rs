@@ -17,7 +17,6 @@ use std::cell::RefCell;
 use std::io::Read;
 use std::rc::Rc;
 
-use crate::ast::AssignExpr;
 use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
 use crate::ast::BlockStmt;
@@ -42,6 +41,7 @@ use crate::ast::UnaryExpr;
 use crate::ast::UnaryOp;
 use crate::ast::VarStmt;
 use crate::ast::WhileStmt;
+use crate::ast::{AssignExpr, CompoundAssignExpr};
 use crate::diagnostics::Diagnostic;
 use crate::diagnostics::DiagnosticHandler;
 use crate::diagnostics::DiagnosticKind;
@@ -486,13 +486,38 @@ impl<R: Read> YKParser<'_, R> {
     fn assign(&mut self) -> Option<Expr> {
         let mut left = self.or()?;
 
-        while self.tmatch(&TokenType::Eq).is_some() {
+        while let Some(tok) = self.tmatch_any(&[
+            TokenType::Eq,
+            TokenType::PlusEq,
+            TokenType::MinusEq,
+            TokenType::AsteriskEq,
+            TokenType::SlashEq,
+        ]) {
+            let is_cassign = matches!(
+                tok.token_type,
+                TokenType::PlusEq | TokenType::MinusEq | TokenType::AsteriskEq | TokenType::SlashEq
+            );
             let right = self.assign()?;
             let mut range = Range::new();
             range.set_start(&left.range());
             range.set_end(&right.range());
 
-            left = Expr::Assign(Box::from(AssignExpr::new(left, right, range)));
+            left = if is_cassign {
+                Expr::CompoundAssign(Box::from(CompoundAssignExpr::new(
+                    left,
+                    match &tok.token_type {
+                        TokenType::PlusEq => BinaryOp::Plus,
+                        TokenType::MinusEq => BinaryOp::Minus,
+                        TokenType::AsteriskEq => BinaryOp::Mult,
+                        TokenType::SlashEq => BinaryOp::Div,
+                        _ => unreachable!(),
+                    },
+                    right,
+                    range,
+                )))
+            } else {
+                Expr::Assign(Box::from(AssignExpr::new(left, right, range)))
+            };
         }
 
         return Some(left);

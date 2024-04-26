@@ -39,6 +39,16 @@ print a * b; // 200
 print a / b; // 0.5
 ```
 
+## Compound assignment
+
+```
+var a = 10;
+a += 2; // a = a + 2
+a -= 2; // a = a - 2
+a *= 2; // a = a * 2
+a /= 2; // a = a / 2
+```
+
 ## Comparison
 
 ```

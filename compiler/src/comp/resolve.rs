@@ -33,9 +33,9 @@ use crate::diagnostics::DiagnosticKind;
 use crate::location::Range;
 use crate::messages;
 use crate::scope::Scope;
-use crate::symtab::VarSym;
 use crate::symtab::LoopSym;
 use crate::symtab::Symbol;
+use crate::symtab::VarSym;
 
 /// The name resolution helper.
 pub struct Resolve<'inst> {

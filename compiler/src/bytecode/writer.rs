@@ -15,7 +15,7 @@
 
 use std::ops::Deref;
 
-use crate::ast::ASTVisitor;
+use crate::ast::{ASTVisitor, CompoundAssignExpr};
 use crate::ast::AssignExpr;
 use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
@@ -47,9 +47,9 @@ use crate::bytecode::cp_info::Utf8Info;
 use crate::bytecode::decls;
 use crate::bytecode::file::YKBFile;
 use crate::bytecode::opcode::get_opcode;
+use crate::bytecode::opcode::OpCode;
 use crate::bytecode::opcode::opcode_cmp;
 use crate::bytecode::opcode::opcode_cmpz;
-use crate::bytecode::opcode::OpCode;
 use crate::bytecode::opcode::OpCodeExt;
 use crate::features::CompilerFeatures;
 use crate::messages;
@@ -212,14 +212,6 @@ impl CodeGenContext<'_> {
 
     fn pop_loop(&mut self) -> Option<LoopContext> {
         self.loops.pop()
-    }
-
-    fn peek_loop(&self) -> Option<&LoopContext> {
-        self.loops.last()
-    }
-
-    fn peek_loop_mut(&mut self) -> Option<&mut LoopContext> {
-        self.loops.last_mut()
     }
 
     fn find_loop(&mut self, label: Option<&IdentifierExpr>) -> Option<&mut LoopContext> {
@@ -461,6 +453,36 @@ impl<'a> CodeGen<'a> {
                 JumpType::Continue => self.patch_jmp(pending.from, continue_at),
                 JumpType::Break => self.patch_jmp(pending.from, break_to),
             }
+        }
+    }
+
+    fn load_var(&mut self, idx: &u16) {
+        match idx {
+            0 => self.emitop0(OpCode::Load0),
+            1 => self.emitop0(OpCode::Load1),
+            2 => self.emitop0(OpCode::Load2),
+            3 => self.emitop0(OpCode::Load3),
+            _ => self.emit1_16(OpCode::Load, idx.clone()),
+        };
+    }
+
+    fn store_var(&mut self, idx: &u16) {
+        match idx {
+            0 => self.emitop0(OpCode::Store0),
+            1 => self.emitop0(OpCode::Store1),
+            2 => self.emitop0(OpCode::Store2),
+            3 => self.emitop0(OpCode::Store3),
+            _ => self.emit1_16(OpCode::Store, idx.clone()),
+        };
+    }
+
+    fn to_arith_opcode(&self, op: &BinaryOp) -> OpCode {
+        match op {
+            BinaryOp::Plus => OpCode::Add,
+            BinaryOp::Minus => OpCode::Sub,
+            BinaryOp::Mult => OpCode::Mult,
+            BinaryOp::Div => OpCode::Div,
+            _ => panic!("Unsupported binary arithmetic op: {:?}", op),
         }
     }
 }
@@ -744,28 +766,33 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
     ) -> Option<()> {
         if let Some(identifier) = assign_expr.target.Identifier() {
             self.visit_expr(&mut assign_expr.value, ctx);
-
-            if let Some(idx) = ctx.scope.get_var_idx(&identifier.name) {
-                let opcode = match &idx {
-                    0 => OpCode::Store0,
-                    1 => OpCode::Store1,
-                    2 => OpCode::Store2,
-                    3 => OpCode::Store3,
-                    _ => OpCode::Store,
-                };
-
-                if opcode != OpCode::Store {
-                    self.emitop(opcode);
-                } else {
-                    self.emit1_16(opcode, idx.clone());
-                }
-
-                return None;
-            }
+            self.store_var(ctx.scope.req_var_idx(&identifier.name));
+            return None;
         }
 
         // TODO: Support more assign expressions
         panic!("Unsupported assign expr: {:?}", assign_expr);
+    }
+
+    fn visit_compound_assign_expr(
+        &mut self,
+        compound_assign_expr: &mut CompoundAssignExpr,
+        ctx: &mut CodeGenContext<'_>,
+    ) -> Option<()> {
+        if let Some(identifier) = compound_assign_expr.target.Identifier() {
+            let idx = ctx.scope.req_var_idx(&identifier.name).clone();
+            self.load_var(&idx);
+            self.visit_expr(&mut compound_assign_expr.value, ctx);
+            self.emitop0(self.to_arith_opcode(&compound_assign_expr.op));
+            self.store_var(&idx);
+            return None;
+        }
+
+        // TODO: Support more assign expressions
+        panic!(
+            "Unsupported compound assign expr: {:?}",
+            compound_assign_expr
+        );
     }
 
     fn visit_binary_expr(
@@ -778,14 +805,7 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
                 self.visit_expr(&mut binary.left, ctx);
                 self.visit_expr(&mut binary.right, ctx);
 
-                let opcode = match binary.op {
-                    BinaryOp::Plus => OpCode::Add,
-                    BinaryOp::Minus => OpCode::Sub,
-                    BinaryOp::Mult => OpCode::Mult,
-                    BinaryOp::Div => OpCode::Div,
-                    _ => unreachable!(),
-                };
-
+                let opcode = self.to_arith_opcode(&binary.op);
                 self.emitop(opcode);
                 return None;
             }
@@ -910,18 +930,7 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
 
         if !typ.is_decl_name() && typ != &IdentifierType::Keyword {
             if let Some(idx) = ctx.scope.get_var_idx(&identifier.name) {
-                let opcode = match idx {
-                    0 => OpCode::Load0,
-                    1 => OpCode::Load1,
-                    2 => OpCode::Load2,
-                    3 => OpCode::Load3,
-                    _ => OpCode::Load,
-                };
-                if opcode != OpCode::Load {
-                    self.emitop(opcode);
-                } else {
-                    self.emit1_16(opcode, idx.clone());
-                }
+                self.load_var(idx);
             } else {
                 panic!("Variable not found: {}", &identifier.name);
             }

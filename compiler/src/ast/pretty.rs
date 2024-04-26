@@ -17,7 +17,6 @@ use std::fmt::Write;
 use std::ops::Add;
 
 use crate::ast::visitor::ASTVisitor;
-use crate::ast::ClassDecl;
 use crate::ast::Decl;
 use crate::ast::Expr;
 use crate::ast::ExprStmt;
@@ -35,6 +34,7 @@ use crate::ast::WhileStmt;
 use crate::ast::{AssignExpr, UnaryExpr};
 use crate::ast::{BinaryExpr, IdentifierExpr};
 use crate::ast::{BlockStmt, LiteralExpr};
+use crate::ast::{ClassDecl, CompoundAssignExpr};
 
 pub struct ASTPrinter<'a> {
     f: &'a mut dyn Write,
@@ -79,6 +79,10 @@ impl<'a> ASTPrinter<'a> {
             Expr::Assign(assign_expr) => {
                 self.f.write_str("assign ").unwrap();
                 self.visit_assign_expr(assign_expr, indent_level);
+            }
+            Expr::CompoundAssign(expr) => {
+                self.f.write_str("compound_assign ").unwrap();
+                self.visit_compound_assign_expr(expr, indent_level);
             }
             Expr::Binary(binary_expr) => {
                 self.f.write_str("binary ").unwrap();
@@ -342,6 +346,19 @@ impl<'a> ASTVisitor<usize, ()> for ASTPrinter<'a> {
         self.print_expr(&mut assign_expr.target, &mut indent_level.add(1));
         self.f.write_str(" = ").unwrap();
         self.print_expr(&mut assign_expr.value, &mut indent_level.add(1));
+        None
+    }
+
+    fn visit_compound_assign_expr(
+        &mut self,
+        compound_assign_expr: &mut CompoundAssignExpr,
+        indent_level: &mut usize,
+    ) -> Option<()> {
+        self.print_expr(&mut compound_assign_expr.target, &mut indent_level.add(1));
+        self.f
+            .write_str(&format!(" {}= ", compound_assign_expr.op))
+            .unwrap();
+        self.print_expr(&mut compound_assign_expr.value, &mut indent_level.add(1));
         None
     }
 

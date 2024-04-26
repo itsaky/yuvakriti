@@ -15,7 +15,6 @@
 
 use paste::paste;
 
-use crate::ast::BinaryExpr;
 use crate::ast::BlockStmt;
 use crate::ast::ClassDecl;
 use crate::ast::Decl;
@@ -38,6 +37,7 @@ use crate::ast::VarStmt;
 use crate::ast::Visitable;
 use crate::ast::WhileStmt;
 use crate::ast::{AssignExpr, BreakStmt, ContinueStmt};
+use crate::ast::{BinaryExpr, CompoundAssignExpr};
 
 /// ASTVisitor for visiting AST nodes. Methods in the visitor result an [Option<R>]. If the result
 /// is [Some], then the child nodes of the AST node will not be visited.
@@ -112,6 +112,7 @@ pub trait ASTVisitor<P, R> {
     fn default_visit_expr(&mut self, expr: &mut Expr, p: &mut P) -> Option<R> {
         match expr {
             Expr::Assign(expr) => self.visit_assign_expr(expr, p),
+            Expr::CompoundAssign(expr) => self.visit_compound_assign_expr(expr, p),
             Expr::Binary(binary_expr) => self.visit_binary_expr(binary_expr, p),
             Expr::Unary(unary_expr) => self.visit_unary_expr(unary_expr, p),
             Expr::FuncCall(func_call_expr) => self.visit_func_call_expr(func_call_expr, p),
@@ -337,6 +338,30 @@ pub trait ASTVisitor<P, R> {
         self.default_visit_assign_expr(assign_expr, p)
     }
     fn default_visit_assign_expr(&mut self, assign_expr: &mut AssignExpr, p: &mut P) -> Option<R> {
+        let r = self.visit_expr(&mut assign_expr.target, p);
+        if r.is_some() {
+            return r;
+        }
+
+        self.visit_expr(&mut assign_expr.value, p)
+    }
+
+    fn visit_compound_assign_expr(
+        &mut self,
+        compound_assign_expr: &mut CompoundAssignExpr,
+        p: &mut P,
+    ) -> Option<R> {
+        self.default_visit_compound_assign_expr(compound_assign_expr, p)
+    }
+    fn default_visit_compound_assign_expr(
+        &mut self,
+        assign_expr: &mut CompoundAssignExpr,
+        p: &mut P,
+    ) -> Option<R> {
+        let r = self.visit_expr(&mut assign_expr.target, p);
+        if r.is_some() {
+            return r;
+        }
         self.visit_expr(&mut assign_expr.value, p)
     }
 
@@ -459,6 +484,7 @@ impl_visitables!(
     BreakStmt,
     ContinueStmt,
     AssignExpr,
+    CompoundAssignExpr,
     BinaryExpr,
     UnaryExpr,
     FuncCallExpr,

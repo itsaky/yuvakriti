@@ -13,8 +13,9 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::location::Range;
 use std::fmt::{Display, Formatter};
+
+use crate::location::Range;
 
 #[derive(Eq, Debug)]
 pub struct Token {
@@ -47,14 +48,18 @@ pub enum TokenType {
     LBrace, // {
     RBrace, // }
 
-    Plus,      // +
-    Minus,     // -
-    Asterisk,  // *
-    Slash,     // /
-    Comma,     // ,
-    Dot,       // .
-    Colon,     // :
-    Semicolon, // ;
+    Plus,       // +
+    PlusEq,     // +=
+    Minus,      // -
+    MinusEq,    // -=
+    Asterisk,   // *
+    AsteriskEq, // *=
+    Slash,      // /
+    SlashEq,    // /=
+    Comma,      // ,
+    Dot,        // .
+    Colon,      // :
+    Semicolon,  // ;
 
     Bang,   // !
     Eq,     // =

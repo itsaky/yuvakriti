@@ -1,4 +1,3 @@
-mod matcher;
 pub mod result;
 
 #[macro_export]

@@ -34,7 +34,6 @@ use crate::features::CompilerFeatures;
 use crate::lexer::YKLexer;
 use crate::messages;
 use crate::parser::YKParser;
-use crate::tests::matcher::Bool;
 use crate::tests::matcher::Identifier;
 use crate::tests::matcher::Node;
 use crate::tests::matcher::Null;
@@ -43,6 +42,7 @@ use crate::tests::matcher::Program;
 use crate::tests::matcher::String;
 use crate::tests::matcher::Unary;
 use crate::tests::matcher::{Any, Binary};
+use crate::tests::matcher::{Bool, CompoundAssigment};
 use crate::tests::util::match_ast;
 use crate::tests::util::match_node;
 use crate::tests::util::parse;
@@ -604,4 +604,51 @@ fn test_labeled_while_stmt() {
             )],
         ),
     )
+}
+
+#[test]
+fn test_compound_assignment_operator() {
+    match_ast(
+        "var i = 0; i += 1;",
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Node(NodeType::VarStmt, boxed_vec![Identifier("i"), Number(0f64)]),
+                CompoundAssigment(BinaryOp::Plus, boxed_vec![Identifier("i"), Number(1f64)]),
+            ],
+        ),
+    );
+
+    match_ast(
+        "var i = 0; i -= 1;",
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Node(NodeType::VarStmt, boxed_vec![Identifier("i"), Number(0f64)]),
+                CompoundAssigment(BinaryOp::Minus, boxed_vec![Identifier("i"), Number(1f64)]),
+            ],
+        ),
+    );
+
+    match_ast(
+        "var i = 0; i *= 1;",
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Node(NodeType::VarStmt, boxed_vec![Identifier("i"), Number(0f64)]),
+                CompoundAssigment(BinaryOp::Mult, boxed_vec![Identifier("i"), Number(1f64)]),
+            ],
+        ),
+    );
+
+    match_ast(
+        "var i = 0; i /= 1;",
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Node(NodeType::VarStmt, boxed_vec![Identifier("i"), Number(0f64)]),
+                CompoundAssigment(BinaryOp::Div, boxed_vec![Identifier("i"), Number(1f64)]),
+            ],
+        ),
+    );
 }

@@ -13,7 +13,6 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::ast::AssignExpr;
 use crate::ast::AstNode;
 use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
@@ -41,6 +40,7 @@ use crate::ast::VarStmt;
 use crate::ast::Visitable;
 use crate::ast::WhileStmt;
 use crate::ast::{ASTVisitor, BreakStmt, ContinueStmt};
+use crate::ast::{AssignExpr, CompoundAssignExpr};
 use crate::location::Range;
 
 pub type Matcher = dyn ASTVisitor<(), bool>;
@@ -197,6 +197,14 @@ impl ASTVisitor<(), bool> for NoOpMatcher {
         Some(true)
     }
     #[allow(unused_variables)]
+    fn visit_compound_assign_expr(
+        &mut self,
+        compound_assign_expr: &mut CompoundAssignExpr,
+        p: &mut (),
+    ) -> Option<bool> {
+        Some(true)
+    }
+    #[allow(unused_variables)]
     fn visit_binary_expr(&mut self, binary_expr: &mut BinaryExpr, p: &mut ()) -> Option<bool> {
         Some(true)
     }
@@ -302,6 +310,47 @@ impl ASTVisitor<(), bool> for UnaryMatcher {
     }
 }
 
+pub struct CompoundAssignmentMatcher {
+    pub op: Option<BinaryOp>,
+    pub nested: Vec<Box<Matcher>>,
+}
+
+impl CompoundAssignmentMatcher {
+    pub fn new(op: Option<BinaryOp>, nested: Vec<Box<Matcher>>) -> CompoundAssignmentMatcher {
+        return CompoundAssignmentMatcher { op, nested };
+    }
+}
+
+impl ASTVisitor<(), bool> for CompoundAssignmentMatcher {
+    fn visit_compound_assign_expr(
+        &mut self,
+        compound_assign_expr: &mut CompoundAssignExpr,
+        _p: &mut (),
+    ) -> Option<bool> {
+        if let Some(op) = self.op.as_ref() {
+            assert_eq!(op, &compound_assign_expr.op);
+        }
+
+        if let Some(matcher) = self.nested.get_mut(0) {
+            mtch!(
+                compound_assign_expr.target,
+                matcher.as_mut(),
+                "Failed to match target"
+            );
+        }
+
+        if let Some(matcher) = self.nested.get_mut(1) {
+            mtch!(
+                compound_assign_expr.value,
+                matcher.as_mut(),
+                "Failed to match value"
+            );
+        }
+
+        Some(true)
+    }
+}
+
 #[allow(non_snake_case)]
 pub fn Program(decls: Vec<Box<Matcher>>, stmts: Vec<Box<Matcher>>) -> AssertingAstMatcher {
     let mut nested: Vec<Box<Matcher>> = vec![];
@@ -356,6 +405,11 @@ pub fn Binary(op: BinaryOp, nested: Vec<Box<Matcher>>) -> BinaryMatcher {
 #[allow(non_snake_case, unused)]
 pub fn Unary(op: UnaryOp, expr: Box<Matcher>) -> UnaryMatcher {
     return UnaryMatcher::new(Some(op), Some(expr));
+}
+
+#[allow(non_snake_case, unused)]
+pub fn CompoundAssigment(op: BinaryOp, nested: Vec<Box<Matcher>>) -> CompoundAssignmentMatcher {
+    return CompoundAssignmentMatcher::new(Some(op), nested);
 }
 
 impl ASTVisitor<(), bool> for AssertingAstMatcher {

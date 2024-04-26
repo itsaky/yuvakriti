@@ -393,7 +393,7 @@ impl<'inst> CodeExecutor<'inst> {
                         _ => {
                             // TODO: Should we warn the user?
                             Value::Number(0.0)
-                        },
+                        }
                     });
                 }
 
@@ -405,7 +405,7 @@ impl<'inst> CodeExecutor<'inst> {
                         _ => {
                             // TODO: Should we warn the user?
                             Value::Bool(false)
-                        },
+                        }
                     });
                 }
             }

@@ -143,6 +143,7 @@ pub enum NodeType {
     BreakStmt,
     ContinueStmt,
     AssignExpr,
+    CompoundAssignExpr,
     BinaryExpr,
     UnaryExpr,
     FuncCallExpr,
@@ -280,6 +281,7 @@ def_node!(WhileStmt {
 
 def_enum!(Expr {
     Assign: Box<AssignExpr>,
+    CompoundAssign: Box<CompoundAssignExpr>,
     Binary: Box<BinaryExpr>,
     Unary: Box<UnaryExpr>,
     FuncCall: Box<FuncCallExpr>,
@@ -290,6 +292,12 @@ def_enum!(Expr {
 
 def_node!(AssignExpr {
     target: Expr,
+    value: Expr,
+});
+
+def_node!(CompoundAssignExpr {
+    target: Expr,
+    op: BinaryOp,
     value: Expr,
 });
 
@@ -581,6 +589,7 @@ impl_node!(ReturnStmt);
 impl_node!(VarStmt);
 impl_node!(BlockStmt);
 impl_node!(AssignExpr);
+impl_node!(CompoundAssignExpr);
 impl_node!(BinaryExpr);
 impl_node!(UnaryExpr);
 impl_node!(FuncCallExpr);

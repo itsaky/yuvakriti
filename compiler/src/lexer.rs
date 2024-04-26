@@ -138,11 +138,20 @@ impl<R: Read> YKLexer<'_, R> {
                     '}' => Some(self.token(TokenType::RBrace)),
                     ',' => Some(self.token(TokenType::Comma)),
                     '.' => Some(self.token(TokenType::Dot)),
-                    '+' => Some(self.token(TokenType::Plus)),
-                    '-' => Some(self.token(TokenType::Minus)),
                     ':' => Some(self.token(TokenType::Colon)),
                     ';' => Some(self.token(TokenType::Semicolon)),
-                    '*' => Some(self.token(TokenType::Asterisk)),
+                    '+' => match self.cmatch('=') {
+                        true => Some(self.token(TokenType::PlusEq)),
+                        false => Some(self.token(TokenType::Plus)),
+                    },
+                    '-' => match self.cmatch('=') {
+                        true => Some(self.token(TokenType::MinusEq)),
+                        false => Some(self.token(TokenType::Minus)),
+                    },
+                    '*' => match self.cmatch('=') {
+                        true => Some(self.token(TokenType::AsteriskEq)),
+                        false => Some(self.token(TokenType::Asterisk)),
+                    },
 
                     '"' => self.string(),
 
@@ -166,11 +175,13 @@ impl<R: Read> YKLexer<'_, R> {
                         false => Some(self.token(TokenType::Lt)),
                     },
 
-                    '/' => {
-                        if let Some(next) = self.peek() {
-                            // comments start with a '//' token and span the entire line
-                            // we seek to the end of line and return a comment token
-                            if next == '/' {
+                    '/' => match self.cmatch('=') {
+                        true => Some(self.token(TokenType::SlashEq)),
+                        false => match self.cmatch('/') {
+                            false => Some(self.token(TokenType::Slash)),
+                            true => {
+                                // comments start with a '//' token and span the entire line
+                                // we seek to the end of line and return a comment token
                                 while self.peek().unwrap_or(NULL_CHAR) != '\n' && !self.is_at_eof()
                                 {
                                     // we ignore comments
@@ -179,10 +190,8 @@ impl<R: Read> YKLexer<'_, R> {
 
                                 return Some(self.token(TokenType::Comment));
                             }
-                        }
-
-                        return Some(self.token(TokenType::Slash));
-                    }
+                        },
+                    },
 
                     _ => {
                         self.report(DiagnosticKind::Error, messages::LEX_UNKNOWN_TOKEN);

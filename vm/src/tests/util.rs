@@ -65,6 +65,7 @@ pub fn eval(
 pub fn eval_arithmetic_src(src: &str) -> f64 {
     eval_src(src).Number().unwrap().clone()
 }
+
 pub fn eval_src(src: &str) -> Value {
     let mut vm = YKVM::new();
     let mut compiler = YKCompiler::new();

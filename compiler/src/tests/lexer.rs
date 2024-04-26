@@ -34,6 +34,13 @@ fn check_token_types<R: Read>(lexer: &mut YKLexer<R>, expected_tokens: &Vec<Toke
     assert_eq!(expected_tokens, &tokens);
 }
 
+fn match_token_types(src: &str, expected_tokens: &Vec<TokenType>) {
+    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut lexer = YKLexer::new(Cursor::new(src), diag_handler.clone());
+    check_token_types(&mut lexer, expected_tokens);
+    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
+}
+
 fn check_diagnostic_messages(
     diag_handler: &CollectingDiagnosticHandler,
     expected_messages: &Vec<&str>,
@@ -50,11 +57,8 @@ fn check_diagnostic_messages(
 
 #[test]
 fn test_simple_operator_lexing() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(Cursor::new("()[]{},.+-:;*!<> ="), diag_handler.clone());
-
-    check_token_types(
-        &mut lexer,
+    match_token_types(
+        "()[]{},.+-:;*!<> =",
         &vec![
             TokenType::LParen,
             TokenType::RParen,
@@ -75,20 +79,12 @@ fn test_simple_operator_lexing() {
             TokenType::Eq,
         ],
     );
-
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
 
 #[test]
 fn test_multiline_operator_lexing() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("()\n[]\n{}\n,\n.\n+\n-\n;\n*\n!\n<\n>\n=\n"),
-        diag_handler.clone(),
-    );
-
-    check_token_types(
-        &mut lexer,
+    match_token_types(
+        "()\n[]\n{}\n,\n.\n+\n-\n;\n*\n!\n<\n>\n=\n",
         &vec![
             TokenType::LParen,
             TokenType::RParen,
@@ -108,17 +104,12 @@ fn test_multiline_operator_lexing() {
             TokenType::Eq,
         ],
     );
-
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
 
 #[test]
 fn test_whitespaces_in_input_must_be_ignored() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(Cursor::new("( )[ ]{ }\t,\r.\n+-;*"), diag_handler.clone());
-
-    check_token_types(
-        &mut lexer,
+    match_token_types(
+        "( )[ ]{ }\t,\r.\n+-;*",
         &vec![
             TokenType::LParen,
             TokenType::RParen,
@@ -134,17 +125,12 @@ fn test_whitespaces_in_input_must_be_ignored() {
             TokenType::Asterisk,
         ],
     );
-
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
 
 #[test]
 fn test_multi_character_operator_lexing() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(Cursor::new("!===<=>="), diag_handler.clone());
-
-    check_token_types(
-        &mut lexer,
+    match_token_types(
+        "!===<=>=",
         &vec![
             TokenType::BangEq,
             TokenType::EqEq,
@@ -152,21 +138,14 @@ fn test_multi_character_operator_lexing() {
             TokenType::GtEq,
         ],
     );
-
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
 
 #[test]
 fn test_comments_are_ignored_by_default() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("!=\n// something not equal to \n=="),
-        diag_handler.clone(),
+    match_token_types(
+        "!=\n// something not equal to \n==",
+        &vec![TokenType::BangEq, TokenType::EqEq],
     );
-
-    check_token_types(&mut lexer, &vec![TokenType::BangEq, TokenType::EqEq]);
-
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
 
 #[test]
@@ -223,23 +202,13 @@ fn test_lexer_reports_unrecognized_tokens() {
 
 #[test]
 fn test_simple_identifier_lexing() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(Cursor::new("identifier"), diag_handler.clone());
-
-    check_token_types(&mut lexer, &vec![TokenType::Identifier]);
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
+    match_token_types("identifier", &vec![TokenType::Identifier]);
 }
 
 #[test]
 fn test_simple_keyword_lexing() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new("and or if else while null return true fun for false var this super print"),
-        diag_handler.clone(),
-    );
-
-    check_token_types(
-        &mut lexer,
+    match_token_types(
+        "and or if else while null return true fun for false var this super print",
         &vec![
             TokenType::And,
             TokenType::Or,
@@ -258,22 +227,12 @@ fn test_simple_keyword_lexing() {
             TokenType::Print,
         ],
     );
-
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
 
 #[test]
 fn test_mixed_identifier_and_keyword_lexing() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(
-        Cursor::new(
-            "and or andor if else ifelse while null return true fun identifier for false falseee",
-        ),
-        diag_handler.clone(),
-    );
-
-    check_token_types(
-        &mut lexer,
+    match_token_types(
+        "and or andor if else ifelse while null return true fun identifier for false falseee",
         &vec![
             TokenType::And,
             TokenType::Or,
@@ -292,78 +251,46 @@ fn test_mixed_identifier_and_keyword_lexing() {
             TokenType::Identifier,
         ],
     );
-
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
 
 #[test]
 fn test_numbers_in_identifiers() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(Cursor::new("and123"), diag_handler.clone());
-
-    check_token_types(&mut lexer, &vec![TokenType::Identifier]);
-
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
+    match_token_types("and123", &vec![TokenType::Identifier]);
 }
 
 #[test]
 fn test_identifiers_starting_with_number() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(Cursor::new("123and"), diag_handler.clone());
-
-    check_token_types(&mut lexer, &vec![TokenType::Number, TokenType::And]);
-
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
+    match_token_types("123and", &vec![TokenType::Number, TokenType::And]);
 }
 
 #[test]
 fn test_underscores_in_identifiers() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(Cursor::new("and_ a_nd _and"), diag_handler.clone());
-
-    check_token_types(
-        &mut lexer,
+    match_token_types(
+        "and_ a_nd _and",
         &vec![
             TokenType::Identifier,
             TokenType::Identifier,
             TokenType::Identifier,
         ],
     );
-
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
 
 #[test]
 fn test_integer_number() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(Cursor::new("123"), diag_handler.clone());
-
-    check_token_types(&mut lexer, &vec![TokenType::Number]);
-
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
+    match_token_types("123", &vec![TokenType::Number]);
 }
 
 #[test]
 fn test_decimal_number() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(Cursor::new("123.123"), diag_handler.clone());
-
-    check_token_types(&mut lexer, &vec![TokenType::Number]);
-
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
+    match_token_types("123.123", &vec![TokenType::Number]);
 }
 
 #[test]
 fn test_invalid_number() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(Cursor::new("123.123.123"), diag_handler.clone());
-
-    check_token_types(
-        &mut lexer,
+    match_token_types(
+        "123.123.123",
         &vec![TokenType::Number, TokenType::Dot, TokenType::Number],
     );
-
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
 }
 
 #[test]
@@ -493,4 +420,17 @@ fn test_unicode_escapes() {
     assert_eq!(8, token.range.end.index);
 
     assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
+}
+
+#[test]
+fn test_compound_assignment_operators() {
+    match_token_types(
+        "+= -= *= /=",
+        &vec![
+            TokenType::PlusEq,
+            TokenType::MinusEq,
+            TokenType::AsteriskEq,
+            TokenType::SlashEq,
+        ],
+    );
 }
