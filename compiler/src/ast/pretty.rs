@@ -180,6 +180,7 @@ impl<'a> ASTPrinter<'a> {
                 self.f.write_str("continue").unwrap();
                 self.visit_continue_stmt(cont, indent_level);
             }
+            Stmt::Empty(_) => {}
         }
         self.f.write_str(")").unwrap();
     }

@@ -13,7 +13,6 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::ast::AstNode;
 use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
 use crate::ast::BlockStmt;
@@ -41,6 +40,7 @@ use crate::ast::Visitable;
 use crate::ast::WhileStmt;
 use crate::ast::{ASTVisitor, BreakStmt, ContinueStmt};
 use crate::ast::{AssignExpr, CompoundAssignExpr};
+use crate::ast::{AstNode, EmptyStmt};
 use crate::location::Range;
 
 pub type Matcher = dyn ASTVisitor<(), bool>;
@@ -190,6 +190,10 @@ impl ASTVisitor<(), bool> for NoOpMatcher {
     }
     #[allow(unused_variables)]
     fn visit_while_stmt(&mut self, while_stmt: &mut WhileStmt, p: &mut ()) -> Option<bool> {
+        Some(true)
+    }
+    #[allow(unused_variables)]
+    fn visit_empty_stmt(&mut self, empty_stmt: &mut EmptyStmt, p: &mut ()) -> Option<bool> {
         Some(true)
     }
     #[allow(unused_variables)]
@@ -608,6 +612,11 @@ impl ASTVisitor<(), bool> for AssertingAstMatcher {
             );
         }
 
+        Some(true)
+    }
+
+    fn visit_empty_stmt(&mut self, empty_stmt: &mut EmptyStmt, _p: &mut ()) -> Option<bool> {
+        assert_eq!(&self.typ, &empty_stmt.typ());
         Some(true)
     }
 

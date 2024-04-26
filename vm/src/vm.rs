@@ -18,21 +18,21 @@ use std::cmp::max;
 use std::fmt::Display;
 
 use log::error;
-use log::Level::Trace;
 use log::log_enabled;
 use log::trace;
 use log::warn;
+use log::Level::Trace;
 
 use compiler::bytecode::attrs;
 use compiler::bytecode::attrs::Attr;
 use compiler::bytecode::attrs::Code;
 use compiler::bytecode::bytes::AssertingByteConversions;
-use compiler::bytecode::ConstantEntry;
-use compiler::bytecode::ConstantPool;
-use compiler::bytecode::CpSize;
 use compiler::bytecode::opcode;
 use compiler::bytecode::opcode::get_mnemonic;
 use compiler::bytecode::opcode::OpSize;
+use compiler::bytecode::ConstantEntry;
+use compiler::bytecode::ConstantPool;
+use compiler::bytecode::CpSize;
 use compiler::bytecode::YKBFile;
 
 /// The YuvaKriti Virtual Machine
@@ -458,7 +458,7 @@ impl<'inst> CodeExecutor<'inst> {
         if result.is_some() {
             trace!("VM::execute(): result: {:?}", result);
         }
-        
+
         self.variables.clear();
         self.operands.clear();
 

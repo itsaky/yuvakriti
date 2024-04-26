@@ -12,15 +12,22 @@
  * You should have received a copy of the GNU General Public License along with this
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
+
+use log::trace;
+
 use crate::ast::ASTVisitor;
 use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
+use crate::ast::BlockStmt;
+use crate::ast::Decl;
+use crate::ast::EmptyStmt;
 use crate::ast::Expr;
+use crate::ast::IfStmt;
 use crate::ast::LiteralExpr;
 use crate::ast::Spanned;
+use crate::ast::Stmt;
 use crate::ast::UnaryExpr;
 use crate::ast::UnaryOp;
-use log::trace;
 
 /// Helper for constant folding in the compiler.
 pub struct ConstFold;
@@ -31,9 +38,55 @@ impl ConstFold {
         ConstFold {}
     }
 
+    /// Try to fold the given statement and return a [Stmt] if the constant folding was
+    /// successful.
+    pub fn try_fold_stmt(&self, stmt: &Stmt) -> Option<Stmt> {
+        match stmt {
+            Stmt::If(_if) => self.fold_if(_if),
+            Stmt::Block(block) => self.fold_block(block),
+            _ => None,
+        }
+    }
+
+    pub fn fold_block(&self, block: &BlockStmt) -> Option<Stmt> {
+        let len = block.decls.len();
+        if len == 0 {
+            return Some(Stmt::Empty(EmptyStmt::new(block.range().clone())));
+        } else if len == 1 {
+            if let Decl::Stmt(stmt) = block.decls.get(0).unwrap() {
+                if let Some(folded) = self.try_fold_stmt(stmt) {
+                    return Some(folded);
+                }
+                return Some(stmt.clone());
+            }
+        }
+
+        None
+    }
+
+    pub fn fold_if(&self, _if: &IfStmt) -> Option<Stmt> {
+        if let Some(cond) = _if.condition.Literal().and_then(|l| l.Bool()).map(|b| b.0) {
+            let mut stmt = if cond {
+                Stmt::Block(_if.then_branch.clone())
+            } else if let Some(else_branch) = &_if.else_branch {
+                Stmt::Block(else_branch.clone())
+            } else {
+                Stmt::Empty(EmptyStmt::new(_if.range().clone()))
+            };
+
+            if let Some(folded) = self.try_fold_stmt(&stmt) {
+                stmt = folded;
+            }
+
+            return Some(stmt);
+        }
+
+        None
+    }
+
     /// Try to fold the given expression and return an [Expr] if the constant folding was
     /// successful.
-    pub fn try_fold(&self, expr: &Expr) -> Option<Expr> {
+    pub fn try_fold_expr(&self, expr: &Expr) -> Option<Expr> {
         match expr {
             Expr::Binary(binary) => self.fold_binary(binary.as_ref()),
             Expr::Unary(unary) => self.fold_unary(unary.as_ref()),
@@ -45,7 +98,7 @@ impl ConstFold {
     /// folding was successful or [None] if it failed.
     pub fn fold_unary(&self, unary: &UnaryExpr) -> Option<Expr> {
         let mut expr = &unary.expr;
-        let folded = self.try_fold(expr);
+        let folded = self.try_fold_expr(expr);
         if let Some(exp) = &folded {
             expr = exp;
         }
@@ -78,13 +131,13 @@ impl ConstFold {
     /// folding was successful or [None] if it failed.
     pub fn fold_binary(&self, binary: &BinaryExpr) -> Option<Expr> {
         let mut left = &binary.left;
-        let left_folded = self.try_fold(left);
+        let left_folded = self.try_fold_expr(left);
         if let Some(exp) = &left_folded {
             left = exp;
         }
 
         let mut right = &binary.right;
-        let right_folded = self.try_fold(right);
+        let right_folded = self.try_fold_expr(right);
         if let Some(exp) = &right_folded {
             right = exp;
         }
@@ -285,8 +338,14 @@ impl ConstFold {
 }
 
 impl ASTVisitor<(), ()> for ConstFold {
+    fn visit_stmt(&mut self, stmt: &mut Stmt, p: &mut ()) -> Option<()> {
+        if let Some(folded) = self.try_fold_stmt(stmt) {
+            *stmt = folded;
+        }
+        self.default_visit_stmt(stmt, p)
+    }
     fn visit_expr(&mut self, expr: &mut Expr, p: &mut ()) -> Option<()> {
-        if let Some(folded) = self.try_fold(expr) {
+        if let Some(folded) = self.try_fold_expr(expr) {
             *expr = folded;
         }
         self.default_visit_expr(expr, p)

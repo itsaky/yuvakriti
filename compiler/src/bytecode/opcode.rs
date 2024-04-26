@@ -68,7 +68,7 @@ macro_rules! def_opcodes {
                 _ => unreachable!("Unknown/unsupported opcode: {:?}", code),
             }
         }
-        
+
         $(
             #[allow(non_upper_case_globals)]
             pub const $name: OpSize = $code;

@@ -13,11 +13,12 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use crate::ast::NodeType;
 use crate::boxed_vec;
 use crate::features::CompilerFeatures;
-use crate::tests::matcher::Number;
 use crate::tests::matcher::Program;
 use crate::tests::matcher::{Bool, String};
+use crate::tests::matcher::{Node, Number};
 use crate::tests::util::match_node;
 use crate::tests::util::parse_attr;
 
@@ -48,4 +49,91 @@ fn test_bool_op_expr_binary_fold() {
             &mut Program(vec![], boxed_vec![expected]),
         );
     }
+}
+
+#[test]
+fn test_if_stmt_folding() {
+    let mut features = CompilerFeatures::default();
+    features.const_folding = true;
+
+    match_node(
+        &mut parse_attr(
+            "if false { print \"Never executed\"; } print \"Always executed\"; ",
+            true,
+            &features,
+        ),
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Node(NodeType::EmptyStmt, vec![]),
+                Node(
+                    NodeType::PrintStmt,
+                    boxed_vec![String("\"Always executed\"")]
+                )
+            ],
+        ),
+    );
+
+    match_node(
+        &mut parse_attr(
+            "if true { print \"Always executed\"; } print \"Always executed\"; ",
+            true,
+            &features,
+        ),
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Node(
+                    NodeType::PrintStmt,
+                    boxed_vec![String("\"Always executed\"")]
+                ),
+                Node(
+                    NodeType::PrintStmt,
+                    boxed_vec![String("\"Always executed\"")]
+                )
+            ],
+        ),
+    );
+
+    match_node(
+        &mut parse_attr(
+            "if true { print \"Always executed\"; } else { print \"Never executed\"; } print \"Always executed\"; ",
+            true,
+            &features,
+        ),
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Node(
+                    NodeType::PrintStmt,
+                    boxed_vec![String("\"Always executed\"")]
+                ),
+                Node(
+                    NodeType::PrintStmt,
+                    boxed_vec![String("\"Always executed\"")]
+                )
+            ],
+        ),
+    );
+
+    match_node(
+        &mut parse_attr(
+            "if false { print \"Never executed\"; } else { print \"Always executed\"; } print \"Always executed\"; ",
+            true,
+            &features,
+        ),
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Node(
+                    NodeType::PrintStmt,
+                    boxed_vec![String("\"Always executed\"")]
+                ),
+                Node(
+                    NodeType::PrintStmt,
+                    boxed_vec![String("\"Always executed\"")]
+                )
+            ],
+        ),
+    );
 }

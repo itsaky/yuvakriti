@@ -15,7 +15,6 @@
 
 use paste::paste;
 
-use crate::ast::BlockStmt;
 use crate::ast::ClassDecl;
 use crate::ast::Decl;
 use crate::ast::Expr;
@@ -38,6 +37,7 @@ use crate::ast::Visitable;
 use crate::ast::WhileStmt;
 use crate::ast::{AssignExpr, BreakStmt, ContinueStmt};
 use crate::ast::{BinaryExpr, CompoundAssignExpr};
+use crate::ast::{BlockStmt, EmptyStmt};
 
 /// ASTVisitor for visiting AST nodes. Methods in the visitor result an [Option<R>]. If the result
 /// is [Some], then the child nodes of the AST node will not be visited.
@@ -103,6 +103,7 @@ pub trait ASTVisitor<P, R> {
             Stmt::Block(block_stmt) => self.visit_block_stmt(block_stmt, p),
             Stmt::Break(br) => self.visit_break_stmt(br, p),
             Stmt::Continue(cont) => self.visit_continue_stmt(cont, p),
+            Stmt::Empty(empty) => self.visit_empty_stmt(empty, p),
         }
     }
 
@@ -334,6 +335,13 @@ pub trait ASTVisitor<P, R> {
         self.visit_block_stmt(&mut while_stmt.body, p)
     }
 
+    fn visit_empty_stmt(&mut self, empty_stmt: &mut EmptyStmt, p: &mut P) -> Option<R> {
+        self.default_visit_empty_stmt(empty_stmt, p)
+    }
+    fn default_visit_empty_stmt(&mut self, _empty_stmt: &mut EmptyStmt, _p: &mut P) -> Option<R> {
+        None
+    }
+
     fn visit_assign_expr(&mut self, assign_expr: &mut AssignExpr, p: &mut P) -> Option<R> {
         self.default_visit_assign_expr(assign_expr, p)
     }
@@ -483,6 +491,7 @@ impl_visitables!(
     WhileStmt,
     BreakStmt,
     ContinueStmt,
+    EmptyStmt,
     AssignExpr,
     CompoundAssignExpr,
     BinaryExpr,

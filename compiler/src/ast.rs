@@ -142,6 +142,7 @@ pub enum NodeType {
     BlockStmt,
     BreakStmt,
     ContinueStmt,
+    EmptyStmt,
     AssignExpr,
     CompoundAssignExpr,
     BinaryExpr,
@@ -227,7 +228,10 @@ def_enum!(Stmt {
     Block: BlockStmt,
     Break: BreakStmt,
     Continue: ContinueStmt,
+    Empty: EmptyStmt,
 });
+
+def_node!(EmptyStmt {});
 
 def_node!(BreakStmt {
     label: Option<IdentifierExpr>
@@ -588,6 +592,7 @@ impl_node!(PrintStmt);
 impl_node!(ReturnStmt);
 impl_node!(VarStmt);
 impl_node!(BlockStmt);
+impl_node!(EmptyStmt);
 impl_node!(AssignExpr);
 impl_node!(CompoundAssignExpr);
 impl_node!(BinaryExpr);
