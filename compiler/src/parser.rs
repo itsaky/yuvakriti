@@ -17,7 +17,6 @@ use std::cell::RefCell;
 use std::io::Read;
 use std::rc::Rc;
 
-use crate::ast::{AssignExpr, CompoundAssignExpr};
 use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
 use crate::ast::BlockStmt;
@@ -42,6 +41,7 @@ use crate::ast::UnaryExpr;
 use crate::ast::UnaryOp;
 use crate::ast::VarStmt;
 use crate::ast::WhileStmt;
+use crate::ast::{ArrayExpr, AssignExpr, CompoundAssignExpr};
 use crate::diagnostics::Diagnostic;
 use crate::diagnostics::DiagnosticHandler;
 use crate::diagnostics::DiagnosticKind;
@@ -148,12 +148,12 @@ impl<R: Read> YKParser<'_, R> {
     /// Returns the next declaration in the input source.
     fn decl(&mut self) -> Option<Decl> {
         let token = self.peek();
-        
+
         if token.is_some_and(|t| &t.token_type == &TokenType::Semicolon) {
             self.advance();
             return None;
         }
-        
+
         return match token {
             Some(token) => match token.token_type {
                 TokenType::Fun => self.fun_decl(),
@@ -628,6 +628,7 @@ impl<R: Read> YKParser<'_, R> {
                     token.range,
                 ))),
                 TokenType::LParen => self.grouping(),
+                TokenType::LBrack => self.array(token),
                 _ => {
                     self.report(DiagnosticKind::Error, messages::PARS_EXPECTED_EXPR);
                     None
@@ -637,6 +638,42 @@ impl<R: Read> YKParser<'_, R> {
             self.report(DiagnosticKind::Error, messages::PARS_UNEXPECTED_EOF);
             None
         }
+    }
+
+    fn array(&mut self, token: Token) -> Option<Expr> {
+        // empty array
+        if self.tmatch(&TokenType::RBrack).is_some() {
+            return Some(Expr::Array(ArrayExpr::new(vec![], token.range)));
+        }
+
+        let expr = self.expr();
+        if expr.is_none() {
+            self.report(DiagnosticKind::Error, messages::PARS_EXPECTED_EXPR);
+            return None;
+        }
+
+        let mut exprs = vec![expr.unwrap()];
+
+        let mut comma_without_expr = false;
+        while self.tmatch(&TokenType::Comma).is_some() {
+            if self.tmatch(&TokenType::RBrack).is_some() {
+                return Some(Expr::Array(ArrayExpr::new(exprs, token.range)));
+            }
+
+            let expr = self.expr();
+            if expr.is_some() {
+                exprs.push(expr.unwrap());
+                continue;
+            } else if comma_without_expr {
+                self.report(DiagnosticKind::Error, messages::PARS_EXPECTED_EXPR);
+            }
+
+            comma_without_expr = true;
+        }
+
+        self.consume(TokenType::RBrack, &err_exp_sym("]"));
+
+        return Some(Expr::Array(ArrayExpr::new(exprs, token.range)));
     }
 
     fn gen_binary_expr(

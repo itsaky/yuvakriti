@@ -13,7 +13,6 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
 use crate::ast::BlockStmt;
 use crate::ast::ClassDecl;
@@ -39,6 +38,7 @@ use crate::ast::VarStmt;
 use crate::ast::Visitable;
 use crate::ast::WhileStmt;
 use crate::ast::{ASTVisitor, BreakStmt, ContinueStmt};
+use crate::ast::{ArrayExpr, BinaryExpr};
 use crate::ast::{AssignExpr, CompoundAssignExpr};
 use crate::ast::{AstNode, EmptyStmt};
 use crate::location::Range;
@@ -236,7 +236,6 @@ impl ASTVisitor<(), bool> for NoOpMatcher {
     fn visit_grouping_expr(&mut self, grouping: &mut GroupingExpr, _p: &mut ()) -> Option<bool> {
         Some(true)
     }
-
     #[allow(unused_variables)]
     fn visit_identifier_expr(
         &mut self,
@@ -248,6 +247,11 @@ impl ASTVisitor<(), bool> for NoOpMatcher {
 
     #[allow(unused_variables)]
     fn visit_literal_expr(&mut self, literal: &mut LiteralExpr, _p: &mut ()) -> Option<bool> {
+        Some(true)
+    }
+
+    #[allow(unused_variables)]
+    fn visit_array_expr(&mut self, array_expr: &mut ArrayExpr, p: &mut ()) -> Option<bool> {
         Some(true)
     }
 }
@@ -371,6 +375,11 @@ pub fn Node(typ: NodeType, nested: Vec<Box<Matcher>>) -> AssertingAstMatcher {
 #[allow(non_snake_case, unused)]
 pub fn Empty() -> AssertingAstMatcher {
     return AssertingAstMatcher::new(NodeType::EmptyStmt, vec![]);
+}
+
+#[allow(non_snake_case, unused)]
+pub fn Array(nested: Vec<Box<Matcher>>) -> AssertingAstMatcher {
+    return AssertingAstMatcher::new(NodeType::ArrayExpr, nested);
 }
 
 #[allow(non_snake_case, unused)]
@@ -653,6 +662,21 @@ impl ASTVisitor<(), bool> for AssertingAstMatcher {
                 matcher.as_mut(),
                 "Failed to match grouping expr"
             );
+        }
+
+        Some(true)
+    }
+
+    fn visit_array_expr(&mut self, array_expr: &mut ArrayExpr, _p: &mut ()) -> Option<bool> {
+        assert_eq!(&self.typ, &array_expr.typ());
+        for i in 0..array_expr.elements.len() {
+            if let Some(matcher) = self.nested.get_mut(i) {
+                mtch_o!(
+                    array_expr.elements.get_mut(i),
+                    matcher.as_mut(),
+                    "Failed to match element"
+                );
+            }
         }
 
         Some(true)

@@ -30,22 +30,27 @@ use crate::ast::Visitable;
 use crate::boxed_vec;
 use crate::comp::YKCompiler;
 use crate::diagnostics;
+use crate::diagnostics::DiagnosticKind;
 use crate::features::CompilerFeatures;
 use crate::lexer::YKLexer;
 use crate::messages;
 use crate::parser::YKParser;
+use crate::tests::matcher::Any;
+use crate::tests::matcher::Array;
+use crate::tests::matcher::Binary;
+use crate::tests::matcher::Bool;
+use crate::tests::matcher::CompoundAssigment;
+use crate::tests::matcher::Identifier;
 use crate::tests::matcher::Node;
 use crate::tests::matcher::Null;
 use crate::tests::matcher::Number;
 use crate::tests::matcher::Program;
 use crate::tests::matcher::String;
 use crate::tests::matcher::Unary;
-use crate::tests::matcher::{Any, Binary};
-use crate::tests::matcher::{Bool, CompoundAssigment};
-use crate::tests::matcher::{Empty, Identifier};
 use crate::tests::util::match_ast;
 use crate::tests::util::match_node;
 use crate::tests::util::parse;
+use crate::tests::util::parse_1;
 
 #[test]
 fn test_simple_var_decl() {
@@ -666,6 +671,81 @@ fn test_empty_statements() {
                 NodeType::PrintStmt,
                 boxed_vec![String("\"Something\"")]
             ),],
+        ),
+    );
+}
+
+#[test]
+fn test_array_expr() {
+    match_ast(
+        "[1, 2, 3];",
+        &mut Program(
+            vec![],
+            boxed_vec![Array(boxed_vec![Number(1f64), Number(2f64), Number(3f64)])],
+        ),
+    );
+
+    // comma at the end
+    match_ast(
+        "[1, 2, 3,];",
+        &mut Program(
+            vec![],
+            boxed_vec![Array(boxed_vec![Number(1f64), Number(2f64), Number(3f64)])],
+        ),
+    );
+
+    // double comma at the beginning
+    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut program = parse_1("[1, 2, 3,,];", diag_handler.clone());
+    let diags = &diag_handler.borrow().diagnostics;
+    assert!(!diags.is_empty());
+    assert_eq!(1, diags.len());
+
+    let exp = diags.get(0).expect("Diagnostic expected");
+    assert_eq!(DiagnosticKind::Error, exp.kind);
+    assert_eq!(messages::PARS_EXPECTED_EXPR, exp.message);
+
+    match_node(
+        &mut program,
+        &mut Program(
+            vec![],
+            boxed_vec![Array(boxed_vec![Number(1f64), Number(2f64), Number(3f64)])],
+        ),
+    )
+}
+
+#[test]
+fn test_arr_var_decl() {
+    match_ast(
+        "var i = [1, 2, 3];",
+        &mut Program(
+            vec![],
+            boxed_vec![Node(
+                NodeType::VarStmt,
+                boxed_vec![
+                    Identifier("i"),
+                    Array(boxed_vec![Number(1f64), Number(2f64), Number(3f64)])
+                ]
+            )],
+        ),
+    );
+
+    match_ast(
+        "var i = [1, 2, 3, 4, ];",
+        &mut Program(
+            vec![],
+            boxed_vec![Node(
+                NodeType::VarStmt,
+                boxed_vec![
+                    Identifier("i"),
+                    Array(boxed_vec![
+                        Number(1f64),
+                        Number(2f64),
+                        Number(3f64),
+                        Number(4f64)
+                    ])
+                ]
+            )],
         ),
     );
 }

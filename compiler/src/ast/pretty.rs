@@ -17,7 +17,6 @@ use std::fmt::Write;
 use std::ops::Add;
 
 use crate::ast::visitor::ASTVisitor;
-use crate::ast::Decl;
 use crate::ast::Expr;
 use crate::ast::ExprStmt;
 use crate::ast::ForStmt;
@@ -31,6 +30,7 @@ use crate::ast::ReturnStmt;
 use crate::ast::Stmt;
 use crate::ast::VarStmt;
 use crate::ast::WhileStmt;
+use crate::ast::{ArrayExpr, Decl};
 use crate::ast::{AssignExpr, UnaryExpr};
 use crate::ast::{BinaryExpr, IdentifierExpr};
 use crate::ast::{BlockStmt, LiteralExpr};
@@ -107,6 +107,10 @@ impl<'a> ASTPrinter<'a> {
             Expr::Literal(literal) => {
                 self.f.write_str("literal ").unwrap();
                 self.visit_literal_expr(literal, indent_level);
+            }
+            Expr::Array(arr) => {
+                self.f.write_str("array ").unwrap();
+                self.visit_array_expr(arr, indent_level);
             }
         }
         self.f.write_str(")").unwrap();
@@ -201,7 +205,6 @@ impl<'a> ASTVisitor<usize, ()> for ASTPrinter<'a> {
         self.f.write_str(")").unwrap();
         None
     }
-
     fn visit_stmt(&mut self, stmt: &mut Stmt, p: &mut usize) -> Option<()> {
         self.print_stmt(stmt, p);
         None
@@ -437,6 +440,15 @@ impl<'a> ASTVisitor<usize, ()> for ASTPrinter<'a> {
             ))
             .unwrap();
 
+        None
+    }
+
+    fn visit_array_expr(&mut self, array_expr: &mut ArrayExpr, p: &mut usize) -> Option<()> {
+        self.f.write_char('[').unwrap();
+        for i in 0..array_expr.elements.len() {
+            self.print_expr(&mut array_expr.elements[i], p);
+        }
+        self.f.write_char(']').unwrap();
         None
     }
 }

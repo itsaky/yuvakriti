@@ -15,7 +15,6 @@
 
 use paste::paste;
 
-use crate::ast::ClassDecl;
 use crate::ast::Decl;
 use crate::ast::Expr;
 use crate::ast::ExprStmt;
@@ -35,6 +34,7 @@ use crate::ast::UnaryExpr;
 use crate::ast::VarStmt;
 use crate::ast::Visitable;
 use crate::ast::WhileStmt;
+use crate::ast::{ArrayExpr, ClassDecl};
 use crate::ast::{AssignExpr, BreakStmt, ContinueStmt};
 use crate::ast::{BinaryExpr, CompoundAssignExpr};
 use crate::ast::{BlockStmt, EmptyStmt};
@@ -114,14 +114,13 @@ pub trait ASTVisitor<P, R> {
         match expr {
             Expr::Assign(expr) => self.visit_assign_expr(expr, p),
             Expr::CompoundAssign(expr) => self.visit_compound_assign_expr(expr, p),
-            Expr::Binary(binary_expr) => self.visit_binary_expr(binary_expr, p),
-            Expr::Unary(unary_expr) => self.visit_unary_expr(unary_expr, p),
-            Expr::FuncCall(func_call_expr) => self.visit_func_call_expr(func_call_expr, p),
-            Expr::MemberAccess(member_access_expr) => {
-                self.visit_member_access_expr(member_access_expr, p)
-            }
+            Expr::Binary(bin) => self.visit_binary_expr(bin, p),
+            Expr::Unary(un) => self.visit_unary_expr(un, p),
+            Expr::FuncCall(func) => self.visit_func_call_expr(func, p),
+            Expr::MemberAccess(acc) => self.visit_member_access_expr(acc, p),
             Expr::Identifier(exp) => self.visit_identifier_expr(exp, p),
             Expr::Literal(exp) => self.visit_literal_expr(exp, p),
+            Expr::Array(arr) => self.visit_array_expr(arr, p),
         }
     }
 
@@ -457,6 +456,20 @@ pub trait ASTVisitor<P, R> {
     fn default_visit_literal(&mut self, _literal_expr: &mut LiteralExpr, _p: &mut P) -> Option<R> {
         None
     }
+
+    fn visit_array_expr(&mut self, array_expr: &mut ArrayExpr, p: &mut P) -> Option<R> {
+        self.default_visit_array_expr(array_expr, p)
+    }
+    fn default_visit_array_expr(&mut self, array_expr: &mut ArrayExpr, p: &mut P) -> Option<R> {
+        for i in 0..array_expr.elements.len() {
+            let element = array_expr.elements.get_mut(i).unwrap();
+            let r = self.visit_expr(element, p);
+            if r.is_some() {
+                return r;
+            }
+        }
+        None
+    }
 }
 
 macro_rules! impl_visitable {
@@ -501,4 +514,5 @@ impl_visitables!(
     GroupingExpr,
     IdentifierExpr,
     LiteralExpr,
+    ArrayExpr,
 );
