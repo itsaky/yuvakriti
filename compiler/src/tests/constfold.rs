@@ -16,8 +16,8 @@
 use crate::ast::NodeType;
 use crate::boxed_vec;
 use crate::features::CompilerFeatures;
-use crate::tests::matcher::Program;
 use crate::tests::matcher::{Bool, String};
+use crate::tests::matcher::{Empty, Program};
 use crate::tests::matcher::{Node, Number};
 use crate::tests::util::match_node;
 use crate::tests::util::parse_attr;
@@ -65,7 +65,7 @@ fn test_if_stmt_folding() {
         &mut Program(
             vec![],
             boxed_vec![
-                Node(NodeType::EmptyStmt, vec![]),
+                Empty(),
                 Node(
                     NodeType::PrintStmt,
                     boxed_vec![String("\"Always executed\"")]

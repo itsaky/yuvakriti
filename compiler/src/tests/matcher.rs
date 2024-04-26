@@ -369,6 +369,11 @@ pub fn Node(typ: NodeType, nested: Vec<Box<Matcher>>) -> AssertingAstMatcher {
 }
 
 #[allow(non_snake_case, unused)]
+pub fn Empty() -> AssertingAstMatcher {
+    return AssertingAstMatcher::new(NodeType::EmptyStmt, vec![]);
+}
+
+#[allow(non_snake_case, unused)]
 pub fn Any() -> NoOpMatcher {
     return NoOpMatcher::new();
 }

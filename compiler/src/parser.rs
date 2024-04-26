@@ -17,6 +17,7 @@ use std::cell::RefCell;
 use std::io::Read;
 use std::rc::Rc;
 
+use crate::ast::{AssignExpr, CompoundAssignExpr};
 use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
 use crate::ast::BlockStmt;
@@ -41,7 +42,6 @@ use crate::ast::UnaryExpr;
 use crate::ast::UnaryOp;
 use crate::ast::VarStmt;
 use crate::ast::WhileStmt;
-use crate::ast::{AssignExpr, CompoundAssignExpr};
 use crate::diagnostics::Diagnostic;
 use crate::diagnostics::DiagnosticHandler;
 use crate::diagnostics::DiagnosticKind;
@@ -139,10 +139,7 @@ impl<R: Read> YKParser<'_, R> {
                 } else {
                     decls.push(node)
                 }
-                continue;
             }
-
-            break;
         }
 
         return Program::new(decls, stmts, Range::NO_RANGE);
@@ -151,6 +148,12 @@ impl<R: Read> YKParser<'_, R> {
     /// Returns the next declaration in the input source.
     fn decl(&mut self) -> Option<Decl> {
         let token = self.peek();
+        
+        if token.is_some_and(|t| &t.token_type == &TokenType::Semicolon) {
+            self.advance();
+            return None;
+        }
+        
         return match token {
             Some(token) => match token.token_type {
                 TokenType::Fun => self.fun_decl(),

@@ -34,7 +34,6 @@ use crate::features::CompilerFeatures;
 use crate::lexer::YKLexer;
 use crate::messages;
 use crate::parser::YKParser;
-use crate::tests::matcher::Identifier;
 use crate::tests::matcher::Node;
 use crate::tests::matcher::Null;
 use crate::tests::matcher::Number;
@@ -43,6 +42,7 @@ use crate::tests::matcher::String;
 use crate::tests::matcher::Unary;
 use crate::tests::matcher::{Any, Binary};
 use crate::tests::matcher::{Bool, CompoundAssigment};
+use crate::tests::matcher::{Empty, Identifier};
 use crate::tests::util::match_ast;
 use crate::tests::util::match_node;
 use crate::tests::util::parse;
@@ -649,6 +649,23 @@ fn test_compound_assignment_operator() {
                 Node(NodeType::VarStmt, boxed_vec![Identifier("i"), Number(0f64)]),
                 CompoundAssigment(BinaryOp::Div, boxed_vec![Identifier("i"), Number(1f64)]),
             ],
+        ),
+    );
+}
+
+#[test]
+fn test_empty_statements() {
+    match_ast(";", &mut Program(vec![], vec![]));
+    match_ast(";;", &mut Program(vec![], vec![]));
+
+    match_ast(
+        "print \"Something\";;",
+        &mut Program(
+            vec![],
+            boxed_vec![Node(
+                NodeType::PrintStmt,
+                boxed_vec![String("\"Something\"")]
+            ),],
         ),
     );
 }
