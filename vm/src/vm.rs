@@ -197,8 +197,17 @@ impl<'inst> CodeExecutor<'inst> {
         self.operands.last()
     }
 
+    fn try_peek_operand_mut(&mut self) -> Option<&mut Value> {
+        self.operands.last_mut()
+    }
+
     fn peek_operand(&mut self) -> &Value {
         self.try_peek_operand()
+            .expect("Expected an operand to peek")
+    }
+
+    fn peek_operand_mut(&mut self) -> &mut Value {
+        self.try_peek_operand_mut()
             .expect("Expected an operand to peek")
     }
 
@@ -469,19 +478,20 @@ impl<'inst> CodeExecutor<'inst> {
 
     fn exec_arithmetic(&mut self, op: OpCode) {
         let op2 = self.pop_operand();
-        let op1 = self.pop_operand();
-        let op2 = op2.Number().expect("Expected a number operand");
-        let op1 = op1.Number().expect("Expected a number operand");
-
-        let result = match op {
-            OpCode::Add => op1 + op2,
-            OpCode::Sub => op1 - op2,
-            OpCode::Mult => op1 * op2,
-            OpCode::Div => op1 / op2,
-            _ => panic!("Expected a binary numeric operator"),
+        let op1 = self.peek_operand_mut();
+        
+        match (op1, op2) {
+            (Value::Number(n1), Value::Number(n2)) => {
+                *n1 = match op {
+                    OpCode::Add => *n1 + n2,
+                    OpCode::Sub => *n1 - n2,
+                    OpCode::Mult => *n1 * n2,
+                    OpCode::Div => *n1 / n2,
+                    _ => panic!("Expected a binary numeric operator"),
+                };
+            }
+            _ => panic!("Expected numeric operands"),
         };
-
-        self.push_operand(Value::Number(result))
     }
 }
 
