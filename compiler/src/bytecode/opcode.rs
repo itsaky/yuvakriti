@@ -27,6 +27,7 @@ pub trait OpCodeExt {
 
 macro_rules! def_opcodes {
     ($({$name:ident, $code:literal, $stack_effect:literal, $mnemonic:literal, $opsize:literal $(, $jmp:expr $(,)?)? } $(,)?)+) => {
+
         #[derive(Debug, PartialEq, Clone, Copy)]
         #[repr(u8)]
         #[rustfmt::skip]
@@ -65,6 +66,18 @@ macro_rules! def_opcodes {
             match code {
                 $($code => OpCode::$name,)+
                 _ => unreachable!("Unknown/unsupported opcode: {:?}", code),
+            }
+        }
+        
+        $(
+            #[allow(non_upper_case_globals)]
+            pub const $name: OpSize = $code;
+        )+
+
+        pub fn get_mnemonic(insn: &OpSize) -> &'static str {
+            match insn {
+                $(&crate::bytecode::opcode::$name => $mnemonic,)+
+                _ => panic!("Unknown/unsupported opcode: {:?}", insn),
             }
         }
     };

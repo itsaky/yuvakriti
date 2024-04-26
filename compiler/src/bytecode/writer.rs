@@ -15,7 +15,6 @@
 
 use std::ops::Deref;
 
-use crate::ast::{ASTVisitor, CompoundAssignExpr};
 use crate::ast::AssignExpr;
 use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
@@ -36,6 +35,7 @@ use crate::ast::UnaryOp;
 use crate::ast::VarStmt;
 use crate::ast::Visitable;
 use crate::ast::WhileStmt;
+use crate::ast::{ASTVisitor, CompoundAssignExpr};
 use crate::bytecode::attrs;
 use crate::bytecode::attrs::Attr;
 use crate::bytecode::attrs::Code;
@@ -47,9 +47,9 @@ use crate::bytecode::cp_info::Utf8Info;
 use crate::bytecode::decls;
 use crate::bytecode::file::YKBFile;
 use crate::bytecode::opcode::get_opcode;
-use crate::bytecode::opcode::OpCode;
 use crate::bytecode::opcode::opcode_cmp;
 use crate::bytecode::opcode::opcode_cmpz;
+use crate::bytecode::opcode::OpCode;
 use crate::bytecode::opcode::OpCodeExt;
 use crate::features::CompilerFeatures;
 use crate::messages;

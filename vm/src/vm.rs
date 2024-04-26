@@ -18,6 +18,8 @@ use std::cmp::max;
 use std::fmt::Display;
 
 use log::error;
+use log::Level::Trace;
+use log::log_enabled;
 use log::trace;
 use log::warn;
 
@@ -25,11 +27,12 @@ use compiler::bytecode::attrs;
 use compiler::bytecode::attrs::Attr;
 use compiler::bytecode::attrs::Code;
 use compiler::bytecode::bytes::AssertingByteConversions;
-use compiler::bytecode::opcode::OpCode;
-use compiler::bytecode::opcode::{get_opcode, OpCodeExt};
 use compiler::bytecode::ConstantEntry;
 use compiler::bytecode::ConstantPool;
 use compiler::bytecode::CpSize;
+use compiler::bytecode::opcode;
+use compiler::bytecode::opcode::get_mnemonic;
+use compiler::bytecode::opcode::OpSize;
 use compiler::bytecode::YKBFile;
 
 /// The YuvaKriti Virtual Machine
@@ -116,18 +119,10 @@ impl Value {
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Value::String(str) => {
-                write!(f, "{}", str)
-            }
-            Value::Number(num) => {
-                write!(f, "{}", num)
-            }
-            Value::Bool(b) => {
-                write!(f, "{}", b)
-            }
-            Value::Null => {
-                write!(f, "null")
-            }
+            Value::String(str) => write!(f, "{}", str),
+            Value::Number(num) => write!(f, "{}", num),
+            Value::Bool(b) => write!(f, "{}", b),
+            Value::Null => write!(f, "null"),
         }
     }
 }
@@ -155,15 +150,17 @@ pub struct CodeExecutor<'inst> {
 
 macro_rules! read1 {
     ($insns:expr, $pc:expr) => {{
+        let r = $insns[$pc];
         $pc += 1;
-        $insns[$pc - 1]
+        r
     }};
 }
 
 macro_rules! read2 {
     ($insns:expr, $pc:expr) => {{
+        let r = ($insns[$pc]).as_u16() << 8 | $insns[$pc + 1].as_u16();
         $pc += 2;
-        ($insns[$pc - 2]).as_u16() << 8 | $insns[$pc - 1].as_u16()
+        r
     }};
 }
 
@@ -183,12 +180,17 @@ impl<'inst> CodeExecutor<'inst> {
     }
 
     pub fn set_constant_pool(&mut self, pool: Option<&'inst ConstantPool>) {
-        trace!("VM::set_constant_pool: {:?}", pool);
+        if log_enabled!(Trace) {
+            trace!("VM::set_constant_pool: {:?}", pool);
+        }
+
         self.constant_pool = pool;
     }
 
     pub fn reset(&mut self) {
-        trace!("VM::reset()");
+        if log_enabled!(Trace) {
+            trace!("VM::reset()");
+        }
         self.variables = vec![];
         self.operands = vec![];
     }
@@ -216,30 +218,41 @@ impl<'inst> CodeExecutor<'inst> {
     }
 
     fn pop_operand(&mut self) -> Value {
-        trace!("VM::pop_operand()");
+        if log_enabled!(Trace) {
+            trace!("VM::pop_operand()");
+        }
         let op = self.try_pop_operand().expect("Expected an operand to pop");
 
-        trace!("VM::pop_operand(): {:?}", op);
-        trace!("VM::pop_operand(): operands.len(): {}", self.operands.len());
+        if log_enabled!(Trace) {
+            trace!("VM::pop_operand(): {:?}", op);
+            trace!("VM::pop_operand(): operands.len(): {}", self.operands.len());
+        }
 
         op
     }
 
     fn push_operand(&mut self, value: Value) {
-        trace!("VM::push_operand({:?})", value);
+        if log_enabled!(Trace) {
+            trace!("VM::push_operand({:?})", value);
+        }
         if self.max_stack != 0 && self.operands.len() >= self.max_stack as usize {
             panic!("Critical: Operand stack overflow! max_stack={}. Did the compiler compute invalid stack depth?", self.max_stack);
         }
 
         self.operands.push(value);
-        trace!(
-            "VM::push_operand(): operands.len(): {}",
-            self.operands.len()
-        );
+
+        if log_enabled!(Trace) {
+            trace!(
+                "VM::push_operand(): operands.len(): {}",
+                self.operands.len()
+            );
+        }
     }
 
     fn load_constant(&mut self, index: CpSize) {
-        trace!("VM::load_constant({})", index);
+        if log_enabled!(Trace) {
+            trace!("VM::load_constant({})", index);
+        }
 
         if let Some(str) = self.constant_pool().get_string(index) {
             self.push_operand(Value::String(str));
@@ -263,13 +276,17 @@ impl<'inst> CodeExecutor<'inst> {
     }
 
     pub fn store_var(&mut self, index: u16) {
-        trace!("VM::store_var({})", index);
+        if log_enabled!(Trace) {
+            trace!("VM::store_var({})", index);
+        }
         let value = self.try_pop_operand().unwrap_or(Value::Null);
         self.variables[index as usize] = Variable::new(value);
     }
 
     pub fn load_var(&mut self, index: u16) {
-        trace!("VM::load_var({})", index);
+        if log_enabled!(Trace) {
+            trace!("VM::load_var({})", index);
+        }
         // TODO(itsaky): Avoid cloning
         let value = self.variables[index as usize].value.clone();
         self.push_operand(value);
@@ -279,11 +296,13 @@ impl<'inst> CodeExecutor<'inst> {
         self.max_stack = code.max_stack();
         self.max_locals = code.max_locals();
 
-        trace!(
-            "VM::execute(max_stack={}, max_locals={})",
-            self.max_stack,
-            self.max_locals
-        );
+        if log_enabled!(Trace) {
+            trace!(
+                "VM::execute(max_stack={}, max_locals={})",
+                self.max_stack,
+                self.max_locals
+            );
+        }
 
         self.operands = Vec::with_capacity(max(0, self.max_stack) as usize);
 
@@ -292,110 +311,115 @@ impl<'inst> CodeExecutor<'inst> {
             .resize(max(0, self.max_locals) as usize, Variable::NONE);
 
         let insns = code.instructions();
-        trace!("VM::execute(insns.len()={})", insns.len());
+        if log_enabled!(Trace) {
+            trace!("VM::execute(insns.len()={})", insns.len());
+        }
 
         let mut pc = 0;
         let mut is_halted = false;
 
         'insn: while pc < insns.len() {
-            let instruction = read1!(insns, pc).as_op_size();
-            let opcode = get_opcode(instruction);
-            trace!(
-                "VM::execute(pc={}, instruction={}, opcode={:?})",
-                pc,
-                instruction,
-                opcode.get_mnemonic()
-            );
+            let insn = read1!(insns, pc).as_op_size();
+            if log_enabled!(Trace) {
+                trace!(
+                    "VM::execute(pc={}, instruction={}, opcode={:?})",
+                    pc,
+                    insn,
+                    get_mnemonic(&insn)
+                );
+            }
 
-            match &opcode {
-                OpCode::Nop => {}
-                OpCode::Halt => {
+            match insn {
+                opcode::Nop => {}
+                opcode::Halt => {
                     is_halted = true;
                     break 'insn;
                 }
-                OpCode::Add | OpCode::Sub | OpCode::Mult | OpCode::Div => {
-                    trace!("VM::execute(arithmetic): {:?}", opcode);
-                    self.exec_arithmetic(opcode);
+                opcode::Add | opcode::Sub | opcode::Mult | opcode::Div => {
+                    self.exec_arithmetic(&insn);
                 }
-                OpCode::Print => {
+                opcode::Print => {
                     let value = self.pop_operand();
                     println!("{}", value);
                 }
-                OpCode::Ldc => {
+                opcode::Ldc => {
                     let const_idx = read2!(insns, pc);
-
                     self.load_constant(const_idx);
                 }
-                OpCode::BPush0 => self.push_operand(Value::Bool(false)),
-                OpCode::BPush1 => self.push_operand(Value::Bool(true)),
-                OpCode::Store0 => self.store_var(0),
-                OpCode::Store1 => self.store_var(1),
-                OpCode::Store2 => self.store_var(2),
-                OpCode::Store3 => self.store_var(3),
-                OpCode::Store => {
+                opcode::BPush0 => self.push_operand(Value::Bool(false)),
+                opcode::BPush1 => self.push_operand(Value::Bool(true)),
+                opcode::Store0 => self.store_var(0),
+                opcode::Store1 => self.store_var(1),
+                opcode::Store2 => self.store_var(2),
+                opcode::Store3 => self.store_var(3),
+                opcode::Store => {
                     let var_idx = read2!(insns, pc);
                     self.store_var(var_idx);
                 }
-                OpCode::Load0 => self.load_var(0),
-                OpCode::Load1 => self.load_var(1),
-                OpCode::Load2 => self.load_var(2),
-                OpCode::Load3 => self.load_var(3),
-                OpCode::Load => {
+                opcode::Load0 => self.load_var(0),
+                opcode::Load1 => self.load_var(1),
+                opcode::Load2 => self.load_var(2),
+                opcode::Load3 => self.load_var(3),
+                opcode::Load => {
                     let var_idx = read2!(insns, pc);
                     self.load_var(var_idx);
                 }
 
-                OpCode::IfTruthy | OpCode::IfFalsy => {
+                opcode::IfTruthy | opcode::IfFalsy => {
                     let addr = read2!(insns, pc) as i16;
-
                     let value = self.peek_operand();
 
-                    if (opcode == OpCode::IfTruthy && value.is_truthy())
-                        || (opcode == OpCode::IfFalsy && value.is_falsy())
+                    if (insn == opcode::IfTruthy && value.is_truthy())
+                        || (insn == opcode::IfFalsy && value.is_falsy())
                     {
                         // jump to the specified address
                         jmp(&mut pc, addr);
+                        if log_enabled!(Trace) {
+                            trace!("VM::execute::jmp(pc={})", pc);
+                        }
+                    }
+                }
+
+                opcode::IfEq
+                | opcode::IfNe
+                | opcode::IfLt
+                | opcode::IfGt
+                | opcode::IfLe
+                | opcode::IfGe => {
+                    let addr = read2!(insns, pc) as i16;
+                    if self.cmp(&insn) {
+                        jmp(&mut pc, addr);
+                    }
+                }
+
+                opcode::IfEqZ
+                | opcode::IfNeZ
+                | opcode::IfLtZ
+                | opcode::IfGtZ
+                | opcode::IfLeZ
+                | opcode::IfGeZ => {
+                    let addr = read2!(insns, pc) as i16;
+                    if self.cmpz(&insn) {
+                        jmp(&mut pc, addr);
+                    }
+                }
+
+                opcode::Jmp => {
+                    let addr = read2!(insns, pc) as i16;
+                    jmp(&mut pc, addr);
+                    if log_enabled!(Trace) {
                         trace!("VM::execute::jmp(pc={})", pc);
                     }
                 }
 
-                OpCode::IfEq
-                | OpCode::IfNe
-                | OpCode::IfLt
-                | OpCode::IfGt
-                | OpCode::IfLe
-                | OpCode::IfGe => {
-                    let addr = read2!(insns, pc) as i16;
-                    if self.cmp(opcode) {
-                        jmp(&mut pc, addr);
+                opcode::Pop => {
+                    if log_enabled!(Trace) {
+                        trace!("VM::execute::pop()");
                     }
-                }
-
-                OpCode::IfEqZ
-                | OpCode::IfNeZ
-                | OpCode::IfLtZ
-                | OpCode::IfGtZ
-                | OpCode::IfLeZ
-                | OpCode::IfGeZ => {
-                    let addr = read2!(insns, pc) as i16;
-                    if self.cmpz(opcode) {
-                        jmp(&mut pc, addr);
-                    }
-                }
-
-                OpCode::Jmp => {
-                    let addr = read2!(insns, pc) as i16;
-                    jmp(&mut pc, addr);
-                    trace!("VM::execute::jmp(pc={})", pc);
-                }
-
-                OpCode::Pop => {
-                    trace!("VM::execute::pop()");
                     self.pop_operand();
                 }
 
-                OpCode::Neg => {
-                    trace!("VM::execute::neg()");
+                opcode::Neg => {
                     let value = self.pop_operand();
                     self.push_operand(match value {
                         Value::Number(num) => Value::Number(-num),
@@ -406,8 +430,7 @@ impl<'inst> CodeExecutor<'inst> {
                     });
                 }
 
-                OpCode::Not => {
-                    trace!("VM::execute::not()");
+                opcode::Not => {
                     let value = self.pop_operand();
                     self.push_operand(match value {
                         Value::Bool(bool) => Value::Bool(!bool),
@@ -417,6 +440,8 @@ impl<'inst> CodeExecutor<'inst> {
                         }
                     });
                 }
+
+                _ => panic!("Unexpected instruction: {:?}", insn),
             }
         }
 
@@ -433,23 +458,26 @@ impl<'inst> CodeExecutor<'inst> {
         if result.is_some() {
             trace!("VM::execute(): result: {:?}", result);
         }
+        
+        self.variables.clear();
+        self.operands.clear();
 
         // Return the result at the top of the stack
         Ok(result)
     }
 
-    fn cmp(&mut self, op: OpCode) -> bool {
+    fn cmp(&mut self, op: &OpSize) -> bool {
         let op2 = self.pop_operand();
         let op1 = self.pop_operand();
 
         if let (Some(n2), Some(n1)) = (op2.Number(), op1.Number()) {
             return match op {
-                OpCode::IfEq => n1 == n2,
-                OpCode::IfNe => n1 != n2,
-                OpCode::IfLt => n1 < n2,
-                OpCode::IfLe => n1 <= n2,
-                OpCode::IfGt => n1 > n2,
-                OpCode::IfGe => n1 >= n2,
+                &opcode::IfEq => n1 == n2,
+                &opcode::IfNe => n1 != n2,
+                &opcode::IfLt => n1 < n2,
+                &opcode::IfLe => n1 <= n2,
+                &opcode::IfGt => n1 > n2,
+                &opcode::IfGe => n1 >= n2,
                 _ => unreachable!("cmp is not implemented for {:?}", op),
             };
         }
@@ -458,16 +486,16 @@ impl<'inst> CodeExecutor<'inst> {
         false
     }
 
-    fn cmpz(&mut self, op_code: OpCode) -> bool {
+    fn cmpz(&mut self, op_code: &OpSize) -> bool {
         let op = self.pop_operand();
         if let Some(n) = op.Number() {
             return match op_code {
-                OpCode::IfEqZ => n == &0f64,
-                OpCode::IfNeZ => n != &0f64,
-                OpCode::IfLtZ => n < &0f64,
-                OpCode::IfLeZ => n <= &0f64,
-                OpCode::IfGtZ => n > &0f64,
-                OpCode::IfGeZ => n >= &0f64,
+                &opcode::IfEqZ => n == &0f64,
+                &opcode::IfNeZ => n != &0f64,
+                &opcode::IfLtZ => n < &0f64,
+                &opcode::IfLeZ => n <= &0f64,
+                &opcode::IfGtZ => n > &0f64,
+                &opcode::IfGeZ => n >= &0f64,
                 _ => unreachable!("cmp is not implemented for {:?}", op),
             };
         }
@@ -476,17 +504,17 @@ impl<'inst> CodeExecutor<'inst> {
         false
     }
 
-    fn exec_arithmetic(&mut self, op: OpCode) {
+    fn exec_arithmetic(&mut self, op: &OpSize) {
         let op2 = self.pop_operand();
         let op1 = self.peek_operand_mut();
-        
+
         match (op1, op2) {
             (Value::Number(n1), Value::Number(n2)) => {
                 *n1 = match op {
-                    OpCode::Add => *n1 + n2,
-                    OpCode::Sub => *n1 - n2,
-                    OpCode::Mult => *n1 * n2,
-                    OpCode::Div => *n1 / n2,
+                    &opcode::Add => *n1 + n2,
+                    &opcode::Sub => *n1 - n2,
+                    &opcode::Mult => *n1 * n2,
+                    &opcode::Div => *n1 / n2,
                     _ => panic!("Expected a binary numeric operator"),
                 };
             }
@@ -495,6 +523,7 @@ impl<'inst> CodeExecutor<'inst> {
     }
 }
 
+#[inline(always)]
 fn jmp(pc: &mut usize, offset: i16) {
     *pc = pc
         .checked_add_signed(offset as isize)
