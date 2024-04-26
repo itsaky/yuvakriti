@@ -749,3 +749,179 @@ fn test_arr_var_decl() {
         ),
     );
 }
+
+#[test]
+fn test_array_access_expr() {
+    match_ast(
+        "var i = [1, 2, 3]; i[0];",
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Node(
+                    NodeType::VarStmt,
+                    boxed_vec![
+                        Identifier("i"),
+                        Array(boxed_vec![Number(1f64), Number(2f64), Number(3f64)])
+                    ]
+                ),
+                Node(
+                    NodeType::ArrayAccessExpr,
+                    boxed_vec![Identifier("i"), Number(0f64)]
+                )
+            ],
+        ),
+    );
+
+    match_ast(
+        "var i = [1, 2, 3]; print i[0];",
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Node(
+                    NodeType::VarStmt,
+                    boxed_vec![
+                        Identifier("i"),
+                        Array(boxed_vec![Number(1f64), Number(2f64), Number(3f64)])
+                    ]
+                ),
+                Node(
+                    NodeType::PrintStmt,
+                    boxed_vec![Node(
+                        NodeType::ArrayAccessExpr,
+                        boxed_vec![Identifier("i"), Number(0f64)]
+                    )]
+                )
+            ],
+        ),
+    );
+
+    match_ast(
+        "var i = [1, 2, 3]; i[0] = 2;",
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Node(
+                    NodeType::VarStmt,
+                    boxed_vec![
+                        Identifier("i"),
+                        Array(boxed_vec![Number(1f64), Number(2f64), Number(3f64)])
+                    ]
+                ),
+                Node(
+                    NodeType::AssignExpr,
+                    boxed_vec![
+                        Node(
+                            NodeType::ArrayAccessExpr,
+                            boxed_vec![Identifier("i"), Number(0f64)]
+                        ),
+                        Number(2f64)
+                    ]
+                )
+            ],
+        ),
+    );
+
+    match_ast(
+        "var i = [1, 2, 3]; i[0] += 2;",
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Node(
+                    NodeType::VarStmt,
+                    boxed_vec![
+                        Identifier("i"),
+                        Array(boxed_vec![Number(1f64), Number(2f64), Number(3f64)])
+                    ]
+                ),
+                CompoundAssigment(
+                    BinaryOp::Plus,
+                    boxed_vec![
+                        Node(
+                            NodeType::ArrayAccessExpr,
+                            boxed_vec![Identifier("i"), Number(0f64)]
+                        ),
+                        Number(2f64)
+                    ]
+                )
+            ],
+        ),
+    );
+
+    match_ast(
+        "var i = [1, 2, 3]; i[0] -= 2;",
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Node(
+                    NodeType::VarStmt,
+                    boxed_vec![
+                        Identifier("i"),
+                        Array(boxed_vec![Number(1f64), Number(2f64), Number(3f64)])
+                    ]
+                ),
+                CompoundAssigment(
+                    BinaryOp::Minus,
+                    boxed_vec![
+                        Node(
+                            NodeType::ArrayAccessExpr,
+                            boxed_vec![Identifier("i"), Number(0f64)]
+                        ),
+                        Number(2f64)
+                    ]
+                )
+            ],
+        ),
+    );
+
+    match_ast(
+        "var i = [1, 2, 3]; i[0] *= 2;",
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Node(
+                    NodeType::VarStmt,
+                    boxed_vec![
+                        Identifier("i"),
+                        Array(boxed_vec![Number(1f64), Number(2f64), Number(3f64)])
+                    ]
+                ),
+                CompoundAssigment(
+                    BinaryOp::Mult,
+                    boxed_vec![
+                        Node(
+                            NodeType::ArrayAccessExpr,
+                            boxed_vec![Identifier("i"), Number(0f64)]
+                        ),
+                        Number(2f64)
+                    ]
+                )
+            ],
+        ),
+    );
+
+    match_ast(
+        "var i = [1, 2, 3]; i[0] /= 2;",
+        &mut Program(
+            vec![],
+            boxed_vec![
+                Node(
+                    NodeType::VarStmt,
+                    boxed_vec![
+                        Identifier("i"),
+                        Array(boxed_vec![Number(1f64), Number(2f64), Number(3f64)])
+                    ]
+                ),
+                CompoundAssigment(
+                    BinaryOp::Div,
+                    boxed_vec![
+                        Node(
+                            NodeType::ArrayAccessExpr,
+                            boxed_vec![Identifier("i"), Number(0f64)]
+                        ),
+                        Number(2f64)
+                    ]
+                )
+            ],
+        ),
+    );
+}

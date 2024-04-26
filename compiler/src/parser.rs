@@ -17,7 +17,6 @@ use std::cell::RefCell;
 use std::io::Read;
 use std::rc::Rc;
 
-use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
 use crate::ast::BlockStmt;
 use crate::ast::BreakStmt;
@@ -41,6 +40,7 @@ use crate::ast::UnaryExpr;
 use crate::ast::UnaryOp;
 use crate::ast::VarStmt;
 use crate::ast::WhileStmt;
+use crate::ast::{ArrayAccessExpr, BinaryExpr};
 use crate::ast::{ArrayExpr, AssignExpr, CompoundAssignExpr};
 use crate::diagnostics::Diagnostic;
 use crate::diagnostics::DiagnosticHandler;
@@ -585,7 +585,7 @@ impl<R: Read> YKParser<'_, R> {
             return self.unary_op(&op);
         }
 
-        self.primary()
+        self.array_access()
     }
 
     fn unary_op(&mut self, op: &Token) -> Option<Expr> {
@@ -601,6 +601,32 @@ impl<R: Read> YKParser<'_, R> {
 
         self.report(DiagnosticKind::Error, messages::PARS_EXPECTED_EXPR);
         return None;
+    }
+
+    fn array_access(&mut self) -> Option<Expr> {
+        let expr = self.primary()?;
+
+        if let Some(token) = self.tmatch(&TokenType::LBrack) {
+            let mut range = token.range.clone();
+            let idx = self.expr();
+            if idx.is_none() {
+                self.report(DiagnosticKind::Error, messages::PARS_EXPECTED_EXPR);
+                return None;
+            }
+
+            self.consume(TokenType::RBrack, &err_exp_sym("]"));
+
+            let idx = idx.unwrap();
+            range.set_end(idx.range());
+
+            return Some(Expr::ArrayAccess(ArrayAccessExpr::new(
+                Box::from(expr),
+                Box::from(idx),
+                range,
+            )));
+        }
+
+        return Some(expr);
     }
 
     fn primary(&mut self) -> Option<Expr> {

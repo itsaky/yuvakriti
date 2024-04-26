@@ -13,7 +13,6 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::ast::BinaryOp;
 use crate::ast::BlockStmt;
 use crate::ast::ClassDecl;
 use crate::ast::Decl;
@@ -38,6 +37,7 @@ use crate::ast::VarStmt;
 use crate::ast::Visitable;
 use crate::ast::WhileStmt;
 use crate::ast::{ASTVisitor, BreakStmt, ContinueStmt};
+use crate::ast::{ArrayAccessExpr, BinaryOp};
 use crate::ast::{ArrayExpr, BinaryExpr};
 use crate::ast::{AssignExpr, CompoundAssignExpr};
 use crate::ast::{AstNode, EmptyStmt};
@@ -47,7 +47,7 @@ pub type Matcher = dyn ASTVisitor<(), bool>;
 
 macro_rules! mtch {
     ($e:expr, $m:expr, $er:literal) => {
-        $e.accept($m, &mut ()).map(|r| assert!(r)).expect($er);
+        $e.accept($m, &mut ()).map(|r| assert!(r)).expect($er)
     };
 }
 
@@ -678,7 +678,29 @@ impl ASTVisitor<(), bool> for AssertingAstMatcher {
                 );
             }
         }
+        Some(true)
+    }
 
+    fn visit_array_access_expr(
+        &mut self,
+        array_expr: &mut ArrayAccessExpr,
+        p: &mut (),
+    ) -> Option<bool> {
+        assert_eq!(&self.typ, &array_expr.typ());
+        if let Some(matcher) = self.nested.get_mut(0) {
+            mtch!(
+                &mut array_expr.array,
+                matcher.as_mut(),
+                "Failed to match array access array"
+            );
+        }
+        if let Some(matcher) = self.nested.get_mut(1) {
+            mtch!(
+                &mut array_expr.index,
+                matcher.as_mut(),
+                "Failed to match array access array"
+            );
+        }
         Some(true)
     }
 }

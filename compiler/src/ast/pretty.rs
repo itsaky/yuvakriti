@@ -112,6 +112,11 @@ impl<'a> ASTPrinter<'a> {
                 self.f.write_str("array ").unwrap();
                 self.visit_array_expr(arr, indent_level);
             }
+            Expr::ArrayAccess(arr) => {
+                self.f.write_str("array[").unwrap();
+                self.visit_expr(arr.index.as_mut(), indent_level);
+                self.f.write_str("]").unwrap();
+            }
         }
         self.f.write_str(")").unwrap();
     }

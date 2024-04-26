@@ -153,6 +153,7 @@ pub enum NodeType {
     LiteralExpr,
     GroupingExpr,
     ArrayExpr,
+    ArrayAccessExpr,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -294,10 +295,16 @@ def_enum!(Expr {
     Identifier: IdentifierExpr,
     Literal: LiteralExpr,
     Array: ArrayExpr,
+    ArrayAccess: ArrayAccessExpr,
 });
 
 def_node!(ArrayExpr {
     elements: Vec<Expr>
+});
+
+def_node!(ArrayAccessExpr {
+    array: Box<Expr>,
+    index: Box<Expr>
 });
 
 def_node!(AssignExpr {
@@ -608,3 +615,4 @@ impl_node!(MemberAccessExpr);
 impl_node!(IdentifierExpr);
 impl_node!(GroupingExpr);
 impl_node!(ArrayExpr);
+impl_node!(ArrayAccessExpr);

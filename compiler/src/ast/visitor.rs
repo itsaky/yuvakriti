@@ -15,7 +15,6 @@
 
 use paste::paste;
 
-use crate::ast::Decl;
 use crate::ast::Expr;
 use crate::ast::ExprStmt;
 use crate::ast::ForStmt;
@@ -34,6 +33,7 @@ use crate::ast::UnaryExpr;
 use crate::ast::VarStmt;
 use crate::ast::Visitable;
 use crate::ast::WhileStmt;
+use crate::ast::{ArrayAccessExpr, Decl};
 use crate::ast::{ArrayExpr, ClassDecl};
 use crate::ast::{AssignExpr, BreakStmt, ContinueStmt};
 use crate::ast::{BinaryExpr, CompoundAssignExpr};
@@ -121,6 +121,7 @@ pub trait ASTVisitor<P, R> {
             Expr::Identifier(exp) => self.visit_identifier_expr(exp, p),
             Expr::Literal(exp) => self.visit_literal_expr(exp, p),
             Expr::Array(arr) => self.visit_array_expr(arr, p),
+            Expr::ArrayAccess(arr) => self.visit_array_access_expr(arr, p),
         }
     }
 
@@ -470,6 +471,21 @@ pub trait ASTVisitor<P, R> {
         }
         None
     }
+
+    fn visit_array_access_expr(
+        &mut self,
+        array_expr: &mut ArrayAccessExpr,
+        p: &mut P,
+    ) -> Option<R> {
+        self.default_visit_array_access_expr(array_expr, p)
+    }
+    fn default_visit_array_access_expr(
+        &mut self,
+        array_expr: &mut ArrayAccessExpr,
+        p: &mut P,
+    ) -> Option<R> {
+        self.visit_expr(array_expr.index.as_mut(), p)
+    }
 }
 
 macro_rules! impl_visitable {
@@ -515,4 +531,5 @@ impl_visitables!(
     IdentifierExpr,
     LiteralExpr,
     ArrayExpr,
+    ArrayAccessExpr,
 );
