@@ -62,28 +62,16 @@ pub fn collecting_handler() -> CollectingDiagnosticHandler {
     return CollectingDiagnosticHandler::new();
 }
 
-#[derive(Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Diagnostic {
     pub range: Range,
     pub message: String,
     pub kind: DiagnosticKind,
 }
 
-#[derive(Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum DiagnosticKind {
     Error,
     Warning,
     Note,
-}
-
-impl PartialEq<Self> for Diagnostic {
-    fn eq(&self, other: &Self) -> bool {
-        return self.range == other.range && self.message == other.message;
-    }
-}
-
-impl PartialEq<Self> for DiagnosticKind {
-    fn eq(&self, other: &Self) -> bool {
-        return std::mem::discriminant(self) == std::mem::discriminant(other);
-    }
 }

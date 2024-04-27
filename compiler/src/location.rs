@@ -13,7 +13,7 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#[derive(Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Range {
     pub start: Position,
     pub end: Position,
@@ -72,13 +72,7 @@ impl From<&Range> for Range {
     }
 }
 
-impl PartialEq<Self> for Range {
-    fn eq(&self, other: &Self) -> bool {
-        return self.start == other.start && self.end == other.end;
-    }
-}
-
-#[derive(Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Position {
     pub line: i32,
     pub column: i32,
@@ -98,11 +92,5 @@ impl Position {
             column,
             index,
         }
-    }
-}
-
-impl PartialEq<Self> for Position {
-    fn eq(&self, other: &Self) -> bool {
-        return self.line == other.line && self.column == other.column && self.index == other.index;
     }
 }
