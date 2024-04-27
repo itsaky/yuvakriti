@@ -35,10 +35,6 @@ impl DiagnosticHandler for NoOpDiagnosticHandler {
     fn handle(&mut self, _diagnostic: Diagnostic) {}
 }
 
-pub fn no_op_handler() -> &'static NoOpDiagnosticHandler {
-    return NoOpDiagnosticHandler::instance();
-}
-
 #[derive(Debug)]
 pub struct CollectingDiagnosticHandler {
     pub diagnostics: Vec<Diagnostic>,
@@ -56,10 +52,6 @@ impl DiagnosticHandler for CollectingDiagnosticHandler {
     fn handle(&mut self, diagnostic: Diagnostic) {
         self.diagnostics.push(diagnostic);
     }
-}
-
-pub fn collecting_handler() -> CollectingDiagnosticHandler {
-    return CollectingDiagnosticHandler::new();
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]

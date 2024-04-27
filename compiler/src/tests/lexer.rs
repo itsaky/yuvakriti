@@ -13,12 +13,9 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::cell::RefCell;
 use std::io::Cursor;
 use std::io::Read;
-use std::rc::Rc;
 
-use crate::diagnostics;
 use crate::diagnostics::CollectingDiagnosticHandler;
 use crate::lexer::YKLexer;
 use crate::messages;
@@ -35,10 +32,10 @@ fn check_token_types<R: Read>(lexer: &mut YKLexer<R>, expected_tokens: &Vec<Toke
 }
 
 fn match_token_types(src: &str, expected_tokens: &Vec<TokenType>) {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(Cursor::new(src), diag_handler.clone());
+    let mut diag_handler = CollectingDiagnosticHandler::new();
+    let mut lexer = YKLexer::new(Cursor::new(src), &mut diag_handler);
     check_token_types(&mut lexer, expected_tokens);
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
+    assert_eq!(true, diag_handler.diagnostics.is_empty());
 }
 
 fn check_diagnostic_messages(
@@ -150,10 +147,10 @@ fn test_comments_are_ignored_by_default() {
 
 #[test]
 fn test_comments_are_tokenized_if_enabled() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut diag_handler = CollectingDiagnosticHandler::new();
     let mut lexer = YKLexer::new(
         Cursor::new("!=\n// something not equal to \n=="),
-        diag_handler.clone(),
+        &mut diag_handler,
     );
 
     // enable comment tokenization
@@ -164,13 +161,13 @@ fn test_comments_are_tokenized_if_enabled() {
         &vec![TokenType::BangEq, TokenType::Comment, TokenType::EqEq],
     );
 
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
+    assert_eq!(true, diag_handler.diagnostics.is_empty());
 }
 
 #[test]
 fn test_lexer_reports_unrecognized_tokens() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(Cursor::new("( )[ ]{ }\t,\r.\n�+-;*"), diag_handler.clone());
+    let mut diag_handler = CollectingDiagnosticHandler::new();
+    let mut lexer = YKLexer::new(Cursor::new("( )[ ]{ }\t,\r.\n�+-;*"), &mut diag_handler);
 
     check_token_types(
         &mut lexer,
@@ -191,7 +188,7 @@ fn test_lexer_reports_unrecognized_tokens() {
     );
 
     check_diagnostic_messages(
-        &diag_handler.borrow(),
+        &diag_handler,
         &vec![
             messages::LEX_UNKNOWN_TOKEN,
             messages::LEX_UNKNOWN_TOKEN,
@@ -295,8 +292,8 @@ fn test_invalid_number() {
 
 #[test]
 fn test_simple_string_literal() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(Cursor::new("\"something\""), diag_handler.clone());
+    let mut diag_handler = CollectingDiagnosticHandler::new();
+    let mut lexer = YKLexer::new(Cursor::new("\"something\""), &mut diag_handler);
 
     let tokens = lexer.all();
 
@@ -311,15 +308,15 @@ fn test_simple_string_literal() {
     assert_eq!(0, token.range.start.index);
     assert_eq!(11, token.range.end.index);
 
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
+    assert_eq!(true, diag_handler.diagnostics.is_empty());
 }
 
 #[test]
 fn test_simple_consecutive_string_literals() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut diag_handler = CollectingDiagnosticHandler::new();
     let mut lexer = YKLexer::new(
         Cursor::new("\"something\" \"something else\""),
-        diag_handler.clone(),
+        &mut diag_handler,
     );
 
     let tokens = lexer.all();
@@ -346,13 +343,13 @@ fn test_simple_consecutive_string_literals() {
     assert_eq!(28, second.range.end.column); // end position is exclusive (column and index)
     assert_eq!(28, second.range.end.index);
 
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
+    assert_eq!(true, diag_handler.diagnostics.is_empty());
 }
 
 #[test]
 fn test_multiline_string_literals_should_fail() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(Cursor::new("\"some\nthing\""), diag_handler.clone());
+    let mut diag_handler = CollectingDiagnosticHandler::new();
+    let mut lexer = YKLexer::new(Cursor::new("\"some\nthing\""), &mut diag_handler);
 
     let tokens = lexer.all();
 
@@ -367,7 +364,7 @@ fn test_multiline_string_literals_should_fail() {
     assert_eq!(TokenType::Identifier, tokens.get(0).unwrap().token_type);
 
     check_diagnostic_messages(
-        &diag_handler.borrow(),
+        &diag_handler,
         &vec![
             messages::LEX_STRING_MULTILINE_ERROR,
             messages::LEX_UNEXPECTED_EOF,
@@ -377,10 +374,10 @@ fn test_multiline_string_literals_should_fail() {
 
 #[test]
 fn test_escape_sequences_in_string_literal() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut diag_handler = CollectingDiagnosticHandler::new();
     let mut lexer = YKLexer::new(
         Cursor::new("\"\\u2022 \\b \\s \\t \\n \\f \\r \\\" \\' \\\\ \""),
-        diag_handler.clone(),
+        &mut diag_handler,
     );
 
     let tokens = lexer.all();
@@ -397,13 +394,13 @@ fn test_escape_sequences_in_string_literal() {
     assert_eq!(36, token.range.end.column);
     assert_eq!(36, token.range.end.index);
 
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
+    assert_eq!(true, diag_handler.diagnostics.is_empty());
 }
 
 #[test]
 fn test_unicode_escapes() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut lexer = YKLexer::new(Cursor::new("\"\\u2022\""), diag_handler.clone());
+    let mut diag_handler = CollectingDiagnosticHandler::new();
+    let mut lexer = YKLexer::new(Cursor::new("\"\\u2022\""), &mut diag_handler);
 
     let tokens = lexer.all();
 
@@ -419,7 +416,7 @@ fn test_unicode_escapes() {
     assert_eq!(8, token.range.end.column);
     assert_eq!(8, token.range.end.index);
 
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
+    assert_eq!(true, diag_handler.diagnostics.is_empty());
 }
 
 #[test]

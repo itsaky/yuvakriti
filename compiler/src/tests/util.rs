@@ -13,13 +13,11 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::cell::RefCell;
 use std::io::Cursor;
-use std::rc::Rc;
 
+use crate::ast::{ASTPrinter, ASTVisitor};
 use crate::ast::Program;
 use crate::ast::Visitable;
-use crate::ast::{ASTPrinter, ASTVisitor};
 use crate::comp::YKCompiler;
 use crate::diagnostics::CollectingDiagnosticHandler;
 use crate::features::CompilerFeatures;
@@ -35,10 +33,10 @@ macro_rules! boxed_vec {
 
 pub(crate) fn parse_1(
     source: &str,
-    diagnostics: Rc<RefCell<CollectingDiagnosticHandler>>,
+    diagnostics: &mut CollectingDiagnosticHandler,
 ) -> Program {
-    let lexer = YKLexer::new(Cursor::new(source), diagnostics.clone());
-    let mut parser = YKParser::new(lexer, diagnostics.clone());
+    let lexer = YKLexer::new(Cursor::new(source), diagnostics);
+    let mut parser = YKParser::new(lexer);
     assert!(!parser.has_errors());
     parser.parse()
 }

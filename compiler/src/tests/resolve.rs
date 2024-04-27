@@ -13,12 +13,8 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use crate::comp::Resolve;
-use crate::diagnostics::collecting_handler;
-use crate::diagnostics::DiagnosticKind;
+use crate::diagnostics::{CollectingDiagnosticHandler, DiagnosticKind};
 use crate::location::Position;
 use crate::messages::err_dup_var;
 use crate::messages::err_undef_label;
@@ -26,12 +22,11 @@ use crate::messages::err_undef_var;
 use crate::tests::util::parse_1;
 
 fn match_single_diagnostic(src: &str, msg: String) {
-    let diags = Rc::new(RefCell::new(collecting_handler()));
-    let mut program = parse_1(src, diags.clone());
-    let mut analyzer = Resolve::new(diags.clone());
+    let mut diags = CollectingDiagnosticHandler::new();
+    let mut program = parse_1(src, &mut diags);
+    let mut analyzer = Resolve::new(&mut diags);
     analyzer.analyze(&mut program);
-
-    let diags = diags.borrow();
+    
     let diagnostics = &diags.diagnostics;
 
     assert!(!diagnostics.is_empty());
@@ -41,12 +36,11 @@ fn match_single_diagnostic(src: &str, msg: String) {
 
 #[test]
 fn test_duplicate_var_decl() {
-    let diags = Rc::new(RefCell::new(collecting_handler()));
-    let mut program = parse_1("var decl = 1; var decl = 2;", diags.clone());
-    let mut analyzer = Resolve::new(diags.clone());
+    let mut diags = CollectingDiagnosticHandler::new();
+    let mut program = parse_1("var decl = 1; var decl = 2;", &mut diags);
+    let mut analyzer = Resolve::new(&mut diags);
     analyzer.analyze(&mut program);
-
-    let diags = diags.borrow();
+    
     let diagnostics = &diags.diagnostics;
 
     assert!(!diagnostics.is_empty());
@@ -61,12 +55,11 @@ fn test_duplicate_var_decl() {
 
 #[test]
 fn test_undeclared_var() {
-    let diags = Rc::new(RefCell::new(collecting_handler()));
-    let mut program = parse_1("var decl = 1 + a;", diags.clone());
-    let mut analyzer = Resolve::new(diags.clone());
+    let mut diags = CollectingDiagnosticHandler::new();
+    let mut program = parse_1("var decl = 1 + a;", &mut diags);
+    let mut analyzer = Resolve::new(&mut diags);
     analyzer.analyze(&mut program);
-
-    let diags = diags.borrow();
+    
     let diagnostics = &diags.diagnostics;
 
     assert!(!diagnostics.is_empty());
@@ -81,15 +74,14 @@ fn test_undeclared_var() {
 
 #[test]
 fn test_var_decl_in_sep_scope() {
-    let diags = Rc::new(RefCell::new(collecting_handler()));
+    let mut diags = CollectingDiagnosticHandler::new();
 
     // variables are declared in different scopes
     // hence, they should not interfere
-    let mut program = parse_1("{var decl = 1;} {var decl = 2;}", diags.clone());
-    let mut analyzer = Resolve::new(diags.clone());
+    let mut program = parse_1("{var decl = 1;} {var decl = 2;}", &mut diags);
+    let mut analyzer = Resolve::new(&mut diags);
     analyzer.analyze(&mut program);
-
-    let diags = diags.borrow();
+    
     let diagnostics = &diags.diagnostics;
 
     assert!(diagnostics.is_empty());
@@ -97,15 +89,14 @@ fn test_var_decl_in_sep_scope() {
 
 #[test]
 fn test_var_self_use_in_decl() {
-    let diags = Rc::new(RefCell::new(collecting_handler()));
+    let mut diags = CollectingDiagnosticHandler::new();
 
     // variables are declared in different scopes
     // hence, they should not interfere
-    let mut program = parse_1("var a = a + 1;", diags.clone());
-    let mut analyzer = Resolve::new(diags.clone());
+    let mut program = parse_1("var a = a + 1;", &mut diags);
+    let mut analyzer = Resolve::new(&mut diags);
     analyzer.analyze(&mut program);
-
-    let diags = diags.borrow();
+    
     let diagnostics = &diags.diagnostics;
 
     assert!(!diagnostics.is_empty());

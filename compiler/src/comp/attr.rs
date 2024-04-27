@@ -13,9 +13,6 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use crate::ast::Program;
 use crate::ast::Visitable;
 use crate::comp::ConstFold;
@@ -25,8 +22,6 @@ use crate::features::CompilerFeatures;
 
 /// The attribution phase of the compiler.
 pub struct Attr<'inst> {
-    #[allow(unused)]
-    diagnostics: Rc<RefCell<dyn DiagnosticHandler + 'inst>>,
     resolve: Resolve<'inst>,
     constfold: ConstFold,
     features: &'inst CompilerFeatures,
@@ -37,11 +32,10 @@ impl<'inst> Attr<'inst> {
     /// Create a new instance.
     pub fn new<'a>(
         features: &'a CompilerFeatures,
-        diagnostics: Rc<RefCell<dyn DiagnosticHandler + 'a>>,
+        diagnostics: &'a mut (dyn DiagnosticHandler + 'a),
     ) -> Attr<'a> {
-        let resolve = Resolve::new(diagnostics.clone());
+        let resolve = Resolve::new(diagnostics);
         return Attr {
-            diagnostics,
             resolve,
             features,
             constfold: ConstFold::new(),

@@ -13,11 +13,11 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::cell::RefCell;
 use std::io;
-use std::io::{BufReader, Bytes, Read};
+use std::io::BufReader;
+use std::io::Bytes;
+use std::io::Read;
 use std::iter::Peekable;
-use std::rc::Rc;
 
 use log::error;
 
@@ -33,7 +33,7 @@ use crate::tokens::TokenType;
 const NULL_CHAR: char = '\0';
 
 pub struct YKLexer<'a, R: Read> {
-    diagnostics: Rc<RefCell<dyn DiagnosticHandler + 'a>>,
+    pub(crate) diagnostics: &'a mut (dyn DiagnosticHandler + 'a),
     input: Peekable<Bytes<BufReader<R>>>,
     current_char: Option<char>,
     token_text: Vec<char>,
@@ -45,7 +45,6 @@ pub struct YKLexer<'a, R: Read> {
 impl<R: Read> YKLexer<'_, R> {
     fn report(&mut self, diagnostic_kind: DiagnosticKind, message: &str) {
         self.diagnostics
-            .borrow_mut()
             .handle(self.create_diagnostic(diagnostic_kind, message));
     }
 
@@ -71,7 +70,7 @@ impl<R: Read> YKLexer<'_, R> {
     /// Creates a [YKLexer] which tokenizes the given source.
     pub fn new<'a>(
         source: R,
-        diagnostics_handler: Rc<RefCell<dyn DiagnosticHandler + 'a>>,
+        diagnostics_handler: &'a mut (dyn DiagnosticHandler + 'a),
     ) -> YKLexer<'a, R> {
         let iterator = BufReader::new(source).bytes().peekable();
         let mut lexer = YKLexer {

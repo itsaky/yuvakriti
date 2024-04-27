@@ -13,14 +13,12 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::cell::RefCell;
 use std::io::Cursor;
-use std::rc::Rc;
 
 use log::info;
 
-use crate::ast::ASTPrinter;
 use crate::ast::ArithmeticASTPrinter;
+use crate::ast::ASTPrinter;
 use crate::ast::BinaryOp;
 use crate::ast::NodeType;
 use crate::ast::Spanned;
@@ -29,8 +27,7 @@ use crate::ast::UnaryOp;
 use crate::ast::Visitable;
 use crate::boxed_vec;
 use crate::comp::YKCompiler;
-use crate::diagnostics;
-use crate::diagnostics::DiagnosticKind;
+use crate::diagnostics::{CollectingDiagnosticHandler, DiagnosticKind};
 use crate::features::CompilerFeatures;
 use crate::lexer::YKLexer;
 use crate::messages;
@@ -55,12 +52,12 @@ use crate::tests::util::parse_1;
 #[test]
 fn test_simple_var_decl() {
     let source = "var something = 1234;";
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let lexer = YKLexer::new(Cursor::new(source), diag_handler.clone());
+    let mut diag_handler = CollectingDiagnosticHandler::new();
+    let lexer = YKLexer::new(Cursor::new(source), &mut diag_handler);
 
-    let mut parser = YKParser::new(lexer, diag_handler.clone());
+    let mut parser = YKParser::new(lexer);
     let program = parser.parse();
-    assert_eq!(true, diag_handler.borrow().diagnostics.is_empty());
+    assert_eq!(true, diag_handler.diagnostics.is_empty());
 
     let stmts = program.stmts;
     assert_eq!(1, stmts.len());
@@ -344,13 +341,13 @@ fn test_arith_assoc() {
 
 #[test]
 fn test_parser_diagnostic_at_end() {
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
+    let mut diag_handler = CollectingDiagnosticHandler::new();
     let lexer = YKLexer::new(
         Cursor::new("2 + 3"), // missing semicolon
-        diag_handler.clone(),
+        &mut diag_handler,
     );
 
-    let mut parser = YKParser::new(lexer, diag_handler.clone());
+    let mut parser = YKParser::new(lexer);
     let mut program = parser.parse();
     let mut out = String::new();
     let mut printer = ArithmeticASTPrinter::new(&mut out);
@@ -358,7 +355,7 @@ fn test_parser_diagnostic_at_end() {
 
     assert!(program.decls.is_empty());
 
-    let diags = &diag_handler.borrow().diagnostics;
+    let diags = &diag_handler.diagnostics;
     assert!(!diags.is_empty());
     assert_eq!(2, diags.len());
 
@@ -695,9 +692,9 @@ fn test_array_expr() {
     );
 
     // double comma at the beginning
-    let diag_handler = Rc::new(RefCell::new(diagnostics::collecting_handler()));
-    let mut program = parse_1("[1, 2, 3,,];", diag_handler.clone());
-    let diags = &diag_handler.borrow().diagnostics;
+    let mut diag_handler = CollectingDiagnosticHandler::new();
+    let mut program = parse_1("[1, 2, 3,,];", &mut diag_handler);
+    let diags = &diag_handler.diagnostics;
     assert!(!diags.is_empty());
     assert_eq!(1, diags.len());
 

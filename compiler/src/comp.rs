@@ -13,11 +13,9 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::cell::RefCell;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
-use std::rc::Rc;
 
 use log::debug;
 use log::error;
@@ -25,15 +23,14 @@ use log::info;
 
 use crate::args::CompileArgs;
 use crate::ast::Program;
+use crate::bytecode::EXT_YK;
+use crate::bytecode::EXT_YKB;
 use crate::bytecode::YKBFile;
 use crate::bytecode::YKBFileWriter;
 use crate::bytecode::YKBVersion;
-use crate::bytecode::EXT_YK;
-use crate::bytecode::EXT_YKB;
 pub use crate::comp::attr::Attr;
 pub use crate::comp::constfold::ConstFold;
 pub use crate::comp::resolve::Resolve;
-use crate::diagnostics::collecting_handler;
 use crate::diagnostics::CollectingDiagnosticHandler;
 use crate::features::CompilerFeatures;
 use crate::lexer::YKLexer;
@@ -45,14 +42,14 @@ mod resolve;
 
 // Compiles source files into bytecode.
 pub struct YKCompiler {
-    diagnostics: Rc<RefCell<CollectingDiagnosticHandler>>,
+    diagnostics: CollectingDiagnosticHandler,
 }
 
 impl YKCompiler {
     /// Creates a new compiler instance.
     pub fn new() -> YKCompiler {
         YKCompiler {
-            diagnostics: Rc::new(RefCell::new(collecting_handler())),
+            diagnostics: CollectingDiagnosticHandler::new(),
         }
     }
 
@@ -112,15 +109,15 @@ impl YKCompiler {
 
     /// Parse source code and return the resulting AST.
     pub fn parse<R: Read>(&mut self, source: R) -> Result<(Program, bool), ()> {
-        let lexer = YKLexer::new(source, self.diagnostics.clone());
-        let mut parser = YKParser::new(lexer, self.diagnostics.clone());
+        let lexer = YKLexer::new(source, &mut self.diagnostics);
+        let mut parser = YKParser::new(lexer);
         let program = parser.parse();
         Ok((program, parser.has_errors()))
     }
 
     /// Run the attribution phase on the given program and return whether any errors were found.
     pub fn attr(&mut self, program: &mut Program, features: &CompilerFeatures) -> bool {
-        let mut attr = Attr::new(features, self.diagnostics.clone());
+        let mut attr = Attr::new(features, &mut self.diagnostics);
         attr.analyze(program);
         attr.has_errors()
     }

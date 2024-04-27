@@ -13,13 +13,16 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::cell::RefCell;
 use std::io::Read;
-use std::rc::Rc;
 
+use crate::ast::ArrayAccessExpr;
+use crate::ast::ArrayExpr;
+use crate::ast::AssignExpr;
+use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
 use crate::ast::BlockStmt;
 use crate::ast::BreakStmt;
+use crate::ast::CompoundAssignExpr;
 use crate::ast::ContinueStmt;
 use crate::ast::Decl;
 use crate::ast::Expr;
@@ -40,10 +43,7 @@ use crate::ast::UnaryExpr;
 use crate::ast::UnaryOp;
 use crate::ast::VarStmt;
 use crate::ast::WhileStmt;
-use crate::ast::{ArrayAccessExpr, BinaryExpr};
-use crate::ast::{ArrayExpr, AssignExpr, CompoundAssignExpr};
 use crate::diagnostics::Diagnostic;
-use crate::diagnostics::DiagnosticHandler;
 use crate::diagnostics::DiagnosticKind;
 use crate::lexer::YKLexer;
 use crate::location::Position;
@@ -56,7 +56,6 @@ use crate::tokens::TokenType;
 
 pub struct YKParser<'a, R: Read> {
     lexer: YKLexer<'a, R>,
-    diagnostics: Rc<RefCell<dyn DiagnosticHandler + 'a>>,
     has_error: bool,
 
     // parser state
@@ -66,14 +65,11 @@ pub struct YKParser<'a, R: Read> {
 }
 
 impl<R: Read> YKParser<'_, R> {
+
     /// Create a new [YKParser] instance using the given [YKLexer].
-    pub fn new(
-        lexer: YKLexer<R>,
-        diagnostics_handler: Rc<RefCell<dyn DiagnosticHandler>>,
-    ) -> YKParser<R> {
+    pub fn new(lexer: YKLexer<R>) -> YKParser<R> {
         let mut parser = YKParser {
             lexer,
-            diagnostics: diagnostics_handler,
             has_error: false,
             position: Position::NO_POS,
             current: None,
@@ -90,8 +86,7 @@ impl<R: Read> YKParser<'_, R> {
 
     fn report(&mut self, diagnostic_kind: DiagnosticKind, message: &str) {
         let is_error = diagnostic_kind == DiagnosticKind::Error;
-        self.diagnostics
-            .borrow_mut()
+        self.lexer.diagnostics
             .handle(self.create_diagnostic(diagnostic_kind, message));
 
         self.has_error = self.has_error || is_error;

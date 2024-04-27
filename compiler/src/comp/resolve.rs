@@ -13,9 +13,6 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use crate::ast::ASTVisitor;
 use crate::ast::BlockStmt;
 use crate::ast::BreakStmt;
@@ -40,13 +37,13 @@ use crate::symtab::VarSym;
 /// The name resolution helper.
 pub struct Resolve<'inst> {
     scope: Option<Scope<'inst>>,
-    diagnostics: Rc<RefCell<dyn DiagnosticHandler + 'inst>>,
+    diagnostics: &'inst mut (dyn DiagnosticHandler + 'inst),
     has_errors: bool,
 }
 
 impl Resolve<'_> {
     /// Create a new instance of the name resolution helper.
-    pub fn new<'a>(diagnostics: Rc<RefCell<dyn DiagnosticHandler + 'a>>) -> Resolve<'a> {
+    pub fn new<'a>(diagnostics: &'a mut (dyn DiagnosticHandler + 'a)) -> Resolve<'a> {
         return Resolve {
             diagnostics,
             scope: None,
@@ -72,7 +69,7 @@ impl Resolve<'_> {
 
     fn report_err(&mut self, range: &Range, msg: &str) {
         self.has_errors = true;
-        self.diagnostics.borrow_mut().handle(Diagnostic {
+        self.diagnostics.handle(Diagnostic {
             kind: DiagnosticKind::Error,
             range: range.clone(),
             message: msg.to_string(),
