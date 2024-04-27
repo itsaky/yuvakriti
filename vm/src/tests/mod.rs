@@ -19,3 +19,4 @@ mod loops;
 mod unary;
 mod util;
 mod variables;
+mod arrays;

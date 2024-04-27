@@ -22,7 +22,8 @@ use compiler::bytecode::ConstantPool;
 use compiler::comp::YKCompiler;
 use compiler::features::CompilerFeatures;
 
-use crate::{Value, YKVM};
+use crate::value::Value;
+use crate::YKVM;
 
 pub fn create_vm<'a>() -> YKVM<'a> {
     YKVM::new()

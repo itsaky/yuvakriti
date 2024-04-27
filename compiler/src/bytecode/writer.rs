@@ -15,13 +15,17 @@
 
 use std::ops::Deref;
 
+use crate::ast::{ArrayAccessExpr, ASTVisitor};
+use crate::ast::ArrayExpr;
 use crate::ast::AssignExpr;
 use crate::ast::BinaryExpr;
 use crate::ast::BinaryOp;
 use crate::ast::BlockStmt;
 use crate::ast::BreakStmt;
 use crate::ast::ClassDecl;
+use crate::ast::CompoundAssignExpr;
 use crate::ast::ContinueStmt;
+use crate::ast::Expr;
 use crate::ast::ForStmt;
 use crate::ast::FuncDecl;
 use crate::ast::IdentifierExpr;
@@ -35,7 +39,6 @@ use crate::ast::UnaryOp;
 use crate::ast::VarStmt;
 use crate::ast::Visitable;
 use crate::ast::WhileStmt;
-use crate::ast::{ASTVisitor, CompoundAssignExpr};
 use crate::bytecode::attrs;
 use crate::bytecode::attrs::Attr;
 use crate::bytecode::attrs::Code;
@@ -47,9 +50,9 @@ use crate::bytecode::cp_info::Utf8Info;
 use crate::bytecode::decls;
 use crate::bytecode::file::YKBFile;
 use crate::bytecode::opcode::get_opcode;
+use crate::bytecode::opcode::OpCode;
 use crate::bytecode::opcode::opcode_cmp;
 use crate::bytecode::opcode::opcode_cmpz;
-use crate::bytecode::opcode::OpCode;
 use crate::bytecode::opcode::OpCodeExt;
 use crate::features::CompilerFeatures;
 use crate::messages;
@@ -761,38 +764,46 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
 
     fn visit_assign_expr(
         &mut self,
-        assign_expr: &mut AssignExpr,
+        assign: &mut AssignExpr,
         ctx: &mut CodeGenContext<'_>,
     ) -> Option<()> {
-        if let Some(identifier) = assign_expr.target.Identifier() {
-            self.visit_expr(&mut assign_expr.value, ctx);
-            self.store_var(ctx.scope.req_var_idx(&identifier.name));
-            return None;
-        }
+        match &mut assign.target {
+            Expr::Identifier(identifier) => {
+                self.visit_expr(&mut assign.value, ctx);
+                self.store_var(ctx.scope.req_var_idx(&identifier.name));
+            }
 
-        // TODO: Support more assign expressions
-        panic!("Unsupported assign expr: {:?}", assign_expr);
+            Expr::ArrayAccess(acc) => {
+                acc.array.as_ref().Identifier().expect("Attempt to assign to non-identifier array receiver. This is not supported yet.");
+
+                self.visit_expr(&mut acc.array, ctx);
+                self.visit_expr(&mut acc.index, ctx);
+                self.visit_expr(&mut assign.value, ctx);
+                self.emitop0(OpCode::ArrPut);
+            }
+            _ => panic!("Unsupported assign expr: {:?}", assign),
+        };
+
+        None
     }
 
     fn visit_compound_assign_expr(
         &mut self,
-        compound_assign_expr: &mut CompoundAssignExpr,
+        assign: &mut CompoundAssignExpr,
         ctx: &mut CodeGenContext<'_>,
     ) -> Option<()> {
-        if let Some(identifier) = compound_assign_expr.target.Identifier() {
-            let idx = ctx.scope.req_var_idx(&identifier.name).clone();
-            self.load_var(&idx);
-            self.visit_expr(&mut compound_assign_expr.value, ctx);
-            self.emitop0(self.to_arith_opcode(&compound_assign_expr.op));
-            self.store_var(&idx);
-            return None;
-        }
+        match &mut assign.target {
+            Expr::Identifier(identifier) => {
+                let idx = ctx.scope.req_var_idx(&identifier.name).clone();
+                self.load_var(&idx);
+                self.visit_expr(&mut assign.value, ctx);
+                self.emitop0(self.to_arith_opcode(&assign.op));
+                self.store_var(&idx);
+            }
+            _ => panic!("Unsupported assign expr: {:?}", assign),
+        };
 
-        // TODO: Support more assign expressions
-        panic!(
-            "Unsupported compound assign expr: {:?}",
-            compound_assign_expr
-        );
+        None
     }
 
     fn visit_binary_expr(
@@ -961,6 +972,42 @@ impl ASTVisitor<CodeGenContext<'_>, ()> for CodeGen<'_> {
             }
         }
 
+        None
+    }
+
+    fn visit_array_expr(
+        &mut self,
+        array: &mut ArrayExpr,
+        ctx: &mut CodeGenContext<'_>,
+    ) -> Option<()> {
+        let len = array.elements.len();
+        let const_idx = self
+            .file
+            .constant_pool_mut()
+            .push(ConstantEntry::Number(NumberInfo::from(&(len as f64))));
+        self.emit1_16(OpCode::Ldc, const_idx);
+        self.emitop0(OpCode::ArrNew);
+        for i in 0..len {
+            self.emitop0(OpCode::Dup);
+            let const_idx = self
+                .file
+                .constant_pool_mut()
+                .push(ConstantEntry::Number(NumberInfo::from(&(i as f64))));
+            self.emit1_16(OpCode::Ldc, const_idx);
+            self.visit_expr(&mut array.elements[i], ctx);
+            self.emitop0(OpCode::ArrPut);
+        }
+        None
+    }
+
+    fn visit_array_access_expr(
+        &mut self,
+        array_expr: &mut ArrayAccessExpr,
+        ctx: &mut CodeGenContext<'_>
+    ) -> Option<()> {
+        self.visit_expr(&mut array_expr.array, ctx);
+        self.visit_expr(&mut array_expr.index, ctx);
+        self.emitop0(OpCode::ArrLd);
         None
     }
 }

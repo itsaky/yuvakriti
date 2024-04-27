@@ -14,7 +14,7 @@
  */
 
 use crate::tests::util::eval_src;
-use crate::Value;
+use crate::value::Value;
 
 #[test]
 fn test_cmp_gez_r() {

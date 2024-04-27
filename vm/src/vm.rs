@@ -13,9 +13,8 @@
  * program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use std::any::Any;
 use std::cmp::max;
-use std::fmt::Display;
+use std::ptr::NonNull;
 
 use log::error;
 use log::log_enabled;
@@ -23,32 +22,41 @@ use log::trace;
 use log::warn;
 use log::Level::Trace;
 
+use crate::memory::Heap;
 use compiler::bytecode::attrs;
 use compiler::bytecode::attrs::Attr;
 use compiler::bytecode::attrs::Code;
 use compiler::bytecode::bytes::AssertingByteConversions;
 use compiler::bytecode::opcode;
-use compiler::bytecode::opcode::get_mnemonic;
 use compiler::bytecode::opcode::OpSize;
+use compiler::bytecode::opcode::{get_mnemonic, get_opcode};
 use compiler::bytecode::ConstantEntry;
 use compiler::bytecode::ConstantPool;
 use compiler::bytecode::CpSize;
 use compiler::bytecode::YKBFile;
 
+use crate::object::Obj;
+use crate::object::{ObjArray, ObjType};
+use crate::value::Value;
+
 /// The YuvaKriti Virtual Machine
 #[allow(unused)]
 pub struct YKVM<'inst> {
-    _s: &'inst dyn Any,
+    heap: Heap,
+    _s: &'inst str,
 }
 
 impl<'inst> YKVM<'inst> {
     pub fn new<'a>() -> YKVM<'a> {
-        return YKVM { _s: &"" };
+        return YKVM {
+            heap: Heap::new(),
+            _s: "",
+        };
     }
 }
 
 impl<'inst> YKVM<'inst> {
-    pub fn run(&mut self, file: &YKBFile) -> Result<Option<Value>, String> {
+    pub fn run<'a>(&mut self, file: &YKBFile) -> Result<Option<Value>, String> {
         let attrs = file.attributes();
         let code = attrs.iter().find(|attr| attr.name() == attrs::CODE);
         if code.is_none() {
@@ -70,79 +78,29 @@ impl<'inst> YKVM<'inst> {
 
     /// Execute the instructions in the [Code] and returns the value at the top of the stack
     /// after execution.
-    pub fn run_code(
+    pub fn run_code<'cpinst>(
         &mut self,
         code: &Code,
-        constant_pool: &ConstantPool,
+        constant_pool: &'cpinst ConstantPool,
     ) -> Result<Option<Value>, String> {
-        let mut executor = CodeExecutor::new(Some(constant_pool));
-        executor.execute(code)
-    }
-}
+        let mut executor = CodeExecutor::new(&mut self.heap, Some(constant_pool));
+        let result = executor.execute(code).map(|r| r.map(|r| r.clone()));
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Value {
-    String(String),
-    Number(f64),
-    Bool(bool),
-    Null,
-}
+        self.release();
 
-#[allow(non_snake_case)]
-impl Value {
-    pub fn String(&self) -> Option<&String> {
-        match self {
-            Value::String(str) => Some(str),
-            _ => None,
-        }
+        result
     }
 
-    pub fn Number(&self) -> Option<&f64> {
-        match self {
-            Value::Number(num) => Some(num),
-            _ => None,
-        }
-    }
-
-    pub fn is_truthy(&self) -> bool {
-        match self {
-            Value::Bool(b) => *b,
-            _ => false,
-        }
-    }
-
-    pub fn is_falsy(&self) -> bool {
-        !self.is_truthy()
-    }
-}
-
-impl Display for Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Value::String(str) => write!(f, "{}", str),
-            Value::Number(num) => write!(f, "{}", num),
-            Value::Bool(b) => write!(f, "{}", b),
-            Value::Null => write!(f, "null"),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Variable {
-    value: Value,
-}
-
-impl Variable {
-    pub const NONE: Variable = Variable::new(Value::Null);
-    pub const fn new(value: Value) -> Self {
-        return Variable { value };
+    fn release(&mut self) {
+        self.heap.release();
     }
 }
 
 /// The code executor responsible for executing the code.
 pub struct CodeExecutor<'inst> {
     constant_pool: Option<&'inst ConstantPool>,
-    variables: Vec<Variable>,
+    heap: &'inst mut Heap,
+    variables: Vec<Value>,
     operands: Vec<Value>,
     max_stack: u16,
     max_locals: u16,
@@ -165,8 +123,9 @@ macro_rules! read2 {
 }
 
 impl<'inst> CodeExecutor<'inst> {
-    pub fn new(constant_pool: Option<&ConstantPool>) -> CodeExecutor {
+    fn new<'i>(heap: &'i mut Heap, constant_pool: Option<&'i ConstantPool>) -> CodeExecutor<'i> {
         CodeExecutor {
+            heap,
             constant_pool,
             variables: Vec::with_capacity(0),
             operands: Vec::with_capacity(0),
@@ -175,24 +134,20 @@ impl<'inst> CodeExecutor<'inst> {
         }
     }
 
-    pub fn constant_pool(&self) -> &ConstantPool {
+    fn constant_pool(&self) -> &ConstantPool {
         return self.constant_pool.unwrap();
     }
 
-    pub fn set_constant_pool(&mut self, pool: Option<&'inst ConstantPool>) {
+    fn release(&mut self) {
         if log_enabled!(Trace) {
-            trace!("VM::set_constant_pool: {:?}", pool);
+            trace!("VM::release()");
         }
 
-        self.constant_pool = pool;
-    }
-
-    pub fn reset(&mut self) {
-        if log_enabled!(Trace) {
-            trace!("VM::reset()");
-        }
-        self.variables = vec![];
-        self.operands = vec![];
+        self.constant_pool = None;
+        self.variables.clear();
+        self.operands.clear();
+        self.max_stack = 0;
+        self.max_locals = 0;
     }
 
     fn try_peek_operand(&mut self) -> Option<&Value> {
@@ -231,10 +186,39 @@ impl<'inst> CodeExecutor<'inst> {
         op
     }
 
+    fn pop_num(&mut self) -> f64 {
+        self.pop_operand()
+            .take_Number()
+            .expect("Expected a number in stack")
+    }
+
+    fn pop_bool(&mut self) -> bool {
+        self.pop_operand()
+            .take_Bool()
+            .expect("Expected a boolean in stack")
+    }
+
+    fn pop_ref(&mut self) -> NonNull<Obj> {
+        self.pop_operand()
+            .take_Ref()
+            .expect("Expected a Ref object in stack")
+    }
+
+    fn pop_arr(&mut self) -> &mut ObjArray {
+        unsafe {
+            let mut arr = self.pop_ref();
+            match arr.as_ref().typ {
+                ObjType::Array => Obj::AsArrayRef_mut(&mut arr).expect("Critical: Obj.typ == Array, but Obj.AsArrayRef_mut() failed."),
+                _ => panic!("Attempt to load from a non-array object."),
+            }
+        }
+    }
+
     fn push_operand(&mut self, value: Value) {
         if log_enabled!(Trace) {
             trace!("VM::push_operand({:?})", value);
         }
+
         if self.max_stack != 0 && self.operands.len() >= self.max_stack as usize {
             panic!("Critical: Operand stack overflow! max_stack={}. Did the compiler compute invalid stack depth?", self.max_stack);
         }
@@ -279,16 +263,17 @@ impl<'inst> CodeExecutor<'inst> {
         if log_enabled!(Trace) {
             trace!("VM::store_var({})", index);
         }
+
         let value = self.try_pop_operand().unwrap_or(Value::Null);
-        self.variables[index as usize] = Variable::new(value);
+        self.variables[index as usize] = value.clone();
     }
 
     pub fn load_var(&mut self, index: u16) {
         if log_enabled!(Trace) {
             trace!("VM::load_var({})", index);
         }
-        // TODO(itsaky): Avoid cloning
-        let value = self.variables[index as usize].value.clone();
+
+        let value = self.variables[index as usize].clone();
         self.push_operand(value);
     }
 
@@ -308,7 +293,7 @@ impl<'inst> CodeExecutor<'inst> {
 
         self.variables.clear();
         self.variables
-            .resize(max(0, self.max_locals) as usize, Variable::NONE);
+            .resize_with(max(0, self.max_locals) as usize, &|| Value::Null);
 
         let insns = code.instructions();
         if log_enabled!(Trace) {
@@ -441,7 +426,16 @@ impl<'inst> CodeExecutor<'inst> {
                     });
                 }
 
-                _ => panic!("Unexpected instruction: {:?}", insn),
+                opcode::Dup => {
+                    let value = self.peek_operand().clone();
+                    self.push_operand(value);
+                }
+
+                opcode::ArrNew => self.arrnew(),
+                opcode::ArrLd => self.arrld(),
+                opcode::ArrPut => self.arrput(),
+
+                _ => panic!("Unexpected instruction: {:?}", get_opcode(insn)),
             }
         }
 
@@ -459,11 +453,43 @@ impl<'inst> CodeExecutor<'inst> {
             trace!("VM::execute(): result: {:?}", result);
         }
 
-        self.variables.clear();
-        self.operands.clear();
+        self.release();
 
         // Return the result at the top of the stack
         Ok(result)
+    }
+
+    fn arrnew(&mut self) {
+        let size = self.pop_num();
+        if size < 0.0 {
+            panic!("Array size cannot be negative");
+        }
+        
+        let size = size as usize;
+        
+        let mut elements = Vec::new();
+        elements.resize(size, Value::Null);
+        
+        let arr = ObjArray::new(size, elements);
+        let obj = self
+            .heap
+            .allocate_obj(arr);
+
+        self.push_operand(Value::from(obj));
+    }
+
+    fn arrld(&mut self) {
+        let index = self.pop_num();
+        let arr = self.pop_arr();
+        let val = arr.get(index).clone();
+        self.push_operand(val);
+    }
+
+    fn arrput(&mut self) {
+        let value = self.pop_operand();
+        let index = self.pop_num();
+        let arr = self.pop_arr();
+        arr.set(index, value);
     }
 
     fn cmp(&mut self, op: &OpSize) -> bool {

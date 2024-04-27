@@ -14,7 +14,7 @@
  */
 
 use crate::tests::util::{eval_arithmetic_src, eval_src};
-use crate::Value;
+use crate::value::Value;
 
 #[test]
 fn test_simple_unary_number_negation() {

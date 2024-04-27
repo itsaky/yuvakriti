@@ -16,3 +16,5 @@ log.workspace = true
 clap.workspace = true
 proc_macros.workspace = true
 util.workspace = true
+paste.workspace = true
+stderrlog.workspace = true

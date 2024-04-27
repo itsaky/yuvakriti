@@ -194,6 +194,10 @@ impl<'a, R: Read> YKBDisassembler<'a, R> {
                 | OpCode::BPush0
                 | OpCode::BPush1
                 | OpCode::Neg
+                | OpCode::Dup
+                | OpCode::ArrNew
+                | OpCode::ArrLd
+                | OpCode::ArrPut
                 | OpCode::Not => {}
                 OpCode::Ldc => {
                     let const_index = (insns[index].as_u16()) << 8 | insns[index + 1] as u16;

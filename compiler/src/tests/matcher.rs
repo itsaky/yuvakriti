@@ -684,7 +684,7 @@ impl ASTVisitor<(), bool> for AssertingAstMatcher {
     fn visit_array_access_expr(
         &mut self,
         array_expr: &mut ArrayAccessExpr,
-        p: &mut (),
+        _p: &mut (),
     ) -> Option<bool> {
         assert_eq!(&self.typ, &array_expr.typ());
         if let Some(matcher) = self.nested.get_mut(0) {

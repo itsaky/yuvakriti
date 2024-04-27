@@ -138,6 +138,10 @@ def_opcodes!(
   {Pop,         0x23,  -1,  "pop"       , 0},
   {Neg,         0x24,   0,  "neg"       , 0},
   {Not,         0x25,   0,  "not"       , 0},
+  {Dup,         0x26,   1,  "dup"       , 0},
+  {ArrNew,      0x27,   0,  "arrnew"    , 0},
+  {ArrLd,       0x28,  -1,  "arrld"     , 0},
+  {ArrPut,      0x29,  -3,  "arrput"    , 0},
 );
 
 impl Display for OpCode {

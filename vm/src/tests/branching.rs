@@ -15,7 +15,7 @@
 
 use crate::tests::util::eval_arithmetic_src;
 use crate::tests::util::eval_src;
-use crate::Value;
+use crate::value::Value;
 
 fn eval_bool4(expr: &str, cond: &dyn Fn(bool, bool, bool, bool) -> bool) {
     for a in 0..2 {

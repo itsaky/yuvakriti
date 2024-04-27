@@ -353,7 +353,9 @@ dependencies = [
  "clap",
  "compiler",
  "log",
+ "paste",
  "proc_macros",
+ "stderrlog",
  "util",
 ]
 
